@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { KeNHALogo } from '../components/KeNHALogo';
 import type { User } from '../data/mockData';
-import { useChangePasswordMutation } from '../features/apis/authApi';
+import {
+  useChangePasswordMutation,
+  useRequestPasswordResetMutation,
+  useResetPasswordWithTokenMutation,
+} from '../features/apis/authApi';
 import { useDispatch } from 'react-redux';
 import { updateUser } from '../features/slice/authSlice';
 import { AlertError, AlertWarning, AlertInfo, InlineSpinner } from '../components/shared/Feedback';
@@ -62,80 +66,140 @@ const PwField: React.FC<PwFieldProps> = ({
 );
 
 export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
-  email,
+  email: initialEmail,
   resetOldPass, setResetOldPass,
   resetNewPass,  setResetNewPass,
   resetConfirmPass, setResetConfirmPass,
   showToast,
   navigate,
 }) => {
+  // Extract recovery access_token if present in URL hash (#access_token=...)
+  const getAccessTokenFromHash = () => {
+    if (window.location.hash) {
+      const params = new URLSearchParams(window.location.hash.substring(1));
+      return params.get('access_token');
+    }
+    return null;
+  };
+
+  const recoveryToken = getAccessTokenFromHash();
+
+  const [inputEmail, setInputEmail]   = useState(initialEmail || '');
   const [showOld,     setShowOld]     = useState(false);
   const [showNew,     setShowNew]     = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading,   setIsLoading]   = useState(false);
   const [errorMsg,    setErrorMsg]    = useState<string | null>(null);
   const [warningMsg,  setWarningMsg]  = useState<string | null>(null);
+  const [successMsg,  setSuccessMsg]  = useState<string | null>(null);
+
+  // Flow step: 'email' (input email for reset request) or 'change_password' (setting new password)
+  const [step, setStep] = useState<'email' | 'change_password'>(
+    recoveryToken || initialEmail ? 'change_password' : 'email'
+  );
 
   const [changePasswordApi] = useChangePasswordMutation();
+  const [requestResetApi] = useRequestPasswordResetMutation();
+  const [resetWithTokenApi] = useResetPasswordWithTokenMutation();
   const dispatch = useDispatch();
 
-  // Auto-dismiss warnings after 4 s — same as LoginPage
   useEffect(() => {
     if (warningMsg) {
-      const t = setTimeout(() => setWarningMsg(null), 4000);
+      const t = setTimeout(() => setWarningMsg(null), 6000);
       return () => clearTimeout(t);
     }
   }, [warningMsg]);
 
   useEffect(() => {
     if (errorMsg) {
-      const t = setTimeout(() => setErrorMsg(null), 4000);
+      const t = setTimeout(() => setErrorMsg(null), 6000);
       return () => clearTimeout(t);
     }
   }, [errorMsg]);
 
-  const clearErrors = () => { setErrorMsg(null); setWarningMsg(null); };
+  const clearErrors = () => {
+    setErrorMsg(null);
+    setWarningMsg(null);
+  };
 
-  const validate = (): boolean => {
+  // Step 1: Request Password Reset by Email
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     clearErrors();
-    if (!resetOldPass || !resetNewPass || !resetConfirmPass) {
+
+    if (!inputEmail) {
+      setWarningMsg('Please enter your email address.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inputEmail)) {
+      setWarningMsg('Please enter a valid email address.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await requestResetApi({ email: inputEmail }).unwrap();
+      const message = res.data?.message || 'Password reset email sent to administrator.';
+      setSuccessMsg(message);
+      showToast(message, 'success');
+      // Advance to password update form for admin
+      setStep('change_password');
+    } catch (err: any) {
+      console.error(err);
+      const errMsg = err?.data?.error || err?.message || 'Password reset request failed.';
+      if (errMsg.toLowerCase().includes('non-admin') || errMsg.toLowerCase().includes('contact')) {
+        setErrorMsg('Access Denied: Only administrators can reset passwords directly. Non-admin users must contact the ICT Administrator.');
+      } else {
+        setErrorMsg(errMsg);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Step 2: Change Password Submit
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearErrors();
+
+    if (!resetNewPass || !resetConfirmPass) {
       setWarningMsg('Please fill in all password fields.');
-      return false;
+      return;
     }
     if (resetNewPass.length < 8) {
       setWarningMsg('New password must be at least 8 characters.');
-      return false;
-    }
-    if (resetNewPass === resetOldPass) {
-      setWarningMsg('New password cannot be the same as your current password.');
-      return false;
+      return;
     }
     if (resetNewPass !== resetConfirmPass) {
       setWarningMsg('New passwords do not match.');
-      return false;
+      return;
     }
-    return true;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
 
     setIsLoading(true);
-    clearErrors();
 
     try {
-      await changePasswordApi({
-        new_password: resetNewPass,
-        confirm_password: resetConfirmPass,
-      } as any).unwrap();
+      if (recoveryToken) {
+        await resetWithTokenApi({
+          access_token: recoveryToken,
+          new_password: resetNewPass,
+          confirm_password: resetConfirmPass,
+        }).unwrap();
+      } else {
+        await changePasswordApi({
+          new_password: resetNewPass,
+          confirm_password: resetConfirmPass,
+        } as any).unwrap();
+      }
 
       dispatch(updateUser({ mustChangePassword: false }));
-      showToast('Password changed successfully. Welcome!');
+      showToast('Password changed successfully! Please log in.');
       setResetOldPass('');
       setResetNewPass('');
       setResetConfirmPass('');
-      navigate('/dashboard');
+      navigate('/login');
     } catch (err: any) {
       console.error(err);
       const msg = err?.data?.error || err?.message || 'Password change failed. Please try again.';
@@ -148,18 +212,19 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
   return (
     <div className="login-screen">
 
-      {/* Top-right floating alerts — identical to LoginPage */}
-      {(warningMsg || errorMsg) && (
+      {/* Top-right floating alerts */}
+      {(warningMsg || errorMsg || successMsg) && (
         <div className="fixed top-6 right-6 z-50 flex flex-col gap-2 max-w-sm">
           {warningMsg && <AlertWarning message={warningMsg} />}
           {errorMsg   && <AlertError   message={errorMsg}   />}
+          {successMsg && <AlertInfo    message={successMsg} />}
         </div>
       )}
 
       <div className="login-center">
         <div className="login-card">
 
-          {/* Brand — identical to LoginPage */}
+          {/* Brand */}
           <div className="login-card-brand">
             <KeNHALogo width={38} height={19} />
             <div>
@@ -168,80 +233,142 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
             </div>
           </div>
 
-          {/* Heading */}
-          <div className="login-header">
-            <h1>Set new password</h1>
-          </div>
+          {step === 'email' ? (
+            /* STEP 1: Enter Email */
+            <>
+              <div className="login-header">
+                <h1>Reset Password</h1>
+                <p className="text-xs text-slate-500 mt-1">
+                  Enter your Administrator email to receive a password reset link.
+                </p>
+              </div>
 
-          <form onSubmit={handleSubmit} noValidate>
+              <form onSubmit={handleEmailSubmit} noValidate>
+                <div className="form-group underline">
+                  <input
+                    id="rp-email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="Administrator email address"
+                    value={inputEmail}
+                    onChange={e => {
+                      setInputEmail(e.target.value);
+                      clearErrors();
+                    }}
+                    required
+                    autoFocus
+                    className="form-input"
+                  />
+                </div>
 
-            {/* Current password */}
-            <PwField
-              id="rp-old"
-              placeholder={email ? `Current password (${email})` : 'Current password'}
-              value={resetOldPass}
-              onChange={setResetOldPass}
-              show={showOld}
-              onToggle={() => setShowOld(v => !v)}
-              autoFocus
-              onClearErrors={clearErrors}
-            />
+                <div className="login-actions flex justify-between items-center w-full">
+                  <button
+                    type="button"
+                    className="text-xs text-blue-600 hover:underline flex items-center gap-1 bg-transparent border-0 cursor-pointer"
+                    onClick={() => navigate('/login')}
+                  >
+                    <ArrowLeft size={14} /> Back to Sign in
+                  </button>
+                </div>
 
-            {/* New password */}
-            <PwField
-              id="rp-new"
-              placeholder="New password"
-              value={resetNewPass}
-              onChange={setResetNewPass}
-              show={showNew}
-              onToggle={() => setShowNew(v => !v)}
-              onClearErrors={clearErrors}
-            />
+                <div className="login-submit-row">
+                  <button
+                    type="submit"
+                    className="btn btn-primary min-w-28 flex items-center justify-center gap-2"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <InlineSpinner />
+                        <span>Sending…</span>
+                      </>
+                    ) : 'Reset password'}
+                  </button>
+                </div>
+              </form>
+            </>
+          ) : (
+            /* STEP 2: Set New Password */
+            <>
+              <div className="login-header">
+                <h1>Set new password</h1>
+              </div>
 
-            {/* Confirm new password */}
-            <PwField
-              id="rp-confirm"
-              placeholder="Confirm new password"
-              value={resetConfirmPass}
-              onChange={setResetConfirmPass}
-              show={showConfirm}
-              onToggle={() => setShowConfirm(v => !v)}
-              onClearErrors={clearErrors}
-            />
+              <form onSubmit={handlePasswordSubmit} noValidate>
+                {!recoveryToken && initialEmail && (
+                  <PwField
+                    id="rp-old"
+                    placeholder={`Current password (${initialEmail})`}
+                    value={resetOldPass}
+                    onChange={setResetOldPass}
+                    show={showOld}
+                    onToggle={() => setShowOld(v => !v)}
+                    autoFocus
+                    onClearErrors={clearErrors}
+                  />
+                )}
 
-            {/* Actions row — same spacing/style as LoginPage's login-actions */}
-            <div className="login-actions">
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                Min. 8 characters, different from current password.
-              </span>
-            </div>
+                <PwField
+                  id="rp-new"
+                  placeholder="New password"
+                  value={resetNewPass}
+                  onChange={setResetNewPass}
+                  show={showNew}
+                  onToggle={() => setShowNew(v => !v)}
+                  autoFocus={!initialEmail || !!recoveryToken}
+                  onClearErrors={clearErrors}
+                />
 
-            {/* Submit — right-aligned yellow button, identical to LoginPage */}
-            <div className="login-submit-row">
-              <button
-                type="submit"
-                className="btn btn-primary min-w-28 flex items-center justify-center gap-2"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <InlineSpinner />
-                    <span>Updating…</span>
-                  </>
-                ) : 'Change password'}
-              </button>
-            </div>
+                <PwField
+                  id="rp-confirm"
+                  placeholder="Confirm new password"
+                  value={resetConfirmPass}
+                  onChange={setResetConfirmPass}
+                  show={showConfirm}
+                  onToggle={() => setShowConfirm(v => !v)}
+                  onClearErrors={clearErrors}
+                />
 
-          </form>
+                <div className="login-actions flex justify-between items-center w-full">
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    Min. 8 characters.
+                  </span>
+                  <button
+                    type="button"
+                    className="text-xs text-blue-600 hover:underline bg-transparent border-0 cursor-pointer"
+                    onClick={() => setStep('email')}
+                  >
+                    Use different email
+                  </button>
+                </div>
+
+                <div className="login-submit-row">
+                  <button
+                    type="submit"
+                    className="btn btn-primary min-w-28 flex items-center justify-center gap-2"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <InlineSpinner />
+                        <span>Updating…</span>
+                      </>
+                    ) : 'Change password'}
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
+
         </div>
 
-        {/* Blue info notice — same width/position as LoginPage's AlertInfo */}
+        {/* Info notice */}
         <div className="w-[440px] max-w-full mt-3">
-          <AlertInfo message="You must set a new password before accessing the system. Do not share it with anyone." />
+          <AlertInfo message="Only administrators can reset passwords online. Non-admin users must contact their ICT Administrator." />
         </div>
       </div>
 
-      {/* Footer — identical to LoginPage */}
+      {/* Footer */}
       <div className="login-footer">
         <span>Terms of use</span>
         <span>Privacy &amp; cookies</span>

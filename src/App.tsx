@@ -202,8 +202,29 @@ function App() {
     );
   }
 
-  // Unauthenticated: show login
+  // Unauthenticated: show login or reset password
   if (!currentUser) {
+    if (currentPath === '/reset-password') {
+      return (
+        <>
+          <ResetPasswordPage
+            email={loginEmail}
+            resetOldPass={resetOldPass}
+            setResetOldPass={setResetOldPass}
+            resetNewPass={resetNewPass}
+            setResetNewPass={setResetNewPass}
+            resetConfirmPass={resetConfirmPass}
+            setResetConfirmPass={setResetConfirmPass}
+            setCurrentUser={setCurrentUser}
+            showToast={showToast}
+            navigate={navigate}
+            theme={theme}
+          />
+          <ToastContainer toasts={toasts} />
+        </>
+      );
+    }
+
     return (
       <>
         <LoginPage

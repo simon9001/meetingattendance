@@ -45,6 +45,16 @@ export interface UserProfile {
   department?: string;
 }
 
+export interface ResetPasswordRequestPayload {
+  email: string;
+}
+
+export interface ResetPasswordWithTokenPayload {
+  access_token: string;
+  new_password: string;
+  confirm_password: string;
+}
+
 // ─── Auth API (injected into base apiSlice) ────────────────────────────────
 
 export const authApi = apiSlice.injectEndpoints({
@@ -75,6 +85,24 @@ export const authApi = apiSlice.injectEndpoints({
       }),
     }),
 
+    // POST /auth/reset-password-request
+    requestPasswordReset: builder.mutation<{ success: boolean; data?: { message: string }; error?: string }, ResetPasswordRequestPayload>({
+      query: (payload) => ({
+        url: '/auth/reset-password-request',
+        method: 'POST',
+        body: payload,
+      }),
+    }),
+
+    // POST /auth/reset-password
+    resetPasswordWithToken: builder.mutation<{ success: boolean; data?: { message: string }; error?: string }, ResetPasswordWithTokenPayload>({
+      query: (payload) => ({
+        url: '/auth/reset-password',
+        method: 'POST',
+        body: payload,
+      }),
+    }),
+
     // GET /auth/me
     getCurrentProfile: builder.query<UserProfile, void>({
       query: () => '/auth/me',
@@ -88,5 +116,8 @@ export const {
   useLoginMutation,
   useLogoutMutation,
   useChangePasswordMutation,
+  useRequestPasswordResetMutation,
+  useResetPasswordWithTokenMutation,
   useGetCurrentProfileQuery,
 } = authApi;
+

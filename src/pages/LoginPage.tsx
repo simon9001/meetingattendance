@@ -165,7 +165,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
 
             <div className="login-actions">
-              <span className="forgot-password-link">Forgot password?</span>
+              <button
+                type="button"
+                className="forgot-password-link bg-transparent border-0 p-0 text-left cursor-pointer"
+                onClick={() => navigate('/reset-password')}
+              >
+                Forgot password?
+              </button>
               <label className="login-keep-signed-in">
                 <input id="l-keep" type="checkbox" />
                 Keep me signed in
