@@ -14,8 +14,11 @@ export const PageSpinner = ({ text = 'Loading...' }: { text?: string }) => (
 );
 
 /** Small inline spinner for inside buttons or tight areas */
-export const InlineSpinner = () => (
-  <span className="loading loading-spinner loading-sm" />
+export const InlineSpinner = ({ text }: { text?: string } = {}) => (
+  <span className="inline-flex items-center gap-2">
+    <span className="loading loading-spinner loading-sm" />
+    {text && <span>{text}</span>}
+  </span>
 );
 
 // ─── Alerts ───────────────────────────────────────────────────────────────────

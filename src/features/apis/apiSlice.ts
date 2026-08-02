@@ -48,6 +48,9 @@ export const apiSlice = createApi({
     'AuditLog',
     'Notification',
     'Report',
+    'Template',
+    'Asset',
+    'GeneratedDoc',
   ],
   endpoints: (builder) => ({
     // ─── User Administration ─────────────────────────────────────────────

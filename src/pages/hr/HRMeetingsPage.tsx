@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Eye, Printer } from 'lucide-react';
+import { Search, Eye, Printer, FileText } from 'lucide-react';
 import { PageSpinner } from '../../components/shared/Feedback';
 import { useGetMeetingsQuery, useGetMeetingAttendanceQuery } from '../../features/apis/apiSlice';
+import { GenerateDocumentModal } from '../../components/documents/GenerateDocumentModal';
 
 import type { User } from '../../data/mockData';
 
@@ -14,10 +15,11 @@ interface HRMeetingsPageProps {
   setActiveQRMeeting?: (m: any) => void;
 }
 
-export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = () => {
+export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () => {} }) => {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
+  const [generateDocModal, setGenerateDocModal] = useState<{isOpen: boolean; meetingId: string}>({isOpen: false, meetingId: ''});
 
   // Queries
   const { data: meetingsResponse, isLoading: isMeetingsLoading } = useGetMeetingsQuery(undefined, {
@@ -93,6 +95,9 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = () => {
               <h2 style={{ fontSize: 20, fontWeight: 700, marginTop: 4 }}>{selectedMeeting.title}</h2>
             </div>
             <div style={{ display: 'flex', gap: 10 }} className="btn-group-no-print">
+              <button type="button" onClick={() => setGenerateDocModal({ isOpen: true, meetingId: selectedMeeting.meeting_id })} className="btn btn-primary">
+                <FileText size={16} /> Generate Document
+              </button>
               <button type="button" onClick={handlePrint} className="btn btn-secondary">
                 <Printer size={16} /> Print Report
               </button>
@@ -317,6 +322,12 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = () => {
         </div>
       </div>
 
+      <GenerateDocumentModal
+        isOpen={generateDocModal.isOpen}
+        onClose={() => setGenerateDocModal({ isOpen: false, meetingId: '' })}
+        meetingId={generateDocModal.meetingId}
+        showToast={showToast}
+      />
     </div>
   );
 };
