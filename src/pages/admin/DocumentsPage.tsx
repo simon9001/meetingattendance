@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Upload, Trash2, FileText, Settings, Image as ImageIcon, Search, Download, ChevronDown, ChevronRight, Save } from 'lucide-react';
-import { PageSpinner, AlertError, InlineSpinner } from '../../components/shared/Feedback';
+import { Upload, Trash2, FileText, Settings, Image as ImageIcon, ChevronDown, ChevronRight, Save } from 'lucide-react';
+import { PageSpinner, InlineSpinner } from '../../components/shared/Feedback';
 import {
   useGetTemplatesQuery,
   useGetOrganizationProfileQuery,
