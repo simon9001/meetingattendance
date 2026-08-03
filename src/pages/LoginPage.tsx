@@ -95,8 +95,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         setErrorMsg(err);
       }
     } catch (err: any) {
-      console.error(err);
-      const errMsg = err?.data?.error || err?.message || 'Login failed. Please try again.';
+      // RTK Query FetchBaseQueryError wraps the server body in err.data
+      // Try common backend response shapes: { error }, { message }, { detail }
+      const serverMsg =
+        err?.data?.error ||
+        err?.data?.message ||
+        err?.data?.detail ||
+        (typeof err?.data === 'string' ? err.data : null);
+      const errMsg = serverMsg || err?.message || `Login failed (${err?.status ?? 'unknown error'}). Please try again.`;
       setErrorMsg(errMsg);
     } finally {
       setIsLoading(false);

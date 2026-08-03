@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle2, AlertTriangle, Info, FileText, Image, LayoutPanelTop, LayoutPanelLeft } from 'lucide-react';
-import { TemplateMeta } from '../../features/apis/documentsApi';
+import type { TemplateMeta } from '../../features/apis/documentsApi';
 
 interface TemplatePreviewerProps {
   metadata: TemplateMeta | null;
