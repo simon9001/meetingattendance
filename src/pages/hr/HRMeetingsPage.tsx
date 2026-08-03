@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Search, Eye, Printer, FileText } from 'lucide-react';
+import { Search, Eye, Edit3, FileText } from 'lucide-react';
 import { PageSpinner } from '../../components/shared/Feedback';
 import { useGetMeetingsQuery, useGetMeetingAttendanceQuery } from '../../features/apis/apiSlice';
 import { GenerateDocumentModal } from '../../components/documents/GenerateDocumentModal';
+import { PrintEditorModal } from '../../components/documents/PrintEditorModal';
 
 import type { User } from '../../data/mockData';
 
@@ -20,6 +21,7 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
   const [typeFilter, setTypeFilter] = useState('');
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
   const [generateDocModal, setGenerateDocModal] = useState<{isOpen: boolean; meetingId: string}>({isOpen: false, meetingId: ''});
+  const [printEditorOpen, setPrintEditorOpen] = useState(false);
 
   // Queries
   const { data: meetingsResponse, isLoading: isMeetingsLoading } = useGetMeetingsQuery(undefined, {
@@ -51,7 +53,7 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
     });
   }, [meetingsResponse, search, typeFilter]);
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => setPrintEditorOpen(true);
 
   if (selectedMeetingId && selectedMeeting) {
     const staffAttendees = attendanceResponse?.data?.staff || [];
@@ -99,7 +101,7 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
                 <FileText size={16} /> Generate Document
               </button>
               <button type="button" onClick={handlePrint} className="btn btn-secondary">
-                <Printer size={16} /> Print Report
+                <Edit3 size={16} /> Edit &amp; Print
               </button>
             </div>
           </div>
@@ -235,6 +237,14 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
             )}
           </div>
         </div>
+
+        <PrintEditorModal
+          isOpen={printEditorOpen}
+          onClose={() => setPrintEditorOpen(false)}
+          meeting={selectedMeeting}
+          staff={attendanceResponse?.data?.staff || []}
+          visitors={attendanceResponse?.data?.visitors || []}
+        />
       </div>
     );
   }

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Eye, QrCode, Send, Printer, FileText } from 'lucide-react';
+import { Search, Eye, QrCode, Send, Edit3, FileText } from 'lucide-react';
 import { PageSpinner } from '../../components/shared/Feedback';
 import { GenerateDocumentModal } from '../../components/documents/GenerateDocumentModal';
+import { PrintEditorModal } from '../../components/documents/PrintEditorModal';
 import type { User } from '../../data/mockData';
 import {
   useGetMeetingsQuery,
@@ -30,6 +31,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
   const [typeFilter, setTypeFilter] = useState('');
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
   const [generateDocModal, setGenerateDocModal] = useState<{isOpen: boolean; meetingId: string}>({isOpen: false, meetingId: ''});
+  const [printEditorOpen, setPrintEditorOpen] = useState(false);
 
   // Queries
   const { data: meetingsResponse, isLoading: isMeetingsLoading } = useGetMeetingsQuery(undefined, {
@@ -99,7 +101,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
     }
   };
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => setPrintEditorOpen(true);
 
   if (selectedMeetingId && selectedMeeting) {
     const staffAttendees = attendanceResponse?.data?.staff || [];
@@ -147,7 +149,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                 <FileText size={16} /> Generate Document
               </button>
               <button type="button" onClick={handlePrint} className="btn btn-secondary">
-                <Printer size={16} /> Print Report
+                <Edit3 size={16} /> Edit &amp; Print
               </button>
               {selectedMeeting.attendance_status === 'closed' && (
                 <button type="button" onClick={() => handleSubmitToHR(selectedMeeting)} className="btn btn-primary">
@@ -298,6 +300,14 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
             )}
           </div>
         </div>
+
+        <PrintEditorModal
+          isOpen={printEditorOpen}
+          onClose={() => setPrintEditorOpen(false)}
+          meeting={selectedMeeting}
+          staff={staffAttendees}
+          visitors={visitorAttendees}
+        />
       </div>
     );
   }

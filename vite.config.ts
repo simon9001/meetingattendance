@@ -6,7 +6,15 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [
     tailwindcss(),
-    react()
-    
+    react(),
   ],
+  optimizeDeps: {
+    include: ['mammoth', 'docx', 'file-saver'],
+  },
+  resolve: {
+    // mammoth references 'path' in some code paths; provide an empty shim
+    alias: {
+      path: 'path-browserify',
+    },
+  },
 })

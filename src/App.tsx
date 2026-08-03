@@ -29,8 +29,6 @@ import { HRMeetingsPage } from './pages/hr/HRMeetingsPage';
 import { HRRepositoryPage } from './pages/hr/HRRepositoryPage';
 import { HRAnalyticsPage } from './pages/hr/HRAnalyticsPage';
 
-// Pages — Documents
-import { DocumentsPage } from './pages/admin/DocumentsPage';
 
 // Shared components
 import { QRCodeModal } from './components/QRCodeModal';
@@ -290,9 +288,6 @@ function App() {
     }
     if (activeDashboardTab === 'logs' && currentUser.role === 'admin') {
       return <AdminLogsPage />;
-    }
-    if (activeDashboardTab === 'documents' && currentUser.role === 'admin') {
-      return <DocumentsPage dbTick={dbTick} showToast={showToast} triggerDbUpdate={triggerDbUpdate} />;
     }
 
     // --- ORGANIZER TABS ---

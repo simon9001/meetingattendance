@@ -9,7 +9,6 @@ import {
   BarChart3,
   PlusCircle,
   Send,
-  FileText,
 } from 'lucide-react';
 import { KeNHALogo } from '../KeNHALogo';
 import type { User } from '../../data/mockData';
@@ -82,7 +81,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <NavItem tab="departments" icon={<Building2 size={18} />}   label="Departments" />
             <NavItem tab="security"    icon={<Lock size={18} />}         label="Security Settings" />
             <NavItem tab="logs"        icon={<ClipboardList size={18} />} label="Audit Logs" />
-            <NavItem tab="documents"   icon={<FileText size={18} />}     label="Document Templates" />
           </>
         )}
 
