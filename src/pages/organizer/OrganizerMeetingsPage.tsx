@@ -308,6 +308,14 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
           staff={staffAttendees}
           visitors={visitorAttendees}
         />
+
+        <GenerateDocumentModal
+          isOpen={generateDocModal.isOpen}
+          onClose={() => setGenerateDocModal({ isOpen: false, meetingId: '' })}
+          meetingId={generateDocModal.meetingId}
+          showToast={showToast}
+          onOpenEditor={() => setPrintEditorOpen(true)}
+        />
       </div>
     );
   }
@@ -416,12 +424,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
         </div>
       </div>
 
-      <GenerateDocumentModal
-        isOpen={generateDocModal.isOpen}
-        onClose={() => setGenerateDocModal({ isOpen: false, meetingId: '' })}
-        meetingId={generateDocModal.meetingId}
-        showToast={showToast}
-      />
+      {/* GenerateDocumentModal moved to detail view where meeting data is available */}
     </div>
   );
 };

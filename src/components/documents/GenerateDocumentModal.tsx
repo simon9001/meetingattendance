@@ -8,6 +8,7 @@ interface GenerateDocumentModalProps {
   onClose: () => void;
   meetingId: string;
   showToast: (msg: string, type?: 'success' | 'error') => void;
+  onOpenEditor?: () => void;
 }
 
 export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
@@ -15,6 +16,7 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
   onClose,
   meetingId,
   showToast,
+  onOpenEditor,
 }) => {
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [format, setFormat] = useState('pdf');
@@ -100,6 +102,19 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
               <Download size={18} />
               Download {downloadInfo.format.toUpperCase()}
             </a>
+            {onOpenEditor && (
+              <button
+                type="button"
+                className="btn btn-secondary w-full mt-2"
+                onClick={() => {
+                  resetAndClose();
+                  onOpenEditor();
+                }}
+              >
+                <FileText size={18} />
+                Open &amp; Edit in MS Word Editor
+              </button>
+            )}
             <button className="btn btn-ghost w-full mt-2" onClick={resetAndClose}>
               Close
             </button>
