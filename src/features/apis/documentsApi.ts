@@ -173,7 +173,7 @@ export const documentsApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['Asset'],
     }),
-    renderDocument: builder.mutation<{ success: boolean; data: { downloadUrl: string; format: string } }, { meetingId: string; data: { template_id: string; format: string; version?: number; document_number?: string } }>({
+    renderDocument: builder.mutation<{ success: boolean; data: { downloadUrl: string; format: string } }, { meetingId: string; data: { template_id?: string; format: string; version?: number; document_number?: string } }>({
       query: ({ meetingId, data }) => ({
         url: `/documents/render/${meetingId}`,
         method: 'POST',

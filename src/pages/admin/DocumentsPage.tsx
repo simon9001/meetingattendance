@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Trash2, FileText, Settings, Image as ImageIcon, ChevronDown, ChevronRight, Save } from 'lucide-react';
+import { Upload, Trash2, FileText, Settings, Image as ImageIcon, ChevronDown, ChevronRight, Save, Edit3, Eye, Star } from 'lucide-react';
 import { PageSpinner, InlineSpinner } from '../../components/shared/Feedback';
 import {
   useGetTemplatesQuery,
@@ -10,10 +10,12 @@ import {
   useDeleteAssetMutation,
   useGetTemplateQuery,
   useDeleteTemplateMutation,
-  useSetDefaultTemplateMutation
+  useSetDefaultTemplateMutation,
+  type DocumentTemplate,
 } from '../../features/apis/documentsApi';
 import { TemplateUploadModal } from '../../components/documents/TemplateUploadModal';
 import { TemplatePreviewer } from '../../components/documents/TemplatePreviewer';
+import { EditTemplateModal } from '../../components/documents/EditTemplateModal';
 
 interface DocumentsPageProps {
   dbTick: number;
@@ -24,6 +26,7 @@ interface DocumentsPageProps {
 export const DocumentsPage: React.FC<DocumentsPageProps> = ({ showToast }) => {
   const [activeTab, setActiveTab] = useState<'templates' | 'organization' | 'assets'>('templates');
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null);
   const [expandedTemplateId, setExpandedTemplateId] = useState<string | null>(null);
 
   // Queries
@@ -76,7 +79,9 @@ export const DocumentsPage: React.FC<DocumentsPageProps> = ({ showToast }) => {
             isLoading={isTemplatesLoading} 
             expandedTemplateId={expandedTemplateId}
             setExpandedTemplateId={setExpandedTemplateId}
+            setEditingTemplate={setEditingTemplate}
             showToast={showToast}
+            refetchTemplates={refetchTemplates}
           />
         )}
         {activeTab === 'organization' && (
@@ -95,11 +100,29 @@ export const DocumentsPage: React.FC<DocumentsPageProps> = ({ showToast }) => {
           refetchTemplates();
         }}
       />
+
+      <EditTemplateModal
+        isOpen={!!editingTemplate}
+        onClose={() => setEditingTemplate(null)}
+        template={editingTemplate}
+        onSuccess={(msg) => {
+          showToast(msg);
+          refetchTemplates();
+        }}
+      />
     </div>
   );
 };
 
-const TemplatesTab = ({ templates, isLoading, expandedTemplateId, setExpandedTemplateId, showToast }: any) => {
+const TemplatesTab = ({
+  templates,
+  isLoading,
+  expandedTemplateId,
+  setExpandedTemplateId,
+  setEditingTemplate,
+  showToast,
+  refetchTemplates,
+}: any) => {
   const [deleteTemplate] = useDeleteTemplateMutation();
   const [setDefaultTemplate] = useSetDefaultTemplateMutation();
 
@@ -107,11 +130,12 @@ const TemplatesTab = ({ templates, isLoading, expandedTemplateId, setExpandedTem
     setExpandedTemplateId(expandedTemplateId === id ? null : id);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this template?')) return;
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete template "${name}"? This action cannot be undone.`)) return;
     try {
       await deleteTemplate(id).unwrap();
       showToast('Template deleted successfully');
+      refetchTemplates();
     } catch (err: any) {
       showToast(err.data?.message || 'Failed to delete template', 'error');
     }
@@ -121,6 +145,7 @@ const TemplatesTab = ({ templates, isLoading, expandedTemplateId, setExpandedTem
     try {
       await setDefaultTemplate(id).unwrap();
       showToast('Template set as default');
+      refetchTemplates();
     } catch (err: any) {
       showToast(err.data?.message || 'Failed to set default template', 'error');
     }
@@ -138,11 +163,11 @@ const TemplatesTab = ({ templates, isLoading, expandedTemplateId, setExpandedTem
         <thead>
           <tr>
             <th className="w-8"></th>
-            <th>Name</th>
+            <th>Template Name</th>
             <th>Category</th>
             <th>Version</th>
             <th>Status</th>
-            <th>Actions</th>
+            <th className="text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -154,32 +179,74 @@ const TemplatesTab = ({ templates, isLoading, expandedTemplateId, setExpandedTem
                 </td>
                 <td className="font-semibold">
                   {t.name}
-                  {t.is_default && <span className="badge badge-primary badge-sm ml-2">Default</span>}
+                  {t.is_default && <span className="badge bg-amber-400 text-slate-900 border-none badge-sm ml-2 font-bold">Default</span>}
                 </td>
                 <td><span className="badge badge-ghost badge-sm">{t.category}</span></td>
                 <td>v{t.current_version}</td>
                 <td>
-                  <span className={`badge badge-sm ${t.is_active ? 'badge-success' : 'badge-error'}`}>
+                  <span className={`badge badge-sm font-semibold ${t.is_active ? 'badge-success text-white' : 'badge-error text-white'}`}>
                     {t.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td>
-                  <div className="flex gap-2">
-                    <button className="btn btn-ghost btn-xs" onClick={(e) => { e.stopPropagation(); toggleExpand(t.template_id); }}>
+                <td className="text-right">
+                  <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    
+                    {/* View / Preview */}
+                    <button
+                      type="button"
+                      className="btn btn-xs btn-ghost gap-1 text-base-content/70 hover:text-base-content hover:bg-base-200"
+                      onClick={() => toggleExpand(t.template_id)}
+                      title="View details & placeholders"
+                    >
+                      <Eye size={13} />
                       View
                     </button>
+
+                    {/* Edit / Alter */}
+                    <button
+                      type="button"
+                      className="btn btn-xs bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 dark:text-amber-300 border-amber-200 gap-1 font-semibold"
+                      onClick={() => setEditingTemplate(t)}
+                      title="Edit metadata or upload new version"
+                    >
+                      <Edit3 size={13} />
+                      Edit
+                    </button>
+
+                    {/* Set Default */}
                     {!t.is_default && (
-                      <button className="btn btn-ghost btn-xs text-primary" onClick={(e) => { e.stopPropagation(); handleSetDefault(t.template_id); }}>
-                        Set Default
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-ghost text-primary gap-1"
+                        onClick={() => handleSetDefault(t.template_id)}
+                        title="Set as default template"
+                      >
+                        <Star size={13} />
+                        Default
                       </button>
                     )}
+
+                    {/* Delete */}
+                    <button
+                      type="button"
+                      className="btn btn-xs btn-ghost text-error hover:bg-rose-50 dark:hover:bg-rose-950/40 gap-1"
+                      onClick={() => handleDelete(t.template_id, t.name)}
+                      title="Delete template"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+
                   </div>
                 </td>
               </tr>
               {expandedTemplateId === t.template_id && (
                 <tr>
                   <td colSpan={6} className="p-0 border-b-0 bg-base-200/30">
-                    <TemplateDetailRow templateId={t.template_id} handleDelete={() => handleDelete(t.template_id)} />
+                    <TemplateDetailRow
+                      templateId={t.template_id}
+                      handleDelete={() => handleDelete(t.template_id, t.name)}
+                      handleEdit={() => setEditingTemplate(t)}
+                    />
                   </td>
                 </tr>
               )}
@@ -191,7 +258,15 @@ const TemplatesTab = ({ templates, isLoading, expandedTemplateId, setExpandedTem
   );
 };
 
-const TemplateDetailRow = ({ templateId, handleDelete }: { templateId: string, handleDelete: () => void }) => {
+const TemplateDetailRow = ({
+  templateId,
+  handleDelete,
+  handleEdit,
+}: {
+  templateId: string;
+  handleDelete: () => void;
+  handleEdit: () => void;
+}) => {
   const { data, isLoading } = useGetTemplateQuery(templateId);
 
   if (isLoading) return <div className="p-8 text-center"><InlineSpinner /></div>;
@@ -202,15 +277,26 @@ const TemplateDetailRow = ({ templateId, handleDelete }: { templateId: string, h
   const currentVersion = template.versions?.[0];
 
   return (
-    <div className="p-6 border-x-4 border-l-primary border-r-transparent">
+    <div className="p-6 border-x-4 border-l-amber-400 border-r-transparent">
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h3 className="text-lg font-bold">{template.name}</h3>
-          <p className="text-sm text-base-content/70">{template.description || 'No description provided'}</p>
+          <h3 className="text-lg font-bold text-base-content">{template.name}</h3>
+          <p className="text-sm text-base-content/70 mt-0.5">{template.description || 'No description provided'}</p>
         </div>
         <div className="flex gap-2">
-          <button className="btn btn-outline btn-sm btn-error" onClick={handleDelete}>
-            <Trash2 size={14} /> Delete Template
+          <button
+            type="button"
+            className="btn btn-sm bg-amber-400 hover:bg-amber-500 text-slate-900 border-none font-bold rounded-xl gap-1.5"
+            onClick={handleEdit}
+          >
+            <Edit3 size={14} /> Edit &amp; Upload Version
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline btn-error rounded-xl gap-1.5"
+            onClick={handleDelete}
+          >
+            <Trash2 size={14} /> Delete
           </button>
         </div>
       </div>

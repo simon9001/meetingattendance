@@ -9,7 +9,10 @@ export const store = configureStore({
     auth: authReducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(apiSlice.middleware),
+    getDefaultMiddleware({
+      serializableCheck: false,
+      immutableCheck: false,
+    }).concat(apiSlice.middleware),
 });
 
 setupListeners(store.dispatch);

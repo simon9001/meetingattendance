@@ -28,9 +28,10 @@
   
   /* Fluent / Azure UI variables */
   --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  --shadow-fluent: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-fluent-lg: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-fluent: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --shadow-fluent-lg: 0 10px 32px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05);
   --shadow-azure: 0 4px 20px rgba(0, 120, 212, 0.18);
+  --shadow-gold: 0 4px 16px rgba(249, 214, 22, 0.3);
   
   /* Theme mapping (default Light - Azure enterprise style) */
   --bg-app: #F8FAFC;
@@ -38,10 +39,10 @@
   --bg-sidebar: #001A35;
   --text-main: var(--kenha-text-light);
   --text-muted: var(--kenha-text-muted-light);
-  --border-color: var(--kenha-border-light);
+  --border-color: #CBD5E1;
   --border-sidebar: #0F2847;
-  --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(226, 232, 240, 0.8);
+  --glass-bg: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(226, 232, 240, 0.9);
   --accent-color: #0078D4;
   --accent-text: #FFFFFF;
 }
@@ -53,10 +54,10 @@
   --bg-sidebar: #070B14;
   --text-main: var(--kenha-text-dark);
   --text-muted: var(--kenha-text-muted-dark);
-  --border-color: var(--kenha-border-dark);
+  --border-color: #334155;
   --border-sidebar: #111827;
-  --glass-bg: rgba(17, 24, 39, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(17, 24, 39, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.12);
   --accent-color: #0078D4;
   --accent-text: #FFFFFF;
 }
@@ -67,7 +68,7 @@
   margin: 0;
   padding: 0;
   font-family: var(--font-sans);
-  transition: background-color 0.25s ease, border-color 0.25s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 body {
@@ -76,64 +77,110 @@ body {
   min-height: 100vh;
   line-height: 1.5;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Buttons */
+/* Buttons System — High Visibility & Professional Aesthetic */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 16px;
-  font-size: 14px;
+  padding: 8px 18px;
+  font-size: 13.5px;
   font-weight: 600;
-  border-radius: 4px;
+  letter-spacing: 0.01em;
+  border-radius: 8px;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   text-decoration: none;
   gap: 8px;
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .btn-primary {
   background-color: var(--kenha-yellow);
   color: var(--kenha-black);
-  box-shadow: 0 2px 4px rgba(249, 214, 22, 0.1);
+  border-color: #E2B917;
+  box-shadow: 0 2px 8px rgba(249, 214, 22, 0.35);
+  font-weight: 700;
 }
 
 .btn-primary:hover:not(:disabled) {
   background-color: var(--kenha-yellow-hover);
+  border-color: #CBA50E;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(249, 214, 22, 0.25);
+  box-shadow: 0 4px 14px rgba(249, 214, 22, 0.45);
 }
 
 .btn-primary:active:not(:disabled) {
   transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(249, 214, 22, 0.2);
 }
 
 .btn-primary:disabled {
   background-color: var(--border-color);
+  border-color: var(--border-color);
   color: var(--text-muted);
   cursor: not-allowed;
+  opacity: 0.65;
+  box-shadow: none;
 }
 
 .btn-secondary {
   background-color: var(--bg-card);
   border-color: var(--border-color);
   color: var(--text-main);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .btn-secondary:hover:not(:disabled) {
   background-color: var(--bg-app);
-  border-color: var(--text-muted);
+  border-color: #94A3B8;
+  color: var(--text-main);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
 }
 
 .btn-danger {
-  background-color: #DC2626;
+  background-color: #EF4444;
   color: white;
+  border-color: #DC2626;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
 }
 
 .btn-danger:hover:not(:disabled) {
-  background-color: #B91C1C;
+  background-color: #DC2626;
+  border-color: #B91C1C;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+
+.btn-success {
+  background-color: #10B981;
+  color: white;
+  border-color: #059669;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: #059669;
+  border-color: #047857;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--text-main);
+  box-shadow: none;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background-color: rgba(148, 163, 184, 0.15);
+  color: var(--text-main);
 }
 
 .btn-icon {
@@ -822,7 +869,7 @@ body {
 
 .search-icon {
   position: absolute;
-  left: 12px;
+  left: 14px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--text-muted);
@@ -831,25 +878,77 @@ body {
 
 .search-input {
   width: 100%;
-  padding: 10px 12px 10px 38px;
+  padding: 10px 14px 10px 42px;
   font-size: 14px;
+  font-weight: 500;
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 10px;
   color: var(--text-main);
   outline: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.search-input:focus {
+  border-color: #F9D616;
+  box-shadow: 0 0 0 3px rgba(249, 214, 22, 0.25);
+  background-color: var(--bg-card);
 }
 
 .filter-select {
-  padding: 10px 12px;
+  padding: 10px 14px;
   font-size: 14px;
+  font-weight: 500;
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 10px;
   color: var(--text-main);
   outline: none;
-  min-width: 150px;
+  min-width: 170px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+.filter-select:focus {
+  border-color: #F9D616;
+  box-shadow: 0 0 0 3px rgba(249, 214, 22, 0.25);
+}
+
+/* Form Controls & Inputs General Standards */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+input[type="time"],
+input[type="number"],
+select,
+textarea,
+.input-bordered,
+.select-bordered,
+.textarea-bordered {
+  border-radius: 10px !important;
+  border-color: var(--border-color) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus,
+.input-bordered:focus,
+.select-bordered:focus,
+.textarea-bordered:focus {
+  border-color: #F9D616 !important;
+  box-shadow: 0 0 0 3px rgba(249, 214, 22, 0.25) !important;
+  outline: none !important;
+}
+
 
 /* Forms layout - Meeting Creation */
 .meeting-form-grid {

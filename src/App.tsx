@@ -18,6 +18,7 @@ import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { AdminDepartmentsPage } from './pages/admin/AdminDepartmentsPage';
 import { AdminSecurityPage } from './pages/admin/AdminSecurityPage';
 import { AdminLogsPage } from './pages/admin/AdminLogsPage';
+import { DocumentsPage } from './pages/admin/DocumentsPage';
 
 // Pages — Organizer
 import { OrganizerMeetingsPage } from './pages/organizer/OrganizerMeetingsPage';
@@ -288,6 +289,9 @@ function App() {
     }
     if (activeDashboardTab === 'logs' && currentUser.role === 'admin') {
       return <AdminLogsPage />;
+    }
+    if (activeDashboardTab === 'documents' && currentUser.role === 'admin') {
+      return <DocumentsPage dbTick={dbTick} showToast={showToast} triggerDbUpdate={triggerDbUpdate} />;
     }
 
     // --- ORGANIZER TABS ---
