@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import type { User } from '../../data/mockData';
 import { useCreateMeetingMutation, useGetDepartmentsQuery } from '../../features/apis/apiSlice';
 import { PageSpinner, InlineSpinner } from '../../components/shared/Feedback';
+import { FormFieldsCustomizer } from '../../components/meetings/FormFieldsCustomizer';
+import type { MeetingFormConfig } from '../../types/formConfig';
+import { DEFAULT_MEETING_FORM_CONFIG, serializeMeetingDescription } from '../../types/formConfig';
 
 interface CreateMeetingPageProps {
   currentUser: User;
@@ -17,6 +20,7 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [formConfig, setFormConfig] = useState<MeetingFormConfig>(DEFAULT_MEETING_FORM_CONFIG);
   const [type, setType] = useState<'physical' | 'virtual' | 'hybrid'>('physical');
   const [venue, setVenue] = useState('');
   const [vLink, setVLink] = useState('');
@@ -79,9 +83,11 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
       const openIso = combineDateAndTime(date, openTime);
       const closeIso = combineDateAndTime(date, closeTime);
 
+      const serializedDescription = serializeMeetingDescription(description, formConfig);
+
       const payload = {
         title,
-        description,
+        description: serializedDescription,
         meeting_type: type,
         venue: type !== 'virtual' ? venue : undefined,
         virtual_link: type !== 'physical' ? vLink : undefined,
@@ -92,6 +98,8 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
         attendance_close_time: closeIso,
         department_id: deptId || undefined,
         meeting_pin: pin || undefined,
+        form_config: formConfig,
+        custom_fields: formConfig.customFields,
       };
 
       await createMeeting(payload).unwrap();
@@ -240,7 +248,10 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
               </div>
             </div>
 
-            <div className="form-actions-right">
+            {/* Attendance Form & Register Column Customizer */}
+            <FormFieldsCustomizer config={formConfig} onChange={setFormConfig} />
+
+            <div className="form-actions-right" style={{ marginTop: 20 }}>
               <button type="button" onClick={() => setActiveTab('meetings')} className="btn btn-secondary" disabled={isCreating}>
                 Cancel
               </button>

@@ -172,10 +172,36 @@ export const apiSlice = createApi({
         'AuditLog',
       ],
     }),
+    extendMeetingAttendance: builder.mutation({
+      query: ({ id, minutes }) => ({
+        url: `/meetings/${id}/extend-attendance`,
+        method: 'POST',
+        body: { minutes },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Meeting', id },
+        'Meeting',
+        'AuditLog',
+      ],
+    }),
+    sendMeetingReminders: builder.mutation<any, { meetingId: string; dayLabel?: string; dateStr?: string; emails?: string[] }>({
+      query: ({ meetingId, ...body }) => ({
+        url: `/meetings/${meetingId}/send-reminders`,
+        method: 'POST',
+        body,
+      }),
+    }),
 
     // ─── Attendance ───────────────────────────────────────────────────────
     getPublicMeetingInfo: builder.query({
       query: (meetingId) => `/attendance/meeting-info/${meetingId}`,
+    }),
+    validateMeetingPin: builder.mutation<{ success: boolean; message: string; meetingTitle?: string }, { meeting_id: string; meeting_pin: string }>({
+      query: (data) => ({
+        url: '/attendance/validate-pin',
+        method: 'POST',
+        body: data,
+      }),
     }),
     submitAttendance: builder.mutation({
       query: (attendanceData) => ({
@@ -272,8 +298,11 @@ export const {
   useUpdateMeetingMutation,
   useOpenMeetingAttendanceMutation,
   useCloseMeetingAttendanceMutation,
+  useExtendMeetingAttendanceMutation,
+  useSendMeetingRemindersMutation,
   // Attendance
   useGetPublicMeetingInfoQuery,
+  useValidateMeetingPinMutation,
   useSubmitAttendanceMutation,
   useGetMeetingAttendanceQuery,
   // Reports

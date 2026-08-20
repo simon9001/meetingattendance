@@ -4,15 +4,17 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify, Type, FileDown,
   Upload, ChevronDown, Loader2, FileText, Plus, Undo, Redo,
   Layout, Eye, Layers, ZoomIn, ZoomOut, Image as ImageIcon,
-  Heading1, PanelBottom, Sparkles
+  Heading1, PanelBottom, Sparkles, Trash2, Lock, Unlock,
 } from 'lucide-react';
 import {
   Document, Packer, Paragraph, Table, TableRow, TableCell,
-  TextRun, AlignmentType, WidthType, VerticalAlign,
+  TextRun, ImageRun, AlignmentType, WidthType, VerticalAlign,
+  Header, Footer,
 } from 'docx';
 import { saveAs } from 'file-saver';
 // @ts-ignore — mammoth ships browser remaps via package.json browser field
 import mammoth from 'mammoth';
+import { parseMeetingFormConfig, getDynamicRegisterColumns, aggregateMultiDayAttendees, formatAttendanceDate } from '../../types/formConfig';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface StaffAttendee {
@@ -56,34 +58,6 @@ interface PrintEditorModalProps {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const execCmd = (cmd: string, value?: string) =>
   document.execCommand(cmd, false, value ?? undefined);
-
-// ─── Skeleton Loader ──────────────────────────────────────────────────────────
-const SkeletonBlock = ({ w = '100%', h = 16, mb = 8 }: { w?: string; h?: number; mb?: number }) => (
-  <div style={{
-    width: w, height: h, marginBottom: mb,
-    background: 'linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)',
-    backgroundSize: '200% 100%',
-    borderRadius: 4,
-    animation: 'shimmer 1.4s infinite linear',
-  }} />
-);
-
-const DocumentSkeleton = () => (
-  <>
-    <style>{`@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}`}</style>
-    <div style={{ width: '210mm', minHeight: '297mm', background: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,.12)', borderRadius: 2, padding: '15mm 20mm' }}>
-      <div style={{ textAlign: 'center', marginBottom: 28 }}>
-        <SkeletonBlock w="120px" h={28} mb={8} />
-        <SkeletonBlock w="220px" h={12} mb={6} />
-        <SkeletonBlock w="320px" h={16} mb={0} />
-      </div>
-      <SkeletonBlock w="100%" h={80} mb={20} />
-      <SkeletonBlock w="280px" h={18} mb={12} />
-      <SkeletonBlock w="100%" h={260} mb={24} />
-      <SkeletonBlock w="100%" h={40} mb={0} />
-    </div>
-  </>
-);
 
 // ─── Toolbar Button ────────────────────────────────────────────────────────────
 const ToolbarBtn = ({ onClick, title, children, active = false, danger = false }: {
@@ -179,136 +153,228 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
   const templateInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const printStyleRef = useRef<HTMLStyleElement | null>(null);
-  const [isBuilding, setIsBuilding] = useState(false);
   const [isTemplateLoading, setIsTemplateLoading] = useState(false);
   const [templateMode, setTemplateMode] = useState(false);
   
   // Word Editor States
-  const [activeTab, setActiveTab] = useState<'home' | 'insert' | 'layout' | 'view'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'insert' | 'layout' | 'view' | 'picture'>('home');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [showRulers, setShowRulers] = useState<boolean>(true);
   const [showGuides, setShowGuides] = useState<boolean>(true);
   const [marginSize, setMarginSize] = useState<'normal' | 'narrow' | 'wide'>('normal');
 
+  // ── Image Selection & Word-Style Resizing State ──
+  const [selectedImg, setSelectedImg] = useState<HTMLImageElement | null>(null);
+  const [imgOverlay, setImgOverlay] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+  const [activeHandle, setActiveHandle] = useState<string | null>(null);
+  const [dragState, setDragState] = useState<{ startX: number; startY: number; origW: number; origH: number; ratio: number } | null>(null);
+  const [lockAspect, setLockAspect] = useState<boolean>(true);
+
   // ── Print CSS injected once ──
   useEffect(() => {
     if (!isOpen) return;
     const style = document.createElement('style');
+    style.id = 'print-editor-dynamic-style';
     style.innerHTML = `
       @media print {
         @page {
           size: A4 portrait;
-          margin: 10mm 15mm;
+          margin: 8mm 10mm;
         }
-        body > *:not(#print-editor-root) { display: none !important; }
-        #print-editor-root { display: block !important; position: static !important; background: #fff !important; }
-        #print-editor-ribbon, #print-editor-ruler-top, #print-editor-ruler-left, .no-print, .word-guide-tag, .word-guide-line { display: none !important; }
+        html, body {
+          background: #ffffff !important;
+          color: #000000 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          width: 100% !important;
+          height: auto !important;
+          overflow: visible !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }
+        body * {
+          visibility: hidden !important;
+        }
+        #print-doc-canvas,
+        #print-doc-canvas * {
+          visibility: visible !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }
+        #print-editor-root {
+          position: static !important;
+          display: block !important;
+          width: 100% !important;
+          height: auto !important;
+          background: transparent !important;
+          overflow: visible !important;
+        }
         #print-doc-canvas {
-          box-shadow: none !important; border: none !important;
-          margin: 0 !important; padding: 0 !important;
-          width: 100% !important; min-height: unset !important;
+          position: absolute !important;
+          left: 0 !important;
+          top: 0 !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          min-height: unset !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          box-shadow: none !important;
+          border: none !important;
           transform: none !important;
+          background: #ffffff !important;
+          display: block !important;
         }
-        table { border-collapse: collapse !important; page-break-inside: avoid; }
-        th, td { border: 1px solid #000 !important; }
-        img { max-height: 55px !important; }
+        #print-editor-ribbon,
+        #print-editor-ruler-top,
+        #print-editor-ruler-left,
+        .no-print,
+        .word-guide-tag,
+        .word-guide-line {
+          display: none !important;
+        }
+        table {
+          width: 100% !important;
+          border-collapse: collapse !important;
+          page-break-inside: auto;
+          border: 1.5px solid #000000 !important;
+        }
+        tr {
+          page-break-inside: avoid;
+          page-break-after: auto;
+        }
+        th, td {
+          border: 1px solid #000000 !important;
+        }
+        img {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
       }
     `;
     document.head.appendChild(style);
     printStyleRef.current = style;
     return () => {
-      if (printStyleRef.current) { document.head.removeChild(printStyleRef.current); printStyleRef.current = null; }
+      if (printStyleRef.current) {
+        document.head.removeChild(printStyleRef.current);
+        printStyleRef.current = null;
+      }
     };
   }, [isOpen]);
 
-  // ── Helper to calculate 5 training dates ──
-  const getTrainingDates = useCallback(() => {
-    const baseDateStr = meeting?.meeting_date;
-    const dates: string[] = [];
-    let startDate = new Date(baseDateStr);
-    if (isNaN(startDate.getTime())) {
-      startDate = new Date();
+  // ── Attendee Scope State (all / staff / visitors) ──
+  const [attendeeFilter, setAttendeeFilter] = useState<'all' | 'staff' | 'visitors'>('all');
+
+  // ── Helper to calculate signed attendance dates ──
+  const getAttendanceDates = useCallback(() => {
+    const formConfig = parseMeetingFormConfig(meeting);
+    if (formConfig.isMultiDay && formConfig.sessionDates && formConfig.sessionDates.length > 0) {
+      return formConfig.sessionDates;
     }
-    for (let i = 0; i < 5; i++) {
-      const d = new Date(startDate);
-      d.setDate(startDate.getDate() + i);
-      const dd = String(d.getDate()).padStart(2, '0');
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const yyyy = d.getFullYear();
-      dates.push(`${dd}/${mm}/${yyyy}`);
+
+    const targetAttendees = attendeeFilter === 'staff' ? staff : attendeeFilter === 'visitors' ? visitors : [...staff, ...visitors];
+    const dateSet = new Set<string>();
+    
+    for (const a of targetAttendees) {
+      if (a.submitted_at) {
+        const formatted = formatAttendanceDate(a.submitted_at);
+        if (formatted) dateSet.add(formatted);
+      }
     }
-    return dates;
-  }, [meeting?.meeting_date]);
+
+    // Fallback to meeting date if no signed dates found
+    if (dateSet.size === 0 && meeting?.meeting_date) {
+      const formatted = formatAttendanceDate(meeting.meeting_date);
+      if (formatted) dateSet.add(formatted);
+    }
+
+    if (dateSet.size === 0) {
+      dateSet.add(formatAttendanceDate(new Date().toISOString()));
+    }
+
+    return Array.from(dateSet);
+  }, [meeting, staff, visitors, attendeeFilter]);
 
   // ── Build default KeNHA Attendance Register (Matching official KeNHA/DG/F01 document) ──
   const buildDefaultContent = useCallback((): string => {
-    const dates = getTrainingDates();
-    const allAttendees = [...staff, ...visitors];
-    const totalRowsNeeded = Math.max(15, allAttendees.length);
+    const dates = getAttendanceDates();
+    const isMultiDay = dates.length > 1;
+    const formConfig = parseMeetingFormConfig(meeting);
+    const dynamicCols = getDynamicRegisterColumns(formConfig, attendeeFilter);
 
-    // Render table rows (minimum 15 rows)
+    const allAttendeesRaw = attendeeFilter === 'staff' ? staff : attendeeFilter === 'visitors' ? visitors : [...staff, ...visitors];
+    const allAttendees = isMultiDay ? aggregateMultiDayAttendees(allAttendeesRaw, dates) : allAttendeesRaw;
+    const totalRowsNeeded = Math.max(12, allAttendees.length);
+    const registerTitle = attendeeFilter === 'staff'
+      ? `STAFF ATTENDANCE REGISTER ${meeting?.departments?.name ? `– ${meeting.departments.name.toUpperCase()}` : ''}`
+      : attendeeFilter === 'visitors'
+      ? 'VISITORS ATTENDANCE REGISTER'
+      : `ATTENDANCE REGISTER ${meeting?.departments?.name ? `– ${meeting.departments.name.toUpperCase()}` : ''}`;
+
+    // Format single attendee submitted date
+    const getAttendeeDateStr = (attendee: any) => {
+      if (!attendee?.submitted_at) return dates[0] || '';
+      return formatAttendanceDate(attendee.submitted_at) || dates[0] || '';
+    };
+
+    // Render table rows
     const rowsHtml = Array.from({ length: totalRowsNeeded }).map((_, index) => {
       const attendee = allAttendees[index];
       const rowNum = index + 1;
-      const isRow1 = index === 0;
 
-      const name = attendee ? attendee.full_name : '';
-      const designation = attendee
-        ? ('designation' in attendee ? attendee.designation : (attendee as VisitorAttendee).organization)
-        : '';
       const sigImg = attendee?.signature_data
         ? `<img src="${attendee.signature_data}" style="height:26px; max-width:65px; object-fit:contain; display:block; margin:0 auto;" />`
         : '';
+      const signedDateStr = attendee ? getAttendeeDateStr(attendee) : '';
 
+      const cellsHtml = dynamicCols.map(col => {
+        const val = attendee ? col.getValue(attendee) : '';
+        const isName = col.key === 'name';
+        return `<td contenteditable="true" style="border:1px solid #000; padding:4px 8px; font-size:10px; font-weight:${isName && val ? '600' : '400'}; color:#000;">${val}</td>`;
+      }).join('');
+
+      if (!isMultiDay) {
+        // Single Day Layout: S/NO | [DYNAMIC COLUMNS] | DATE SIGNED | SIGNATURE
+        return `
+          <tr style="height:32px;">
+            <td style="border:1px solid #000; padding:4px; text-align:center; font-weight:600; font-size:10px;">${rowNum}.</td>
+            ${cellsHtml}
+            <td contenteditable="true" style="border:1px solid #000; padding:4px; text-align:center; font-size:9.5px; color:#000;">${signedDateStr}</td>
+            <td contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; font-size:9px;">${sigImg}</td>
+          </tr>
+        `;
+      }
+
+      // Multi-Day Layout
       return `
         <tr style="height:32px;">
           <td style="border:1px solid #000; padding:4px; text-align:center; font-weight:600; font-size:10px;">${rowNum}.</td>
-          <td contenteditable="true" style="border:1px solid #000; padding:4px 8px; font-size:10px; font-weight:${name ? '600' : '400'}; color:#000;">${name}</td>
-          <td contenteditable="true" style="border:1px solid #000; padding:4px 8px; font-size:10px; color:#000;">${designation}</td>
-          ${isRow1 && !attendee ? `
-            <td colspan="5" style="border:1px solid #000; padding:2px; text-align:center; font-size:10px; font-weight:700; color:#374151; vertical-align:middle; background:#fafafa;">
-              Travelling to Venue
-            </td>
-          ` : `
-            <td contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; font-size:9px;">${sigImg}</td>
-            <td contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; font-size:9px;"></td>
-            <td contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; font-size:9px;"></td>
-            <td contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; font-size:9px;"></td>
-            <td contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; font-size:9px;"></td>
-          `}
+          ${cellsHtml}
+          ${dates.map(d => {
+            const sig = (attendee as any)?.signaturesByDate?.[d] || (dates.length === 1 ? attendee?.signature_data : undefined);
+            const sigHtml = sig
+              ? `<img src="${sig}" style="height:26px; max-width:65px; object-fit:contain; display:block; margin:0 auto;" />`
+              : '';
+            return `<td contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; font-size:9px;">${sigHtml}</td>`;
+          }).join('')}
         </tr>
       `;
     }).join('');
 
     return `
-<div class="kenha-page-wrapper" style="position:relative; font-family:Arial, 'Helvetica Neue', sans-serif; color:#000; background:#fff; min-height:100%; display:flex; flex-direction:column; justify-content:space-between;">
+<div class="kenha-page-wrapper" style="position:relative; font-family:Arial, 'Helvetica Neue', sans-serif; color:#000; background:#fff; min-height:265mm; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
 
-  <!-- ==================== EDITABLE HEADER REGION ==================== -->
-  <header contenteditable="true" style="margin-bottom:12px; border:1px transparent solid; outline:none; transition:border .2s;" title="Header Region - Click to edit authority logo, slogan, address or form code">
+  <!-- ==================== EDITABLE HEADER REGION (WORD STYLE) ==================== -->
+  <header contenteditable="true" style="margin-bottom:8px; border:1px transparent solid; outline:none; transition:border .2s;" title="Header Region - Click to edit or replace">
     <!-- Document Reference Code Top Right -->
-    <div style="text-align:right; font-size:11px; font-weight:700; color:#000; font-family:Arial, sans-serif; margin-bottom:4px; letter-spacing:0.3px;">
+    <div style="text-align:right; font-size:11px; font-weight:800; color:#000000; font-family:Arial, sans-serif; margin-bottom:3px; letter-spacing:0.3px;">
       KeNHA/DG/F01
     </div>
 
-    <!-- Black KeNHA Header Box -->
-    <div style="background:#0a0a0a; border-radius:4px; padding:8px 16px; display:flex; align-items:center; justify-content:space-between;">
-      <div style="display:flex; align-items:center; gap:16px;">
-        <img src="/kenhalogo.png" alt="KeNHA Logo" style="height:55px; max-width:180px; object-fit:contain;" />
-        <div>
-          <div style="font-size:21px; font-weight:800; color:#ffffff; font-family:Calibri, Arial, sans-serif; letter-spacing:0.3px; line-height:1.15;">
-            Kenya National Highways Authority
-          </div>
-          <div style="font-size:14px; font-weight:700; font-style:italic; color:#facc15; font-family:Georgia, serif; margin-top:3px;">
-            Quality Highways, Better Connections
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Address Block -->
-    <div style="text-align:center; font-size:9.5px; color:#111827; font-weight:600; margin-top:6px; line-height:1.35;">
-      Barabara Plaza, Block A &amp; C, Jomo Kenyatta International Airport (JKIA), Off Airport South Road, along Mazao Road,<br/>
-      P.O Box 49712 - 00100 Nairobi, Tel 020 - 4954000 / 0700 423 606 Email dg@kenha.co.ke / Website www.kenha.co.ke
+    <!-- Full-Width Stretched KeNHA Header Banner Image -->
+    <div style="width:100%; margin-bottom:4px; overflow:hidden;">
+      <img src="/kenha_header_banner.png" alt="Kenya National Highways Authority Header" style="width:100%; height:auto; max-height:90px; object-fit:fill; display:block;" />
     </div>
   </header>
 
@@ -317,29 +383,40 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     <!-- Title Section -->
     <div style="text-align:center; margin:14px 0 12px;">
       <div contenteditable="true" style="font-size:13px; font-weight:800; text-transform:uppercase; color:#000; line-height:1.4; letter-spacing:0.2px;">
-        ${meeting.title || 'PROVISION OF SUPPORT SERVICES FOR MICROSOFT DYNAMICS 365 FINANCE AND OPERATIONS (KeNHA/2678/2023) - ERP TRAINING FOR ICT STAFF'}
+        ${meeting?.title || 'MEETING & TRAINING ATTENDANCE REGISTER'}
       </div>
-      <div contenteditable="true" style="font-size:12.5px; font-weight:800; text-transform:uppercase; color:#000; margin-top:6px; letter-spacing:0.4px;">
-        ATTENDANCE REGISTER – GROUP II
+      <div contenteditable="true" style="font-size:12px; font-weight:800; text-transform:uppercase; color:#000; margin-top:4px; letter-spacing:0.4px;">
+        ${registerTitle}
+      </div>
+      <div style="font-size:10px; color:#374151; font-weight:600; margin-top:4px;">
+        Date: ${dates.join(', ')} &nbsp;|&nbsp; Venue: ${meeting?.venue || 'KeNHA Headquarters'} &nbsp;|&nbsp; Time: ${meeting?.start_time || ''} - ${meeting?.end_time || ''}
       </div>
     </div>
 
-    <!-- Attendance Register Table -->
+    <!-- Attendance Register Table with Dynamic Configured Columns -->
     <table style="width:100%; border-collapse:collapse; font-size:10px; table-layout:fixed; border:1.5px solid #000; margin-bottom:12px;">
       <thead>
-        <tr style="background:#fff; text-align:left; font-weight:700; color:#000;">
-          <th rowspan="2" style="border:1px solid #000; padding:6px 4px; text-align:center; width:6%;">S/NO</th>
-          <th rowspan="2" style="border:1px solid #000; padding:6px 8px; width:28%;">NAME</th>
-          <th rowspan="2" style="border:1px solid #000; padding:6px 8px; width:22%;">DESIGNATION</th>
-          <th colspan="5" style="border:1px solid #000; padding:6px 4px; text-align:center; width:44%;">SIGNATURE</th>
-        </tr>
-        <tr style="background:#fff; text-align:center; font-weight:700; color:#000;">
-          <th style="border:1px solid #000; padding:4px 2px; width:8.8%; font-size:9.5px;">${dates[0]}</th>
-          <th style="border:1px solid #000; padding:4px 2px; width:8.8%; font-size:9.5px;">${dates[1]}</th>
-          <th style="border:1px solid #000; padding:4px 2px; width:8.8%; font-size:9.5px;">${dates[2]}</th>
-          <th style="border:1px solid #000; padding:4px 2px; width:8.8%; font-size:9.5px;">${dates[3]}</th>
-          <th style="border:1px solid #000; padding:4px 2px; width:8.8%; font-size:9.5px;">${dates[4]}</th>
-        </tr>
+        ${!isMultiDay ? `
+          <tr style="background:#f8fafc; text-align:left; font-weight:700; color:#000;">
+            <th style="border:1px solid #000; padding:6px 4px; text-align:center; width:5%;">S/NO</th>
+            ${dynamicCols.map(col => `
+              <th style="border:1px solid #000; padding:6px 8px;">${col.header}</th>
+            `).join('')}
+            <th style="border:1px solid #000; padding:6px 4px; text-align:center; width:11%;">DATE SIGNED</th>
+            <th style="border:1px solid #000; padding:6px 4px; text-align:center; width:11%;">SIGNATURE</th>
+          </tr>
+        ` : `
+          <tr style="background:#f8fafc; text-align:left; font-weight:700; color:#000;">
+            <th rowspan="2" style="border:1px solid #000; padding:6px 4px; text-align:center; width:5%;">S/NO</th>
+            ${dynamicCols.map(col => `
+              <th rowspan="2" style="border:1px solid #000; padding:6px 8px;">${col.header}</th>
+            `).join('')}
+            <th colspan="${dates.length}" style="border:1px solid #000; padding:6px 4px; text-align:center; width:28%;">SIGNATURE</th>
+          </tr>
+          <tr style="background:#f8fafc; text-align:center; font-weight:700; color:#000;">
+            ${dates.map(d => `<th style="border:1px solid #000; padding:4px 2px; font-size:9.5px;">${d}</th>`).join('')}
+          </tr>
+        `}
       </thead>
       <tbody>
         ${rowsHtml}
@@ -347,38 +424,46 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     </table>
   </main>
 
-  <!-- ==================== EDITABLE FOOTER REGION ==================== -->
-  <footer contenteditable="true" style="margin-top:16px; border:1px transparent solid; outline:none; transition:border .2s;" title="Footer Region - Click to edit Vision, Mission, Core Values, Social Media handles or ISO certification">
-    <!-- Dual Top Accent Line -->
-    <div style="border-top:3px solid #000; margin-bottom:1px;"></div>
-    <div style="border-top:2px solid #eab308; margin-bottom:6px;"></div>
+  <!-- ==================== EDITABLE FOOTER REGION (PINNED TO LOWEST PART) ==================== -->
+  <footer contenteditable="true" style="margin-top:auto; padding-top:12px; border:1px transparent solid; outline:none; transition:border .2s; width:100%;" title="Footer Region - Click any text or section to edit directly like in Microsoft Word">
+    <!-- Top Double Accent Line (High Contrast Black + Gold) -->
+    <div style="border-top:3px solid #1f2937; width:100%; margin-bottom:1.5px;"></div>
+    <div style="border-top:2px solid #EAB308; width:100%; margin-bottom:5px;"></div>
 
-    <!-- Vision, Mission, Core Values -->
-    <div style="text-align:center; font-size:8.5px; color:#000; line-height:1.3; font-weight:500;">
-      <div><strong>Vision:</strong> A quality National Trunk Road Network to all for prosperity</div>
-      <div style="margin-top:1px;"><strong>Mission:</strong> To develop and manage resilient, safe, and adequate National Trunk Roads for sustainable development through innovation and optimal utilization of resources</div>
-      <div style="margin-top:2px; font-size:8.5px;">
-        <span style="font-weight:700;">Core Values:</span> &nbsp;&nbsp;
-        <span>Accountability</span> &nbsp;|&nbsp;
-        <span>Sustainability</span> &nbsp;|&nbsp;
-        <span>Innovation</span> &nbsp;|&nbsp;
-        <span>Teamwork</span>
-      </div>
+    <!-- Vision & Mission (Crisp, Sleek High-Contrast Text) -->
+    <div style="text-align:center; font-size:8.5px; color:#1e293b; line-height:1.35; font-family:Arial, sans-serif;">
+      <div><strong style="color:#0f172a; font-weight:800;">Vision:</strong> A quality National Trunk Road Network to all for prosperity</div>
+      <div style="margin-top:1px;"><strong style="color:#0f172a; font-weight:800;">Mission:</strong> To develop and manage resilient, safe, and adequate National Trunk Roads for sustainable development through innovation and optimal utilization of resources</div>
     </div>
 
-    <!-- Social Media bar -->
-    <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-top:5px; font-size:8px; font-weight:600; color:#1f2937;">
-      <span><strong>𝕏</strong> @KeNHAKenya</span>
-      <span><strong style="color:#1877f2;">f</strong> Kenya National Highways Authority</span>
-      <span><strong style="color:#ff0000;">▶</strong> Kenya National Highways Authority</span>
-      <span><strong style="color:#0a66c2;">in</strong> Kenya National Highways Authority</span>
-      <span><strong style="color:#e4405f;">📷</strong> kenha_kenya</span>
-      <span><strong>🎵</strong> @kenhaofficial</span>
+    <!-- Core Values Segmented Matrix (Clean Horizontal Row with Dividers) -->
+    <div style="margin:4px auto; display:flex; justify-content:center;">
+      <table style="border-collapse:collapse; font-size:8.5px; text-align:center; color:#1e293b; background:#ffffff; border-top:1px dashed #cbd5e1; border-bottom:1px dashed #cbd5e1;">
+        <tbody>
+          <tr>
+            <td style="padding:1px 10px; font-weight:800; color:#0f172a; border-right:1px solid #cbd5e1;">Core Values:</td>
+            <td style="padding:1px 10px; font-weight:600; border-right:1px solid #cbd5e1;">Accountability</td>
+            <td style="padding:1px 10px; font-weight:600; border-right:1px solid #cbd5e1;">Sustainability</td>
+            <td style="padding:1px 10px; font-weight:600; border-right:1px solid #cbd5e1;">Innovation</td>
+            <td style="padding:1px 10px; font-weight:600;">Teamwork</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
-    <!-- Yellow ISO Badge -->
-    <div style="display:flex; justify-content:center; margin-top:4px;">
-      <div style="background:#ebd107; color:#000; padding:2px 24px; border-radius:10px; font-size:9px; font-weight:800; letter-spacing:0.5px; border:1px solid #ca8a04;">
+    <!-- Social Media Bar (Strictly Single Line, Non-Wrapping) -->
+    <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:3px; font-size:7.5px; font-weight:600; color:#1e293b; font-family:Arial, sans-serif; white-space:nowrap; overflow:hidden;">
+      <span style="display:inline-flex; align-items:center; gap:3px;"><strong style="font-weight:900; font-size:8.5px;">𝕏</strong> @KeNHAKenya</span>
+      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="background:#1877F2; color:#fff; font-size:7px; font-weight:900; padding:0 3px; border-radius:2px;">f</span> Kenya National Highways Authority</span>
+      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#FF0000; font-size:8px;">▶</span> Kenya National Highways Authority</span>
+      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="background:#0A66C2; color:#fff; font-size:7px; font-weight:900; padding:0 3px; border-radius:2px;">in</span> Kenya National Highways Authority</span>
+      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="background:linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color:#fff; font-size:7px; font-weight:900; padding:0 2px; border-radius:2px;">📷</span> kenha_kenya</span>
+      <span style="display:inline-flex; align-items:center; gap:3px;"><strong style="font-weight:900; font-size:8.5px;">🎵</strong> @kenhaofficial</span>
+    </div>
+
+    <!-- Tapered Yellow ISO 9001:2015 Ribbon Badge -->
+    <div style="display:flex; justify-content:center; margin-top:3px;">
+      <div style="background:#FEE75C; color:#000000; padding:2px 30px; font-size:8.5px; font-weight:800; letter-spacing:0.5px; border:1px solid #E6B800; clip-path:polygon(3% 0%, 97% 0%, 100% 50%, 97% 100%, 3% 100%, 0% 50%); display:inline-block;">
         ISO 9001 : 2015 Certified
       </div>
     </div>
@@ -386,7 +471,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
 
 </div>
 `;
-  }, [meeting, staff, visitors, getTrainingDates]);
+  }, [meeting, staff, visitors, getAttendanceDates]);
 
   // ── Inject placeholders into uploaded template ──────────────────────────────────
   const injectMeetingData = useCallback((html: string): string => {
@@ -407,19 +492,185 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     return result;
   }, [meeting]);
 
-  // ── Load initial content with skeleton ──────────────────────────────────────
+  // ── Load initial content ──────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
-    setIsBuilding(true);
     setTemplateMode(false);
-    const timer = setTimeout(() => {
-      if (canvasRef.current) {
-        canvasRef.current.innerHTML = buildDefaultContent();
-      }
-      setIsBuilding(false);
-    }, 400);
-    return () => clearTimeout(timer);
+    if (canvasRef.current) {
+      canvasRef.current.innerHTML = buildDefaultContent();
+    }
   }, [isOpen, buildDefaultContent]);
+
+  // ── Update overlay position when selectedImg changes or on scroll/resize ──
+  const updateOverlayPos = useCallback(() => {
+    if (!selectedImg || !canvasRef.current) {
+      setImgOverlay(null);
+      return;
+    }
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const imgRect = selectedImg.getBoundingClientRect();
+    const scale = zoomLevel / 100;
+
+    // Position relative to canvas
+    const left = (imgRect.left - canvasRect.left) / scale;
+    const top = (imgRect.top - canvasRect.top) / scale;
+    const width = imgRect.width / scale;
+    const height = imgRect.height / scale;
+
+    setImgOverlay({ top, left, width, height });
+  }, [selectedImg, zoomLevel]);
+
+  // ── Attach canvas image click listener ──
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleCanvasClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'IMG') {
+        e.stopPropagation();
+        setSelectedImg(target as HTMLImageElement);
+        setActiveTab('picture');
+      } else if (!target.closest('#image-resize-overlay') && !target.closest('#image-toolbar')) {
+        setSelectedImg(null);
+      }
+    };
+
+    canvas.addEventListener('click', handleCanvasClick);
+    return () => {
+      canvas.removeEventListener('click', handleCanvasClick);
+    };
+  }, []);
+
+  useEffect(() => {
+    updateOverlayPos();
+  }, [selectedImg, zoomLevel, updateOverlayPos]);
+
+  // ── Drag Resizing Logic (Microsoft Word 8 Handles) ──
+  const startResize = (handle: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!selectedImg) return;
+
+    const origW = selectedImg.clientWidth || selectedImg.offsetWidth;
+    const origH = selectedImg.clientHeight || selectedImg.offsetHeight;
+    const ratio = origW / (origH || 1);
+
+    setActiveHandle(handle);
+    setDragState({
+      startX: e.clientX,
+      startY: e.clientY,
+      origW,
+      origH,
+      ratio,
+    });
+  };
+
+  useEffect(() => {
+    if (!activeHandle || !dragState || !selectedImg) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const scale = zoomLevel / 100;
+      const deltaX = (e.clientX - dragState.startX) / scale;
+      const deltaY = (e.clientY - dragState.startY) / scale;
+
+      let newW = dragState.origW;
+      let newH = dragState.origH;
+
+      switch (activeHandle) {
+        case 'se':
+          newW = Math.max(30, dragState.origW + deltaX);
+          newH = lockAspect ? newW / dragState.ratio : Math.max(20, dragState.origH + deltaY);
+          break;
+        case 'sw':
+          newW = Math.max(30, dragState.origW - deltaX);
+          newH = lockAspect ? newW / dragState.ratio : Math.max(20, dragState.origH + deltaY);
+          break;
+        case 'ne':
+          newW = Math.max(30, dragState.origW + deltaX);
+          newH = lockAspect ? newW / dragState.ratio : Math.max(20, dragState.origH - deltaY);
+          break;
+        case 'nw':
+          newW = Math.max(30, dragState.origW - deltaX);
+          newH = lockAspect ? newW / dragState.ratio : Math.max(20, dragState.origH - deltaY);
+          break;
+        case 'e':
+          newW = Math.max(30, dragState.origW + deltaX);
+          break;
+        case 'w':
+          newW = Math.max(30, dragState.origW - deltaX);
+          break;
+        case 's':
+          newH = Math.max(20, dragState.origH + deltaY);
+          break;
+        case 'n':
+          newH = Math.max(20, dragState.origH - deltaY);
+          break;
+      }
+
+      selectedImg.style.width = `${Math.round(newW)}px`;
+      selectedImg.style.height = `${Math.round(newH)}px`;
+      selectedImg.setAttribute('width', String(Math.round(newW)));
+      selectedImg.setAttribute('height', String(Math.round(newH)));
+      updateOverlayPos();
+    };
+
+    const handleMouseUp = () => {
+      setActiveHandle(null);
+      setDragState(null);
+      updateOverlayPos();
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [activeHandle, dragState, selectedImg, lockAspect, zoomLevel, updateOverlayPos]);
+
+  // ── Image Quick Actions ──
+  const setImgPresetSize = (widthPx: number) => {
+    if (!selectedImg) return;
+    const ratio = (selectedImg.naturalWidth || selectedImg.clientWidth) / (selectedImg.naturalHeight || selectedImg.clientHeight || 1);
+    const heightPx = Math.round(widthPx / ratio);
+    selectedImg.style.width = `${widthPx}px`;
+    selectedImg.style.height = `${heightPx}px`;
+    selectedImg.setAttribute('width', String(widthPx));
+    selectedImg.setAttribute('height', String(heightPx));
+    updateOverlayPos();
+  };
+
+  const setImgFullWidth = () => {
+    if (!selectedImg) return;
+    selectedImg.style.width = '100%';
+    selectedImg.style.height = 'auto';
+    selectedImg.removeAttribute('height');
+    updateOverlayPos();
+  };
+
+  const setImgAlign = (align: 'left' | 'center' | 'right') => {
+    if (!selectedImg) return;
+    if (align === 'center') {
+      selectedImg.style.display = 'block';
+      selectedImg.style.margin = '8px auto';
+    } else if (align === 'left') {
+      selectedImg.style.display = 'block';
+      selectedImg.style.margin = '8px auto 8px 0';
+    } else {
+      selectedImg.style.display = 'block';
+      selectedImg.style.margin = '8px 0 8px auto';
+    }
+    updateOverlayPos();
+  };
+
+  const deleteSelectedImg = () => {
+    if (!selectedImg) return;
+    selectedImg.remove();
+    setSelectedImg(null);
+    setImgOverlay(null);
+  };
 
   // ── Handle image upload and insert ──────────────────────────────────────────
   const handleImageInsert = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -432,8 +683,18 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
       const canvas = document.getElementById('print-doc-canvas');
       if (!canvas) return;
       canvas.focus();
-      const imgHtml = `<img src="${dataUrl}" style="max-width:180px; height:auto; display:inline-block; margin:4px; vertical-align:middle; border:1px solid #cbd5e1; padding:2px; border-radius:2px;" alt="Inserted image" />`;
+      const imgId = `user-img-${Date.now()}`;
+      const imgHtml = `<img id="${imgId}" src="${dataUrl}" style="max-width:240px; height:auto; display:inline-block; margin:6px; vertical-align:middle; cursor:pointer;" alt="Inserted image" />`;
       document.execCommand('insertHTML', false, imgHtml);
+
+      // Auto-select the newly added image so user can immediately resize
+      setTimeout(() => {
+        const newImg = document.getElementById(imgId) as HTMLImageElement;
+        if (newImg) {
+          setSelectedImg(newImg);
+          setActiveTab('picture');
+        }
+      }, 100);
     };
     reader.readAsDataURL(file);
     if (imageInputRef.current) imageInputRef.current.value = '';
@@ -498,89 +759,457 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
 
   // ── Reset to default layout ──────────────────────────────────────────────────
   const resetToDefault = useCallback(() => {
-    setIsBuilding(true);
-    setTimeout(() => {
-      if (canvasRef.current) canvasRef.current.innerHTML = buildDefaultContent();
-      setIsBuilding(false);
-      setTemplateMode(false);
-    }, 400);
+    if (canvasRef.current) {
+      canvasRef.current.innerHTML = buildDefaultContent();
+    }
+    setTemplateMode(false);
   }, [buildDefaultContent]);
 
-  // ── Print ────────────────────────────────────────────────────────────────────
-  const handlePrint = useCallback(() => window.print(), []);
+  // ── Print using isolated print frame ─────────────────────────────────────────
+  const handlePrint = useCallback(() => {
+    const canvas = document.getElementById('print-doc-canvas');
+    const content = canvas ? canvas.innerHTML : buildDefaultContent();
+
+    // Clean up old print frame if exists
+    const oldIframe = document.getElementById('kenha-print-frame');
+    if (oldIframe) {
+      oldIframe.remove();
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'kenha-print-frame';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <title>KeNHA Official Attendance Register</title>
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 8mm 10mm;
+          }
+          * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: #ffffff !important;
+            color: #000000 !important;
+            font-family: Arial, 'Helvetica Neue', sans-serif;
+            font-size: 11px;
+            width: 100%;
+            line-height: 1.3;
+          }
+          .kenha-page-wrapper {
+            width: 100%;
+            min-height: calc(297mm - 24mm);
+            height: 100%;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            box-sizing: border-box !important;
+          }
+          header {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+            flex-shrink: 0;
+          }
+          main {
+            flex: 1 1 auto;
+          }
+          footer {
+            margin-top: auto !important;
+            padding-bottom: 0 !important;
+            flex-shrink: 0;
+          }
+          table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            border: 1.5px solid #000000 !important;
+            margin-bottom: 12px;
+          }
+          tr {
+            page-break-inside: avoid;
+          }
+          th, td {
+            border: 1px solid #000000 !important;
+          }
+          img {
+            max-height: 65px;
+            object-fit: contain;
+          }
+          .word-guide-tag, .word-guide-line, .no-print {
+            display: none !important;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="kenha-page-wrapper">
+          ${content}
+        </div>
+      </body>
+      </html>
+    `);
+    doc.close();
+
+    // Ensure all images are loaded before invoking print
+    setTimeout(() => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (e) {
+        console.error('Print frame error:', e);
+      }
+    }, 250);
+  }, [buildDefaultContent]);
+
+  // ── Keyboard shortcut for Print (Ctrl+P / Cmd+P) ─────────────
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        handlePrint();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, handlePrint]);
+
+  // ── Helper to convert base64 data URL to Uint8Array ──
+  const base64ToUint8 = (base64Str?: string): Uint8Array | null => {
+    if (!base64Str || typeof base64Str !== 'string') return null;
+    try {
+      const clean = base64Str.replace(/^data:image\/\w+;base64,/, '').trim();
+      if (!clean) return null;
+      const binary = atob(clean);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes;
+    } catch {
+      return null;
+    }
+  };
 
   // ── Download Word ────────────────────────────────────────────────────────────
   const handleDownloadWord = useCallback(async () => {
-    const dates = getTrainingDates();
-    const allAttendees = [...staff, ...visitors];
-    const totalRowsNeeded = Math.max(15, allAttendees.length);
+    const dates = getAttendanceDates();
+    const isMultiDay = dates.length > 1;
 
-    const tableHeaderRows: TableRow[] = [
-      new TableRow({
-        children: [
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'S/NO', bold: true })], alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'NAME', bold: true })] })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'DESIGNATION', bold: true })] })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'SIGNATURE', bold: true })], alignment: AlignmentType.CENTER })], columnSpan: 5 }),
-        ],
-      }),
-      new TableRow({
-        children: dates.map(d =>
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: d, bold: true, size: 16 })], alignment: AlignmentType.CENTER })] })
-        ),
-      }),
-    ];
+    // 1. Build signature map from props & live canvas
+    const sigMap: Record<string, string> = {};
+    [...staff, ...visitors].forEach((a: any) => {
+      if (a.full_name && a.signature_data) {
+        sigMap[a.full_name.trim().toLowerCase()] = a.signature_data;
+      }
+    });
 
-    const bodyRows: TableRow[] = Array.from({ length: totalRowsNeeded }).map((_, index) => {
-      const attendee = allAttendees[index];
-      const name = attendee ? attendee.full_name : '';
-      const designation = attendee
-        ? ('designation' in attendee ? attendee.designation : (attendee as VisitorAttendee).organization)
-        : '';
-      const isRow1 = index === 0 && !attendee;
+    const canvas = document.getElementById('print-doc-canvas');
+    let extractedRows: { sno: string; name: string; designation: string; department: string; dateSigned: string; signatureData?: string }[] = [];
 
+    if (canvas) {
+      const trList = canvas.querySelectorAll('table tbody tr');
+      trList.forEach((tr, index) => {
+        const cells = tr.querySelectorAll('td');
+        if (cells.length >= 5) {
+          const sno = cells[0]?.textContent?.trim() || `${index + 1}.`;
+          const name = cells[1]?.textContent?.trim() || '';
+          const designation = cells[2]?.textContent?.trim() || '';
+          const department = cells[3]?.textContent?.trim() || '';
+          const dateSigned = cells[4]?.textContent?.trim() || '';
+          const img = tr.querySelector('img');
+          const signatureData = img?.src?.startsWith('data:image') ? img.src : sigMap[name.toLowerCase()];
+
+          if (name || designation || department) {
+            extractedRows.push({ sno, name, designation, department, dateSigned, signatureData });
+          }
+        }
+      });
+    }
+
+    // Fallback to props according to attendeeFilter if canvas was empty
+    if (extractedRows.length === 0) {
+      const targetAttendees = attendeeFilter === 'staff' ? staff : attendeeFilter === 'visitors' ? visitors : [...staff, ...visitors];
+      extractedRows = targetAttendees.map((a: any, i: number) => ({
+        sno: `${i + 1}.`,
+        name: a.full_name || '',
+        designation: ('designation' in a ? a.designation : (a as VisitorAttendee).position_title || 'Visitor') || '',
+        department: ('departments' in a ? a.departments?.name || 'Internal' : (a as VisitorAttendee).organization || 'External') || '',
+        dateSigned: a.submitted_at ? new Date(a.submitted_at).toLocaleDateString('en-GB') : (meeting?.meeting_date ? new Date(meeting.meeting_date).toLocaleDateString('en-GB') : ''),
+        signatureData: a.signature_data || ''
+      }));
+    }
+
+    const totalRowsNeeded = Math.max(12, extractedRows.length);
+    while (extractedRows.length < totalRowsNeeded) {
+      extractedRows.push({
+        sno: `${extractedRows.length + 1}.`,
+        name: '',
+        designation: '',
+        department: '',
+        dateSigned: '',
+      });
+    }
+
+    const formConfig = parseMeetingFormConfig(meeting);
+    const dynamicCols = getDynamicRegisterColumns(formConfig, attendeeFilter);
+    const totalColWeight = dynamicCols.reduce((sum, c) => sum + c.widthPercent, 0) || 1;
+
+    let tableHeaderRows: TableRow[];
+
+    if (!isMultiDay) {
+      // Remaining 73% width for custom/dynamic columns
+      const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * 73));
+
+      tableHeaderRows = [
+        new TableRow({
+          children: [
+            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: { fill: '0F172A' }, children: [new Paragraph({ children: [new TextRun({ text: 'S/NO', bold: true, color: 'FFFFFF', size: 18 })], alignment: AlignmentType.CENTER })] }),
+            ...dynamicCols.map((col, idx) =>
+              new TableCell({
+                width: { size: dynamicColWidths[idx], type: WidthType.PERCENTAGE },
+                shading: { fill: '0F172A' },
+                children: [new Paragraph({ children: [new TextRun({ text: col.header, bold: true, color: 'FFFFFF', size: 18 })] })],
+              })
+            ),
+            new TableCell({ width: { size: 11, type: WidthType.PERCENTAGE }, shading: { fill: '0F172A' }, children: [new Paragraph({ children: [new TextRun({ text: 'DATE SIGNED', bold: true, color: 'FFFFFF', size: 18 })], alignment: AlignmentType.CENTER })] }),
+            new TableCell({ width: { size: 11, type: WidthType.PERCENTAGE }, shading: { fill: '0F172A' }, children: [new Paragraph({ children: [new TextRun({ text: 'SIGNATURE', bold: true, color: 'FFFFFF', size: 18 })], alignment: AlignmentType.CENTER })] }),
+          ],
+        }),
+      ];
+    } else {
+      // Multi-Day Header
+      const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * 67));
+
+      tableHeaderRows = [
+        new TableRow({
+          children: [
+            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: { fill: '0F172A' }, children: [new Paragraph({ children: [new TextRun({ text: 'S/NO', bold: true, color: 'FFFFFF', size: 18 })], alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
+            ...dynamicCols.map((col, idx) =>
+              new TableCell({
+                width: { size: dynamicColWidths[idx], type: WidthType.PERCENTAGE },
+                shading: { fill: '0F172A' },
+                children: [new Paragraph({ children: [new TextRun({ text: col.header, bold: true, color: 'FFFFFF', size: 18 })] })],
+                rowSpan: 2,
+                verticalAlign: VerticalAlign.CENTER,
+              })
+            ),
+            new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, shading: { fill: '0F172A' }, children: [new Paragraph({ children: [new TextRun({ text: 'SIGNATURE', bold: true, color: 'FFFFFF', size: 18 })], alignment: AlignmentType.CENTER })], columnSpan: dates.length }),
+          ],
+        }),
+        new TableRow({
+          children: dates.map(d =>
+            new TableCell({ shading: { fill: '1E293B' }, children: [new Paragraph({ children: [new TextRun({ text: d, bold: true, size: 16, color: 'FFFFFF' })], alignment: AlignmentType.CENTER })] })
+          ),
+        }),
+      ];
+    }
+
+    const allAttendeesRaw = attendeeFilter === 'staff' ? staff : attendeeFilter === 'visitors' ? visitors : [...staff, ...visitors];
+    const allAttendeesList = isMultiDay ? aggregateMultiDayAttendees(allAttendeesRaw, dates) : allAttendeesRaw;
+    const totalRowsCount = Math.max(12, Math.max(extractedRows.length, allAttendeesList.length));
+
+    const bodyRows: TableRow[] = Array.from({ length: totalRowsCount }).map((_, index) => {
+      const rowItem = extractedRows[index] || { sno: `${index + 1}.`, name: '', dateSigned: '' };
+      const attendee = allAttendeesList[index];
+      const isEven = index % 2 === 1;
+      const cellShading = isEven ? { fill: 'F8FAFC' } : undefined;
+      const rawSig = attendee?.signature_data || rowItem.signatureData || sigMap[rowItem.name?.trim().toLowerCase()];
+      const sigBytes = base64ToUint8(rawSig);
+
+      if (!isMultiDay) {
+        const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * 73));
+        return new TableRow({
+          children: [
+            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: cellShading, children: [new Paragraph({ text: rowItem.sno || `${index + 1}.`, alignment: AlignmentType.CENTER })] }),
+            ...dynamicCols.map((col, idx) => {
+              const val = attendee ? col.getValue(attendee) : (col.key === 'name' ? rowItem.name : '');
+              const isName = col.key === 'name';
+              return new TableCell({
+                width: { size: dynamicColWidths[idx], type: WidthType.PERCENTAGE },
+                shading: cellShading,
+                children: [new Paragraph({ children: [new TextRun({ text: val, bold: isName && Boolean(val), size: 18 })] })],
+              });
+            }),
+            new TableCell({ width: { size: 11, type: WidthType.PERCENTAGE }, shading: cellShading, children: [new Paragraph({ children: [new TextRun({ text: rowItem.dateSigned || '', size: 18 })], alignment: AlignmentType.CENTER })] }),
+            new TableCell({
+              width: { size: 11, type: WidthType.PERCENTAGE },
+              shading: cellShading,
+              children: [
+                sigBytes
+                  ? new Paragraph({
+                      children: [
+                        new ImageRun({
+                          data: sigBytes,
+                          transformation: { width: 55, height: 20 },
+                          type: 'png',
+                        } as any),
+                      ],
+                      alignment: AlignmentType.CENTER,
+                    })
+                  : new Paragraph({
+                      children: [new TextRun({ text: (attendee || rowItem.name) ? 'Signed' : '', italics: true, size: 16 })],
+                      alignment: AlignmentType.CENTER,
+                    }),
+              ],
+            }),
+          ],
+        });
+      }
+
+      const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * 67));
       return new TableRow({
         children: [
-          new TableCell({ children: [new Paragraph({ text: `${index + 1}.`, alignment: AlignmentType.CENTER })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: name, bold: true })] })] }),
-          new TableCell({ children: [new Paragraph({ text: designation })] }),
-          ...(isRow1 ? [
-            new TableCell({ columnSpan: 5, children: [new Paragraph({ children: [new TextRun({ text: 'Travelling to Venue', bold: true })], alignment: AlignmentType.CENTER })] })
-          ] : [
-            new TableCell({ children: [new Paragraph({ text: '' })] }),
-            new TableCell({ children: [new Paragraph({ text: '' })] }),
-            new TableCell({ children: [new Paragraph({ text: '' })] }),
-            new TableCell({ children: [new Paragraph({ text: '' })] }),
-            new TableCell({ children: [new Paragraph({ text: '' })] }),
-          ]),
+          new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: cellShading, children: [new Paragraph({ text: rowItem.sno || `${index + 1}.`, alignment: AlignmentType.CENTER })] }),
+          ...dynamicCols.map((col, idx) => {
+            const val = attendee ? col.getValue(attendee) : (col.key === 'name' ? rowItem.name : '');
+            const isName = col.key === 'name';
+            return new TableCell({
+              width: { size: dynamicColWidths[idx], type: WidthType.PERCENTAGE },
+              shading: cellShading,
+              children: [new Paragraph({ children: [new TextRun({ text: val, bold: isName && Boolean(val), size: 18 })] })],
+            });
+          }),
+          ...dates.map(d => {
+            const rawSigDate = (attendee as any)?.signaturesByDate?.[d] || (dates.length === 1 ? (attendee?.signature_data || rowItem.signatureData) : undefined);
+            const dateSigBytes = base64ToUint8(rawSigDate);
+            return new TableCell({
+              shading: cellShading,
+              children: [
+                dateSigBytes
+                  ? new Paragraph({
+                      children: [
+                        new ImageRun({
+                          data: dateSigBytes,
+                          transformation: { width: 55, height: 20 },
+                          type: 'png',
+                        } as any),
+                      ],
+                      alignment: AlignmentType.CENTER,
+                    })
+                  : new Paragraph({
+                      children: [new TextRun({ text: rawSigDate ? 'Signed' : '', italics: true })],
+                      alignment: AlignmentType.CENTER,
+                    }),
+              ],
+            });
+          }),
         ],
       });
     });
 
+    const registerTitle = attendeeFilter === 'staff'
+      ? `STAFF ATTENDANCE REGISTER ${meeting?.departments?.name ? `– ${meeting.departments.name.toUpperCase()}` : ''}`
+      : attendeeFilter === 'visitors'
+      ? 'VISITORS ATTENDANCE REGISTER'
+      : `ATTENDANCE REGISTER ${meeting?.departments?.name ? `– ${meeting.departments.name.toUpperCase()}` : ''}`;
+
+    // Fetch KeNHA banner image and footer image buffer for Word document
+    let bannerUint8: Uint8Array | null = null;
+    let footerUint8: Uint8Array | null = null;
+    try {
+      const [bannerRes, footerRes] = await Promise.all([
+        fetch('/kenha_header_banner.png'),
+        fetch('/kenha_footer_banner.png'),
+      ]);
+      if (bannerRes.ok) {
+        bannerUint8 = new Uint8Array(await bannerRes.arrayBuffer());
+      }
+      if (footerRes.ok) {
+        footerUint8 = new Uint8Array(await footerRes.arrayBuffer());
+      }
+    } catch {}
+
     const doc = new Document({
       sections: [{
-        properties: { page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } } },
+        properties: {
+          page: {
+            margin: { top: 1200, right: 720, bottom: 1000, left: 720, header: 360, footer: 360 },
+          },
+        },
+        headers: {
+          default: new Header({
+            children: [
+              new Paragraph({ children: [new TextRun({ text: 'KeNHA/DG/F01', bold: true, size: 18 })], alignment: AlignmentType.RIGHT }),
+              bannerUint8
+                ? new Paragraph({
+                    children: [
+                      new ImageRun({
+                        data: bannerUint8,
+                        transformation: { width: 620, height: 75 },
+                        type: 'png',
+                      } as any),
+                    ],
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 20 },
+                  })
+                : new Paragraph({ text: '' }),
+            ],
+          }),
+        },
+        footers: {
+          default: new Footer({
+            children: [
+              footerUint8
+                ? new Paragraph({
+                    children: [
+                      new ImageRun({
+                        data: footerUint8,
+                        transformation: { width: 620, height: 55 },
+                        type: 'png',
+                      } as any),
+                    ],
+                    alignment: AlignmentType.CENTER,
+                  })
+                : new Paragraph({
+                    children: [
+                      new TextRun({ text: 'ISO 9001 : 2015 Certified', bold: true, size: 16 }),
+                    ],
+                    alignment: AlignmentType.CENTER,
+                  }),
+            ],
+          }),
+        },
         children: [
-          new Paragraph({ children: [new TextRun({ text: 'KeNHA/DG/F01', bold: true, size: 20 })], alignment: AlignmentType.RIGHT }),
-          new Paragraph({ children: [new TextRun({ text: 'Kenya National Highways Authority', bold: true, size: 36, color: '000000' })], alignment: AlignmentType.CENTER }),
-          new Paragraph({ children: [new TextRun({ text: 'Quality Highways, Better Connections', italics: true, bold: true, size: 24, color: 'D97706' })], alignment: AlignmentType.CENTER }),
-          new Paragraph({ children: [new TextRun({ text: 'Barabara Plaza, Block A & C, JKIA, Off Airport South Road, Nairobi', size: 18 })], alignment: AlignmentType.CENTER, spacing: { after: 200 } }),
-          new Paragraph({ children: [new TextRun({ text: meeting.title, bold: true, size: 26 })], alignment: AlignmentType.CENTER }),
-          new Paragraph({ children: [new TextRun({ text: 'ATTENDANCE REGISTER – GROUP II', bold: true, size: 24 })], alignment: AlignmentType.CENTER, spacing: { after: 300 } }),
-          new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [...tableHeaderRows, ...bodyRows] }),
-          new Paragraph({ text: '', spacing: { after: 300 } }),
-          new Paragraph({ children: [new TextRun({ text: 'Vision: A quality National Trunk Road Network to all for prosperity', size: 18, bold: true })], alignment: AlignmentType.CENTER }),
-          new Paragraph({ children: [new TextRun({ text: 'Mission: To develop and manage resilient, safe, and adequate National Trunk Roads', size: 18 })], alignment: AlignmentType.CENTER }),
-          new Paragraph({ children: [new TextRun({ text: 'Core Values: Accountability | Sustainability | Innovation | Teamwork', size: 18, bold: true })], alignment: AlignmentType.CENTER, spacing: { after: 150 } }),
-          new Paragraph({ children: [new TextRun({ text: 'ISO 9001 : 2015 Certified', bold: true, color: '000000', size: 20 })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new TextRun({ text: meeting?.title || 'CS MEETING PROGRAM', bold: true, size: 24, color: '000000' })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new TextRun({ text: registerTitle, bold: true, size: 20, color: '000000' })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new TextRun({ text: `Date: ${dates.join(', ')}  |  Venue: ${meeting?.venue || 'KeNHA Auditorium'}  |  Time: ${meeting?.start_time || ''} - ${meeting?.end_time || ''}`, size: 16, color: '475569' })], alignment: AlignmentType.CENTER, spacing: { after: 150 } }),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [...tableHeaderRows, ...bodyRows],
+          }),
         ],
       }],
     });
 
     const blob = await Packer.toBlob(doc);
-    const safeName = meeting.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    saveAs(blob, `${safeName}_attendance_${meeting.meeting_date}.docx`);
-  }, [meeting, staff, visitors, getTrainingDates]);
+    const scopeTag = attendeeFilter === 'staff' ? '_staff' : attendeeFilter === 'visitors' ? '_visitors' : '_all';
+    const safeName = (meeting?.title || 'meeting').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    saveAs(blob, `${safeName}_attendance${scopeTag}_${meeting?.meeting_date || 'doc'}.docx`);
+  }, [meeting, staff, visitors, getAttendanceDates, attendeeFilter]);
 
   if (!isOpen) return null;
 
@@ -617,7 +1246,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
       <div id="print-editor-ribbon" style={{ background: '#1b365d', color: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', flexShrink: 0 }}>
         
         {/* Top Window Title bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 14px', background: '#0f2442', borderBottom: '1px solid #2d486d' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 14px', background: '#0f2442', borderBottom: '1px solid #2d486d', flexWrap: 'wrap', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ background: '#2b579a', padding: 4, borderRadius: 4, display: 'flex' }}>
               <FileText size={16} style={{ color: '#fff' }} />
@@ -625,6 +1254,74 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
             <span style={{ fontSize: 13, fontWeight: 600, color: '#f8fafc', letterSpacing: 0.2 }}>
               {meeting.title || 'KeNHA Document Editor'} - Microsoft Word
             </span>
+          </div>
+
+          {/* Attendee Scope Switcher */}
+          <div style={{ display: 'flex', alignItems: 'center', background: '#0b192c', padding: '2px 4px', borderRadius: 6, border: '1px solid #2d486d', gap: 2 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', padding: '0 6px', textTransform: 'uppercase', letterSpacing: 0.4 }}>Print Scope:</span>
+            <button
+              type="button"
+              onClick={() => setAttendeeFilter('all')}
+              style={{
+                padding: '4px 10px',
+                fontSize: 11,
+                fontWeight: attendeeFilter === 'all' ? 700 : 500,
+                background: attendeeFilter === 'all' ? '#2563eb' : 'transparent',
+                color: attendeeFilter === 'all' ? '#ffffff' : '#cbd5e1',
+                border: 'none',
+                borderRadius: 4,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                transition: 'all .15s'
+              }}
+              title="Include both KeNHA Staff and Visitors in the same document"
+            >
+              👥 Merged (All: {staff.length + visitors.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setAttendeeFilter('staff')}
+              style={{
+                padding: '4px 10px',
+                fontSize: 11,
+                fontWeight: attendeeFilter === 'staff' ? 700 : 500,
+                background: attendeeFilter === 'staff' ? '#2563eb' : 'transparent',
+                color: attendeeFilter === 'staff' ? '#ffffff' : '#cbd5e1',
+                border: 'none',
+                borderRadius: 4,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                transition: 'all .15s'
+              }}
+              title="Only print or export KeNHA Staff"
+            >
+              👔 Staff Only ({staff.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setAttendeeFilter('visitors')}
+              style={{
+                padding: '4px 10px',
+                fontSize: 11,
+                fontWeight: attendeeFilter === 'visitors' ? 700 : 500,
+                background: attendeeFilter === 'visitors' ? '#2563eb' : 'transparent',
+                color: attendeeFilter === 'visitors' ? '#ffffff' : '#cbd5e1',
+                border: 'none',
+                borderRadius: 4,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                transition: 'all .15s'
+              }}
+              title="Only print or export Visitors"
+            >
+              🏷️ Visitors Only ({visitors.length})
+            </button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -661,6 +1358,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
             { id: 'insert', label: 'Insert' },
             { id: 'layout', label: 'Page Layout' },
             { id: 'view', label: 'View' },
+            ...(selectedImg ? [{ id: 'picture', label: '🖼️ Picture Format' }] : []),
           ].map(tab => (
             <button
               key={tab.id}
@@ -846,6 +1544,31 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
             </>
           )}
 
+          {activeTab === 'picture' && selectedImg && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#1e3a8a' }}>Picture Tools:</span>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button type="button" onClick={() => setImgPresetSize(120)} style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: 4, background: '#fff', fontSize: 11, cursor: 'pointer' }}>Small (120px)</button>
+                <button type="button" onClick={() => setImgPresetSize(240)} style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: 4, background: '#fff', fontSize: 11, cursor: 'pointer' }}>Medium (240px)</button>
+                <button type="button" onClick={() => setImgPresetSize(400)} style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: 4, background: '#fff', fontSize: 11, cursor: 'pointer' }}>Large (400px)</button>
+                <button type="button" onClick={setImgFullWidth} style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: 4, background: '#fff', fontSize: 11, cursor: 'pointer' }}>Full Width (100%)</button>
+              </div>
+              <div style={{ width: 1, height: 22, background: '#cbd5e1' }} />
+              <div style={{ display: 'flex', gap: 2 }}>
+                <ToolbarBtn onClick={() => setImgAlign('left')} title="Align Left"><AlignLeft size={13} /></ToolbarBtn>
+                <ToolbarBtn onClick={() => setImgAlign('center')} title="Align Center"><AlignCenter size={13} /></ToolbarBtn>
+                <ToolbarBtn onClick={() => setImgAlign('right')} title="Align Right"><AlignRight size={13} /></ToolbarBtn>
+              </div>
+              <div style={{ width: 1, height: 22, background: '#cbd5e1' }} />
+              <button type="button" onClick={() => setLockAspect(!lockAspect)} style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: 4, background: lockAspect ? '#eff6ff' : '#fff', color: lockAspect ? '#2563eb' : '#334155', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {lockAspect ? <Lock size={12} /> : <Unlock size={12} />} {lockAspect ? 'Aspect Ratio Locked' : 'Aspect Ratio Free'}
+              </button>
+              <button type="button" onClick={deleteSelectedImg} style={{ padding: '4px 8px', border: '1px solid #fca5a5', borderRadius: 4, background: '#fef2f2', color: '#dc2626', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Trash2 size={12} /> Delete Picture
+              </button>
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -870,67 +1593,157 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
 
         {/* Main Paper Container */}
         <div style={{ padding: '24px 16px 48px', display: 'flex', justifyContent: 'center', width: '100%' }}>
-          
-          {(isBuilding || isTemplateLoading) ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 20px', background: '#fff', borderRadius: 30,
-                boxShadow: '0 2px 12px rgba(0,0,0,.15)',
-                fontSize: 13, color: '#374151', fontWeight: 500,
-              }}>
-                <Loader2 size={18} style={{ color: '#2563eb', animation: 'spin 1s linear infinite' }} />
-                {isTemplateLoading ? 'Merging meeting data into template...' : 'Preparing KeNHA Document Editor...'}
-              </div>
-              <DocumentSkeleton />
-            </div>
-          ) : (
-            <div style={{ position: 'relative' }}>
-
-              {/* MS Word Header Guide Tag */}
-              {showGuides && (
-                <div className="word-guide-tag" onClick={handleFocusHeader} style={{
-                  position: 'absolute', top: 12, left: -95, background: '#eff6ff', color: '#1d4ed8',
-                  border: '1px dashed #3b82f6', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600,
-                  cursor: 'pointer', zIndex: 5, display: 'flex', alignItems: 'center', gap: 4,
-                }} title="Click to edit Header">
-                  <Sparkles size={11} /> Header
-                </div>
-              )}
-
-              {/* MS Word Footer Guide Tag */}
-              {showGuides && (
-                <div className="word-guide-tag" onClick={handleFocusFooter} style={{
-                  position: 'absolute', bottom: 20, left: -90, background: '#eff6ff', color: '#1d4ed8',
-                  border: '1px dashed #3b82f6', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600,
-                  cursor: 'pointer', zIndex: 5, display: 'flex', alignItems: 'center', gap: 4,
-                }} title="Click to edit Footer">
-                  <Sparkles size={11} /> Footer
-                </div>
-              )}
-
-              {/* A4 Paper Canvas */}
-              <div
-                id="print-doc-canvas"
-                ref={canvasRef}
-                contentEditable
-                suppressContentEditableWarning
-                spellCheck
-                style={{
-                  width: '210mm', minHeight: '297mm',
-                  background: '#ffffff',
-                  boxShadow: '0 12px 36px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.05)',
-                  borderRadius: 2,
-                  padding: marginPaddingMap[marginSize],
-                  transform: `scale(${zoomLevel / 100})`,
-                  transformOrigin: 'top center',
-                  transition: 'transform 0.15s ease, padding 0.15s ease',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
+          {isTemplateLoading && (
+            <div style={{
+              position: 'fixed', top: 90, zIndex: 100,
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '10px 20px', background: '#fff', borderRadius: 30,
+              boxShadow: '0 4px 20px rgba(0,0,0,.25)',
+              fontSize: 13, color: '#374151', fontWeight: 500,
+            }}>
+              <Loader2 size={18} style={{ color: '#2563eb', animation: 'spin 1s linear infinite' }} />
+              Merging meeting data into template...
             </div>
           )}
+
+          <div style={{ position: 'relative' }}>
+            {/* MS Word Header Guide Tag */}
+            {showGuides && (
+              <div className="word-guide-tag" onClick={handleFocusHeader} style={{
+                position: 'absolute', top: 12, left: -95, background: '#eff6ff', color: '#1d4ed8',
+                border: '1px dashed #3b82f6', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600,
+                cursor: 'pointer', zIndex: 5, display: 'flex', alignItems: 'center', gap: 4,
+              }} title="Click to edit Header">
+                <Sparkles size={11} /> Header
+              </div>
+            )}
+
+            {/* MS Word Footer Guide Tag */}
+            {showGuides && (
+              <div className="word-guide-tag" onClick={handleFocusFooter} style={{
+                position: 'absolute', bottom: 20, left: -90, background: '#eff6ff', color: '#1d4ed8',
+                border: '1px dashed #3b82f6', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600,
+                cursor: 'pointer', zIndex: 5, display: 'flex', alignItems: 'center', gap: 4,
+              }} title="Click to edit Footer">
+                <Sparkles size={11} /> Footer
+              </div>
+            )}
+
+            {/* A4 Paper Canvas */}
+            <div
+              id="print-doc-canvas"
+              ref={canvasRef}
+              contentEditable
+              suppressContentEditableWarning
+              spellCheck
+              style={{
+                width: '210mm', minHeight: '297mm',
+                background: '#ffffff',
+                boxShadow: '0 12px 36px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.05)',
+                borderRadius: 2,
+                padding: marginPaddingMap[marginSize],
+                transform: `scale(${zoomLevel / 100})`,
+                transformOrigin: 'top center',
+                transition: 'transform 0.15s ease, padding 0.15s ease',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+
+            {/* Microsoft Word Interactive Image Resizing Overlay */}
+            {selectedImg && imgOverlay && (
+              <div
+                id="image-resize-overlay"
+                style={{
+                  position: 'absolute',
+                  top: imgOverlay.top,
+                  left: imgOverlay.left,
+                  width: imgOverlay.width,
+                  height: imgOverlay.height,
+                  border: '2px solid #2563eb',
+                  pointerEvents: 'none',
+                  zIndex: 30,
+                  boxSizing: 'border-box',
+                }}
+              >
+                {/* Floating Word Picture Toolbar */}
+                <div
+                  id="image-toolbar"
+                  style={{
+                    position: 'absolute',
+                    top: -42,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: '#0f172a',
+                    color: '#fff',
+                    padding: '4px 10px',
+                    borderRadius: 6,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                    pointerEvents: 'auto',
+                    fontSize: 11,
+                    whiteSpace: 'nowrap',
+                    zIndex: 35,
+                    border: '1px solid #334155',
+                  }}
+                >
+                  <span style={{ color: '#93c5fd', fontSize: 10, fontWeight: 700 }}>
+                    {Math.round(imgOverlay.width)} × {Math.round(imgOverlay.height)}px
+                  </span>
+                  <div style={{ width: 1, height: 14, background: '#475569' }} />
+                  <button type="button" onClick={() => setImgPresetSize(120)} style={{ border: 'none', background: '#1e293b', color: '#f8fafc', padding: '2px 6px', borderRadius: 3, cursor: 'pointer', fontSize: 10, fontWeight: 600 }}>Small</button>
+                  <button type="button" onClick={() => setImgPresetSize(240)} style={{ border: 'none', background: '#1e293b', color: '#f8fafc', padding: '2px 6px', borderRadius: 3, cursor: 'pointer', fontSize: 10, fontWeight: 600 }}>Med</button>
+                  <button type="button" onClick={() => setImgPresetSize(400)} style={{ border: 'none', background: '#1e293b', color: '#f8fafc', padding: '2px 6px', borderRadius: 3, cursor: 'pointer', fontSize: 10, fontWeight: 600 }}>Large</button>
+                  <button type="button" onClick={setImgFullWidth} style={{ border: 'none', background: '#1e293b', color: '#f8fafc', padding: '2px 6px', borderRadius: 3, cursor: 'pointer', fontSize: 10, fontWeight: 600 }}>100%</button>
+                  <div style={{ width: 1, height: 14, background: '#475569' }} />
+                  <button type="button" onClick={() => setImgAlign('left')} title="Align Left" style={{ border: 'none', background: 'transparent', color: '#cbd5e1', cursor: 'pointer', padding: 2 }}><AlignLeft size={13} /></button>
+                  <button type="button" onClick={() => setImgAlign('center')} title="Align Center" style={{ border: 'none', background: 'transparent', color: '#cbd5e1', cursor: 'pointer', padding: 2 }}><AlignCenter size={13} /></button>
+                  <button type="button" onClick={() => setImgAlign('right')} title="Align Right" style={{ border: 'none', background: 'transparent', color: '#cbd5e1', cursor: 'pointer', padding: 2 }}><AlignRight size={13} /></button>
+                  <div style={{ width: 1, height: 14, background: '#475569' }} />
+                  <button type="button" onClick={() => setLockAspect(!lockAspect)} title={lockAspect ? 'Lock Aspect Ratio (Active)' : 'Unlock Aspect Ratio'} style={{ border: 'none', background: lockAspect ? '#2563eb' : '#334155', color: '#fff', padding: '3px 6px', borderRadius: 3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 10 }}>
+                    {lockAspect ? <Lock size={11} /> : <Unlock size={11} />} {lockAspect ? 'Locked' : 'Free'}
+                  </button>
+                  <button type="button" onClick={deleteSelectedImg} title="Delete Image" style={{ border: 'none', background: '#dc2626', color: '#fff', padding: '3px 6px', borderRadius: 3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 10 }}>
+                    <Trash2 size={11} /> Delete
+                  </button>
+                </div>
+
+                {/* 8 Resize Dots (Microsoft Word Style) */}
+                {[
+                  { id: 'nw', top: -5, left: -5, cursor: 'nwse-resize' },
+                  { id: 'n', top: -5, left: 'calc(50% - 5px)', cursor: 'ns-resize' },
+                  { id: 'ne', top: -5, right: -5, cursor: 'nesw-resize' },
+                  { id: 'e', top: 'calc(50% - 5px)', right: -5, cursor: 'ew-resize' },
+                  { id: 'se', bottom: -5, right: -5, cursor: 'nwse-resize' },
+                  { id: 's', bottom: -5, left: 'calc(50% - 5px)', cursor: 'ns-resize' },
+                  { id: 'sw', bottom: -5, left: -5, cursor: 'nesw-resize' },
+                  { id: 'w', top: 'calc(50% - 5px)', left: -5, cursor: 'ew-resize' },
+                ].map(h => (
+                  <div
+                    key={h.id}
+                    onMouseDown={e => startResize(h.id, e)}
+                    style={{
+                      position: 'absolute',
+                      top: (h as any).top,
+                      bottom: (h as any).bottom,
+                      left: (h as any).left,
+                      right: (h as any).right,
+                      width: 10,
+                      height: 10,
+                      background: '#ffffff',
+                      border: '2px solid #2563eb',
+                      borderRadius: 2,
+                      cursor: h.cursor,
+                      pointerEvents: 'auto',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
