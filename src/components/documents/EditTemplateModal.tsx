@@ -134,8 +134,8 @@ export const EditTemplateModal: React.FC<EditTemplateModalProps> = ({
         </button>
 
         <div className="flex items-center gap-3.5 mb-6">
-          <div className="w-11 h-11 bg-amber-400/15 text-amber-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-xs border border-amber-400/20">
-            <Edit3 size={22} className="text-amber-500" />
+          <div className="w-11 h-11 bg-brand-600/15 text-brand-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-xs border border-brand-600/20">
+            <Edit3 size={22} className="text-brand-600" />
           </div>
           <div>
             <h3 className="text-lg font-extrabold tracking-tight text-base-content leading-tight">
@@ -152,7 +152,7 @@ export const EditTemplateModal: React.FC<EditTemplateModalProps> = ({
           <button
             type="button"
             role="tab"
-            className={`tab font-bold text-xs ${activeTab === 'details' ? 'tab-active text-amber-500 border-amber-400' : 'text-base-content/60'}`}
+            className={`tab font-bold text-xs ${activeTab === 'details' ? 'tab-active text-brand-600 border-brand-600' : 'text-base-content/60'}`}
             onClick={() => { setActiveTab('details'); setErrorMsg(''); }}
           >
             <Edit3 size={15} className="mr-2 inline" /> Template Details
@@ -160,7 +160,7 @@ export const EditTemplateModal: React.FC<EditTemplateModalProps> = ({
           <button
             type="button"
             role="tab"
-            className={`tab font-bold text-xs ${activeTab === 'new_version' ? 'tab-active text-amber-500 border-amber-400' : 'text-base-content/60'}`}
+            className={`tab font-bold text-xs ${activeTab === 'new_version' ? 'tab-active text-brand-600 border-brand-600' : 'text-base-content/60'}`}
             onClick={() => { setActiveTab('new_version'); setErrorMsg(''); }}
           >
             <Upload size={15} className="mr-2 inline" /> Upload New Version (v{template.current_version + 1})
@@ -173,11 +173,11 @@ export const EditTemplateModal: React.FC<EditTemplateModalProps> = ({
           <form onSubmit={handleUpdateDetails} className="space-y-4">
             <div className="form-control w-full">
               <label className="block text-[11px] font-bold text-base-content/70 uppercase tracking-wider mb-1.5">
-                Template Name <span className="text-amber-500 font-bold">*</span>
+                Template Name <span className="text-brand-600 font-bold">*</span>
               </label>
               <input
                 type="text"
-                className="input input-bordered w-full h-11 rounded-xl text-sm font-medium focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 focus:outline-none"
+                className="input input-bordered w-full h-11 rounded-xl text-sm font-medium focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 focus:outline-none"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -189,7 +189,7 @@ export const EditTemplateModal: React.FC<EditTemplateModalProps> = ({
                 Category
               </label>
               <select
-                className="select select-bordered w-full h-11 rounded-xl text-sm font-medium focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 focus:outline-none"
+                className="select select-bordered w-full h-11 rounded-xl text-sm font-medium focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 focus:outline-none"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
               >
@@ -205,7 +205,7 @@ export const EditTemplateModal: React.FC<EditTemplateModalProps> = ({
                 Description
               </label>
               <textarea
-                className="textarea textarea-bordered w-full rounded-xl text-sm font-medium focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 focus:outline-none h-20"
+                className="textarea textarea-bordered w-full rounded-xl text-sm font-medium focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 focus:outline-none h-20"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Optional description of template structure and intended usage..."
@@ -216,7 +216,7 @@ export const EditTemplateModal: React.FC<EditTemplateModalProps> = ({
               <label className="label cursor-pointer justify-start gap-3">
                 <input
                   type="checkbox"
-                  className="toggle toggle-amber toggle-sm"
+                  className="toggle toggle-primary toggle-sm"
                   checked={isActive}
                   onChange={(e) => setIsActive(e.target.checked)}
                 />
@@ -237,7 +237,7 @@ export const EditTemplateModal: React.FC<EditTemplateModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="btn bg-amber-400 hover:bg-amber-500 text-slate-900 border-none font-bold rounded-xl px-6 text-xs gap-2 shadow-md shadow-amber-400/20"
+                className="btn bg-brand-600 hover:bg-brand-700 text-white border-none font-bold rounded-xl px-6 text-xs gap-2 shadow-md shadow-brand-600/20"
                 disabled={isUpdating}
               >
                 {isUpdating ? <InlineSpinner /> : (
@@ -253,16 +253,16 @@ export const EditTemplateModal: React.FC<EditTemplateModalProps> = ({
           <form onSubmit={handleUploadNewVersion} className="space-y-4">
             <div className="form-control w-full">
               <label className="block text-[11px] font-bold text-base-content/70 uppercase tracking-wider mb-1.5">
-                Upload Revised Word Document (.docx) <span className="text-amber-500 font-bold">*</span>
+                Upload Revised Word Document (.docx) <span className="text-brand-600 font-bold">*</span>
               </label>
               <div
                 {...getRootProps()}
                 className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
                   isDragActive
-                    ? 'border-amber-400 bg-amber-400/10'
+                    ? 'border-brand-600 bg-brand-600/10'
                     : file
                     ? 'border-emerald-500 bg-emerald-500/5'
-                    : 'border-base-300 hover:border-amber-400 hover:bg-base-200/50'
+                    : 'border-base-300 hover:border-brand-600 hover:bg-base-200/50'
                 }`}
               >
                 <input {...getInputProps()} />
@@ -273,7 +273,7 @@ export const EditTemplateModal: React.FC<EditTemplateModalProps> = ({
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2 text-base-content/60">
-                    <FileText size={32} className="text-amber-500" />
+                    <FileText size={32} className="text-brand-600" />
                     <p className="text-xs font-medium">
                       Drag &amp; drop revised <span className="font-bold text-base-content">.docx</span> file here, or click to browse
                     </p>
@@ -289,7 +289,7 @@ export const EditTemplateModal: React.FC<EditTemplateModalProps> = ({
               </label>
               <input
                 type="text"
-                className="input input-bordered w-full h-11 rounded-xl text-sm font-medium focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 focus:outline-none"
+                className="input input-bordered w-full h-11 rounded-xl text-sm font-medium focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 focus:outline-none"
                 value={changelog}
                 onChange={(e) => setChangelog(e.target.value)}
                 placeholder="e.g. Updated table layout and added ISO certification logo"
@@ -307,7 +307,7 @@ export const EditTemplateModal: React.FC<EditTemplateModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="btn bg-amber-400 hover:bg-amber-500 text-slate-900 border-none font-bold rounded-xl px-6 text-xs gap-2 shadow-md shadow-amber-400/20"
+                className="btn bg-brand-600 hover:bg-brand-700 text-white border-none font-bold rounded-xl px-6 text-xs gap-2 shadow-md shadow-brand-600/20"
                 disabled={isUploadingVersion || !file}
               >
                 {isUploadingVersion ? <InlineSpinner /> : (

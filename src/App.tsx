@@ -8,12 +8,14 @@ import { ToastContainer } from './components/shared/ToastContainer';
 // Pages — Auth
 import { LoginPage } from './pages/LoginPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { ProfilePage } from './pages/ProfilePage';
 
 // Pages — Public
 import { PublicAttendPage } from './pages/public/PublicAttendPage';
 import { LiveDashboardPage } from './pages/public/LiveDashboardPage';
 
 // Pages — Admin
+import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { AdminDepartmentsPage } from './pages/admin/AdminDepartmentsPage';
 import { AdminSecurityPage } from './pages/admin/AdminSecurityPage';
@@ -82,11 +84,12 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentToken]);
 
+  // Fixed Light Theme (No dark theme)
+  const theme = 'light';
+  const setTheme = () => {};
+
   // Navigation / Router State
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
-
-  // Theme State
-  const [theme, setTheme] = useState(() => localStorage.getItem('kmtams_theme') || 'light');
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -120,16 +123,17 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // --- Theme ---
+  // --- Enforce Pure Light Theme ---
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('kmtams_theme', theme);
-  }, [theme]);
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.classList.remove('dark');
+    localStorage.removeItem('kmtams_theme');
+  }, []);
 
   // --- Default tab per role ---
   useEffect(() => {
     if (currentUser) {
-      if (currentUser.role === 'admin') setActiveDashboardTab('users');
+      if (currentUser.role === 'admin') setActiveDashboardTab('dashboard');
       else if (currentUser.role === 'hr') setActiveDashboardTab('meetings');
       else if (currentUser.role === 'organizer') setActiveDashboardTab('meetings');
     }
@@ -277,7 +281,15 @@ function App() {
   // ==========================================
 
   const renderDashboardContent = () => {
+    // --- SHARED (any role) ---
+    if (activeDashboardTab === 'profile') {
+      return <ProfilePage currentUser={currentUser} />;
+    }
+
     // --- ADMIN TABS ---
+    if (activeDashboardTab === 'dashboard' && currentUser.role === 'admin') {
+      return <AdminDashboardPage />;
+    }
     if (activeDashboardTab === 'users' && currentUser.role === 'admin') {
       return <AdminUsersPage dbTick={dbTick} showToast={showToast} triggerDbUpdate={triggerDbUpdate} />;
     }
@@ -304,6 +316,7 @@ function App() {
           triggerDbUpdate={triggerDbUpdate}
           navigate={navigate}
           setActiveQRMeeting={setActiveQRMeeting}
+          onCreateMeeting={() => setActiveDashboardTab('create_meeting')}
         />
       );
     }
@@ -348,10 +361,10 @@ function App() {
     <>
       <AppShell
         currentUser={currentUser}
-        theme={theme}
-        setTheme={setTheme}
         handleLogout={handleLogout}
         activeDashboardTab={activeDashboardTab}
+        setActiveDashboardTab={setActiveDashboardTab}
+        onOpenProfile={() => setActiveDashboardTab('profile')}
         sidebar={
           <Sidebar
             currentUser={currentUser}

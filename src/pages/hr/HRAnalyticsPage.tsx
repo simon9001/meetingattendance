@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGetMeetingsQuery, useGetReportsQuery } from '../../features/apis/apiSlice';
 import { PageSpinner } from '../../components/shared/Feedback';
+import { resolveDepartmentDisplay } from '../../types/formConfig';
 
 export const HRAnalyticsPage: React.FC = () => {
   const { data: meetingsResponse, isLoading: isMeetingsLoading } = useGetMeetingsQuery(undefined, {
@@ -29,7 +30,7 @@ export const HRAnalyticsPage: React.FC = () => {
   const deptStats = React.useMemo(() => {
     const stats: Record<string, number> = {};
     reports.forEach((r: any) => {
-      const deptName = r.meetings?.departments?.name;
+      const deptName = resolveDepartmentDisplay(r.meetings, '');
       if (deptName) {
         stats[deptName] = (stats[deptName] || 0) + (r.total_staff || 0);
       }

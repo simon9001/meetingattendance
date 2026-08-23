@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 import { PageSpinner } from '../../components/shared/Feedback';
 import { useGetReportsQuery } from '../../features/apis/apiSlice';
+import { resolveDepartmentDisplay } from '../../types/formConfig';
 
 export const HRRepositoryPage: React.FC = () => {
   const [search, setSearch] = useState('');
@@ -20,7 +21,7 @@ export const HRRepositoryPage: React.FC = () => {
   const filtered = React.useMemo(() => {
     return reports.filter((r: any) => {
       const title = r.meetings?.title || '';
-      const dept = r.meetings?.departments?.name || '';
+      const dept = resolveDepartmentDisplay(r.meetings, '');
       const organizer = r.profiles?.email || '';
       return (
         title.toLowerCase().includes(search.toLowerCase()) ||
@@ -69,7 +70,7 @@ export const HRRepositoryPage: React.FC = () => {
                   {filtered.map((r: any) => (
                     <tr key={r.report_id}>
                       <td style={{ fontWeight: 600 }}>{r.meetings?.title || 'N/A'}</td>
-                      <td>{r.meetings?.departments?.name || 'N/A'}</td>
+                      <td>{resolveDepartmentDisplay(r.meetings, 'N/A')}</td>
                       <td>{r.profiles?.email || 'N/A'}</td>
                       <td>{r.meetings?.meeting_date || 'N/A'}</td>
                       <td>{r.submitted_at ? new Date(r.submitted_at).toLocaleDateString() : 'N/A'}</td>

@@ -5,7 +5,7 @@ import { KeNHALogo } from '../../components/KeNHALogo';
 import { SignaturePad } from '../../components/SignaturePad';
 import type { Attendance } from '../../data/mockData';
 import confetti from 'canvas-confetti';
-import { parseMeetingFormConfig } from '../../types/formConfig';
+import { parseMeetingFormConfig, resolveDepartmentDisplay } from '../../types/formConfig';
 import {
   useGetPublicMeetingInfoQuery,
   useGetDepartmentsQuery,
@@ -177,7 +177,7 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
       }
     }
 
-    if (!signatureData) {
+    if (formConfig.includeSignature !== false && !signatureData) {
       showToast('Please draw your signature to register', 'error');
       return;
     }
@@ -188,7 +188,7 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
       meeting_id: meetingId,
       meeting_pin: enteredPin,
       full_name: fullName.trim(),
-      signature_data: signatureData,
+      signature_data: signatureData || (formConfig.includeSignature === false ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' : ''),
       custom_responses: customResponses,
     };
 
@@ -285,7 +285,7 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
           <span className="badge badge-hybrid" style={{ marginBottom: 6 }}>KMTAMS Register</span>
           <h2 style={{ fontSize: 20, fontWeight: 700 }}>{meeting.title}</h2>
           <p style={{ fontSize: 13, marginTop: 4 }}>
-            Department: <strong style={{ color: 'var(--text-main)' }}>{meeting.departments?.name || 'KeNHA'}</strong>
+            Department: <strong style={{ color: 'var(--text-main)' }}>{resolveDepartmentDisplay(meeting, 'KeNHA')}</strong>
           </p>
         </div>
 
@@ -413,24 +413,35 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
               </div>
             )}
 
-            <div className="participant-type-selector">
-              <button
-                type="button"
-                className={`type-select-btn ${attendType === 'staff' ? 'active' : ''}`}
-                onClick={() => { setAttendType('staff'); setFullName(''); setSignatureData(null); }}
-              >
-                <UserCheck size={20} />
-                KeNHA Staff
-              </button>
-              <button
-                type="button"
-                className={`type-select-btn ${attendType === 'visitor' ? 'active' : ''}`}
-                onClick={() => { setAttendType('visitor'); setFullName(''); setSignatureData(null); }}
-              >
-                <Users size={20} />
-                Visitor / Partner
-              </button>
-            </div>
+            {formConfig.allowVisitors ? (
+              <div className="participant-type-selector">
+                <button
+                  type="button"
+                  className={`type-select-btn ${attendType === 'staff' ? 'active' : ''}`}
+                  onClick={() => { setAttendType('staff'); setFullName(''); setSignatureData(null); }}
+                >
+                  <UserCheck size={20} />
+                  KeNHA Staff
+                </button>
+                <button
+                  type="button"
+                  className={`type-select-btn ${attendType === 'visitor' ? 'active' : ''}`}
+                  onClick={() => { setAttendType('visitor'); setFullName(''); setSignatureData(null); }}
+                >
+                  <Users size={20} />
+                  Visitor / Partner
+                </button>
+              </div>
+            ) : (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, fontSize: 12,
+                color: 'var(--text-muted)', background: 'var(--bg-app)',
+                borderRadius: 8, padding: '10px 14px', marginBottom: 20,
+              }}>
+                <UserCheck size={16} style={{ flexShrink: 0 }} />
+                This session is limited to KeNHA staff sign-in only.
+              </div>
+            )}
 
             <div className="form-group">
               <label htmlFor="p-name">Full Name</label>
@@ -567,7 +578,7 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
                 </div>
               ))}
 
-            <SignaturePad onChange={setSignatureData} />
+            {formConfig.includeSignature !== false && <SignaturePad onChange={setSignatureData} />}
 
             <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: 24 }} disabled={isSubmitting}>
             {isSubmitting ? (

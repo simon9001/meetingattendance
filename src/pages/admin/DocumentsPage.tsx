@@ -179,7 +179,7 @@ const TemplatesTab = ({
                 </td>
                 <td className="font-semibold">
                   {t.name}
-                  {t.is_default && <span className="badge bg-amber-400 text-slate-900 border-none badge-sm ml-2 font-bold">Default</span>}
+                  {t.is_default && <span className="badge bg-brand-600 text-white border-none badge-sm ml-2 font-bold">Default</span>}
                 </td>
                 <td><span className="badge badge-ghost badge-sm">{t.category}</span></td>
                 <td>v{t.current_version}</td>
@@ -205,7 +205,7 @@ const TemplatesTab = ({
                     {/* Edit / Alter */}
                     <button
                       type="button"
-                      className="btn btn-xs bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 dark:text-amber-300 border-amber-200 gap-1 font-semibold"
+                      className="btn btn-xs bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/40 dark:hover:bg-brand-900/60 dark:text-brand-300 border-brand-200 gap-1 font-semibold"
                       onClick={() => setEditingTemplate(t)}
                       title="Edit metadata or upload new version"
                     >
@@ -277,7 +277,7 @@ const TemplateDetailRow = ({
   const currentVersion = template.versions?.[0];
 
   return (
-    <div className="p-6 border-x-4 border-l-amber-400 border-r-transparent">
+    <div className="p-6 border-x-4 border-l-brand-600 border-r-transparent">
       <div className="flex justify-between items-start mb-6">
         <div>
           <h3 className="text-lg font-bold text-base-content">{template.name}</h3>
@@ -286,7 +286,7 @@ const TemplateDetailRow = ({
         <div className="flex gap-2">
           <button
             type="button"
-            className="btn btn-sm bg-amber-400 hover:bg-amber-500 text-slate-900 border-none font-bold rounded-xl gap-1.5"
+            className="btn btn-sm bg-brand-600 hover:bg-brand-700 text-white border-none font-bold rounded-xl gap-1.5"
             onClick={handleEdit}
           >
             <Edit3 size={14} /> Edit &amp; Upload Version

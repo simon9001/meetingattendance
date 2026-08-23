@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGetReportsQuery } from '../../features/apis/apiSlice';
 import { Loader2 } from 'lucide-react';
+import { resolveDepartmentDisplay } from '../../types/formConfig';
 
 export const OrganizerSubmissionsPage: React.FC = () => {
   const { data: reportsResponse, isLoading } = useGetReportsQuery(undefined, {
@@ -39,7 +40,7 @@ export const OrganizerSubmissionsPage: React.FC = () => {
                 {submittedReports.map((r: any) => (
                   <tr key={r.report_id}>
                     <td style={{ fontWeight: 600 }}>{r.meetings?.title || 'N/A'}</td>
-                    <td>{r.meetings?.departments?.name || 'N/A'}</td>
+                    <td>{resolveDepartmentDisplay(r.meetings, 'N/A')}</td>
                     <td>{r.submitted_at ? new Date(r.submitted_at).toLocaleString() : 'N/A'}</td>
                     <td><span className="badge badge-submitted">Filed in repository</span></td>
                   </tr>

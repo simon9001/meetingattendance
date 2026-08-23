@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Trash2 } from 'lucide-react';
+import { UserPlus, Trash2, Edit3 } from 'lucide-react';
 import { PageSpinner } from '../../components/shared/Feedback';
 import type { User } from '../../data/mockData';
 import {
   useGetUsersQuery,
   useCreateUserMutation,
+  useUpdateUserMutation,
   useDisableUserMutation,
   useEnableUserMutation,
   useResetUserPasswordMutation,
   useGetDepartmentsQuery
 } from '../../features/apis/apiSlice';
-import { mapProfileToUser } from '../../features/slice/authSlice';
+import { mapProfileToUser, mapBackendRoleToFrontend } from '../../features/slice/authSlice';
 
 interface AdminUsersPageProps {
   dbTick: number;
@@ -29,6 +30,12 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ showToast }) => 
   const [tempPassword, setTempPassword] = useState('Admin@2056');
   const [forceChangePass, setForceChangePass] = useState(true);
 
+  // Edit User Form State
+  const [editingUser, setEditingUser] = useState<{ id: string; email: string } | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editRole, setEditRole] = useState<'admin' | 'hr' | 'organizer'>('organizer');
+  const [editDeptId, setEditDeptId] = useState('');
+
   // Queries & Mutations
   const { data: usersResponse, isLoading: isUsersLoading } = useGetUsersQuery(undefined, {
     pollingInterval: 3000, // real-time sync
@@ -36,6 +43,7 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ showToast }) => 
   const { data: deptsResponse, isLoading: isDeptsLoading } = useGetDepartmentsQuery(undefined);
 
   const [createUser] = useCreateUserMutation();
+  const [updateUser] = useUpdateUserMutation();
   const [disableUser] = useDisableUserMutation();
   const [enableUser] = useEnableUserMutation();
   const [resetPassword] = useResetUserPasswordMutation();
@@ -125,6 +133,44 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ showToast }) => 
     }
   };
 
+  const handleOpenEdit = (user: User) => {
+    const rawProfile = usersResponse?.data?.find((p: any) => p.id === user.id);
+    if (!rawProfile) return;
+
+    setEditingUser({ id: user.id, email: user.email });
+    setEditName(rawProfile.full_name || user.name);
+    setEditRole(mapBackendRoleToFrontend(rawProfile.role));
+    setEditDeptId(rawProfile.department_id || '');
+  };
+
+  const handleEditUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    if (!editName.trim()) {
+      showToast('Name is required', 'error');
+      return;
+    }
+
+    let backendRole: 'ict_admin' | 'hr_officer' | 'meeting_creator' = 'meeting_creator';
+    if (editRole === 'admin') backendRole = 'ict_admin';
+    else if (editRole === 'hr') backendRole = 'hr_officer';
+
+    try {
+      await updateUser({
+        id: editingUser.id,
+        full_name: editName.trim(),
+        role: backendRole,
+        department_id: editDeptId || null,
+      }).unwrap();
+
+      showToast(`User account for ${editName.trim()} updated successfully`);
+      setEditingUser(null);
+    } catch (err: any) {
+      showToast(err?.data?.error || 'Failed to update user', 'error');
+    }
+  };
+
   return (
     <div>
       <div className="search-filter-row" style={{ justifyContent: 'flex-end', marginBottom: 20 }}>
@@ -169,8 +215,18 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ showToast }) => 
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        {u.email !== 'admin@kenha.co.ke' && (
-                          <div style={{ display: 'inline-flex', gap: 8 }}>
+                        <div style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(u)}
+                            className="btn btn-secondary"
+                            style={{ padding: '4px 8px', fontSize: 11 }}
+                            title="Edit name, role, or department"
+                          >
+                            <Edit3 size={12} className="btn-icon" /> Edit
+                          </button>
+                          {u.email !== 'admin@kenha.co.ke' && (
+                            <>
                             <button
                               type="button"
                               onClick={() => handleResetPassword(u)}
@@ -188,8 +244,9 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ showToast }) => 
                             >
                               {u.status === 'active' ? 'Disable' : 'Enable'}
                             </button>
-                          </div>
-                        )}
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -289,6 +346,78 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ showToast }) => 
               <div className="modal-footer">
                 <button type="button" onClick={() => setShowAddUserModal(false)} className="btn btn-secondary">Cancel</button>
                 <button type="submit" className="btn btn-primary">Create Account</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingUser && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: 450 }}>
+            <div className="modal-header">
+              <h3>Edit User Account</h3>
+              <button onClick={() => setEditingUser(null)} className="modal-close-btn"><Trash2 size={16} /></button>
+            </div>
+            <form onSubmit={handleEditUserSubmit}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label htmlFor="e-email">Official KeNHA Email</label>
+                  <input
+                    id="e-email"
+                    type="email"
+                    className="form-input"
+                    value={editingUser.email}
+                    disabled
+                    style={{ opacity: 0.6, cursor: 'not-allowed' }}
+                  />
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Email cannot be changed here.</span>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="e-name">Full Name</label>
+                  <input
+                    id="e-name"
+                    type="text"
+                    className="form-input"
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="e-role">User Role</label>
+                  <select
+                    id="e-role"
+                    className="filter-select"
+                    style={{ width: '100%' }}
+                    value={editRole}
+                    onChange={e => setEditRole(e.target.value as any)}
+                  >
+                    <option value="organizer">Meeting Organizer</option>
+                    <option value="hr">Human Resource Officer</option>
+                    <option value="admin">ICT Administrator</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="e-dept">Department</label>
+                  <select
+                    id="e-dept"
+                    className="filter-select"
+                    style={{ width: '100%' }}
+                    value={editDeptId}
+                    onChange={e => setEditDeptId(e.target.value)}
+                  >
+                    {deptsResponse?.data?.map((d: any) => (
+                      <option key={d.department_id} value={d.department_id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" onClick={() => setEditingUser(null)} className="btn btn-secondary">Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Changes</button>
               </div>
             </form>
           </div>

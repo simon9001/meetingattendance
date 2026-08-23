@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { Info, MapPin, ShieldCheck, Sliders } from 'lucide-react';
 import type { User } from '../../data/mockData';
 import { useCreateMeetingMutation, useGetDepartmentsQuery } from '../../features/apis/apiSlice';
 import { PageSpinner, InlineSpinner } from '../../components/shared/Feedback';
 import { FormFieldsCustomizer } from '../../components/meetings/FormFieldsCustomizer';
+import { FormSection } from '../../components/meetings/FormSection';
+import { DepartmentPicker } from '../../components/meetings/DepartmentPicker';
 import type { MeetingFormConfig } from '../../types/formConfig';
-import { DEFAULT_MEETING_FORM_CONFIG, serializeMeetingDescription } from '../../types/formConfig';
+import { DEFAULT_MEETING_FORM_CONFIG } from '../../types/formConfig';
 
 interface CreateMeetingPageProps {
   currentUser: User;
@@ -32,6 +35,8 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
   const [closeTime, setCloseTime] = useState('12:00');
 
   const [deptId, setDeptId] = useState('');
+  const [deptMode, setDeptMode] = useState<'single' | 'custom'>('single');
+  const [deptLabel, setDeptLabel] = useState('');
   const [customPin, setCustomPin] = useState('');
 
   // Queries & Mutations
@@ -73,6 +78,11 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
       return;
     }
 
+    if (deptMode === 'custom' && !deptLabel.trim()) {
+      showToast('Please type a department label, or switch back to picking a single department', 'error');
+      return;
+    }
+
     const pin = customPin.trim();
     if (pin && (pin.length !== 6 || !/^\d+$/.test(pin))) {
       showToast('Custom PIN must be exactly 6 digits', 'error');
@@ -83,11 +93,12 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
       const openIso = combineDateAndTime(date, openTime);
       const closeIso = combineDateAndTime(date, closeTime);
 
-      const serializedDescription = serializeMeetingDescription(description, formConfig);
+      const cleanDesc = description.trim();
+      const fullDescription = `${cleanDesc} <!--KMTAMS_FORM_CONFIG:${JSON.stringify(formConfig)}-->`;
 
       const payload = {
         title,
-        description: serializedDescription,
+        description: fullDescription,
         meeting_type: type,
         venue: type !== 'virtual' ? venue : undefined,
         virtual_link: type !== 'physical' ? vLink : undefined,
@@ -96,7 +107,8 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
         end_time: endTime,
         attendance_open_time: openIso,
         attendance_close_time: closeIso,
-        department_id: deptId || undefined,
+        department_id: deptMode === 'single' ? (deptId || undefined) : undefined,
+        department_label: deptMode === 'custom' ? deptLabel.trim() : undefined,
         meeting_pin: pin || undefined,
         form_config: formConfig,
         custom_fields: formConfig.customFields,
@@ -121,132 +133,161 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
           <PageSpinner text="Loading departments..." />
         ) : (
           <form onSubmit={handleFormSubmit}>
-            <div className="form-group">
-              <label htmlFor="m-title">Meeting Title</label>
-              <input
-                id="m-title"
-                type="text"
-                className="form-input"
-                placeholder="e.g. FY 2026/27 Budget Consultation"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="m-desc">Description</label>
-              <textarea
-                id="m-desc"
-                className="form-input"
-                rows={3}
-                placeholder="Provide context or objectives of this session"
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                required
-                style={{ resize: 'vertical' }}
-              />
-            </div>
-
-            <div className="meeting-form-grid">
+            <FormSection
+              step={1}
+              title="Basic Info"
+              helperText="What is this session about, and what should it be called?"
+              icon={<Info size={16} style={{ color: '#5645d4' }} />}
+            >
               <div className="form-group">
-                <label htmlFor="m-type">Meeting Type</label>
-                <select
-                  id="m-type"
-                  className="filter-select"
-                  style={{ width: '100%' }}
-                  value={type}
-                  onChange={e => setType(e.target.value as any)}
-                >
-                  <option value="physical">Physical Meeting</option>
-                  <option value="virtual">Virtual Meeting</option>
-                  <option value="hybrid">Hybrid (Both)</option>
-                </select>
+                <label htmlFor="m-title">Meeting Title</label>
+                <input
+                  id="m-title"
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. FY 2026/27 Budget Consultation"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  required
+                />
               </div>
-              {type !== 'virtual' && (
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label htmlFor="m-desc">Description</label>
+                <textarea
+                  id="m-desc"
+                  className="form-input"
+                  rows={3}
+                  placeholder="Provide context or objectives of this session"
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  required
+                  style={{ resize: 'vertical' }}
+                />
+              </div>
+            </FormSection>
+
+            <FormSection
+              step={2}
+              title="Schedule & Venue"
+              helperText="Where and when the meeting itself takes place."
+              icon={<MapPin size={16} style={{ color: '#5645d4' }} />}
+            >
+              <div className="meeting-form-grid">
                 <div className="form-group">
-                  <label htmlFor="m-venue">Venue / Location</label>
+                  <label htmlFor="m-type">Meeting Type</label>
+                  <select
+                    id="m-type"
+                    className="filter-select"
+                    style={{ width: '100%' }}
+                    value={type}
+                    onChange={e => setType(e.target.value as any)}
+                  >
+                    <option value="physical">Physical Meeting</option>
+                    <option value="virtual">Virtual Meeting</option>
+                    <option value="hybrid">Hybrid (Both)</option>
+                  </select>
+                </div>
+                {type !== 'virtual' && (
+                  <div className="form-group">
+                    <label htmlFor="m-venue">Venue / Location</label>
+                    <input
+                      id="m-venue"
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. HQ Boardroom 1st floor"
+                      value={venue}
+                      onChange={e => setVenue(e.target.value)}
+                      required
+                    />
+                  </div>
+                )}
+              </div>
+
+              {type !== 'physical' && (
+                <div className="form-group">
+                  <label htmlFor="m-vlink">Virtual Meeting Link (Microsoft Teams / Zoom)</label>
                   <input
-                    id="m-venue"
-                    type="text"
+                    id="m-vlink"
+                    type="url"
                     className="form-input"
-                    placeholder="e.g. HQ Boardroom 1st floor"
-                    value={venue}
-                    onChange={e => setVenue(e.target.value)}
-                    required
+                    placeholder="e.g. https://teams.microsoft.com/..."
+                    value={vLink}
+                    onChange={e => setVLink(e.target.value)}
+                    required={type === 'virtual'}
                   />
                 </div>
               )}
-            </div>
 
-            {type !== 'physical' && (
-              <div className="form-group">
-                <label htmlFor="m-vlink">Virtual Meeting Link (Microsoft Teams / Zoom)</label>
-                <input
-                  id="m-vlink"
-                  type="url"
-                  className="form-input"
-                  placeholder="e.g. https://teams.microsoft.com/..."
-                  value={vLink}
-                  onChange={e => setVLink(e.target.value)}
-                  required={type === 'virtual'}
-                />
-              </div>
-            )}
-
-            <div className="meeting-form-grid">
               <div className="form-group">
                 <label htmlFor="m-date">Meeting Date</label>
                 <input id="m-date" type="date" className="form-input" value={date} onChange={e => setDate(e.target.value)} required />
               </div>
-              <div className="form-group">
-                <label htmlFor="m-dept">Department</label>
-                <select id="m-dept" className="filter-select" style={{ width: '100%' }} value={deptId} onChange={e => setDeptId(e.target.value)}>
-                  {deptsResponse?.data?.map((d: any) => (
-                    <option key={d.department_id} value={d.department_id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
 
-            <div className="meeting-form-grid">
-              <div className="form-group">
-                <label htmlFor="m-start">Start Time</label>
-                <input id="m-start" type="time" className="form-input" value={startTime} onChange={e => setStartTime(e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label htmlFor="m-end">End Time</label>
-                <input id="m-end" type="time" className="form-input" value={endTime} onChange={e => setEndTime(e.target.value)} required />
-              </div>
-            </div>
+              <DepartmentPicker
+                mode={deptMode}
+                deptId={deptId}
+                deptLabel={deptLabel}
+                departments={deptsResponse?.data || []}
+                onModeChange={setDeptMode}
+                onDeptIdChange={setDeptId}
+                onDeptLabelChange={setDeptLabel}
+              />
 
-            <div className="meeting-form-grid">
-              <div className="form-group">
-                <label htmlFor="m-open">Attendance Logging Opening Time</label>
-                <input id="m-open" type="time" className="form-input" value={openTime} onChange={e => setOpenTime(e.target.value)} required />
+              <div className="meeting-form-grid" style={{ marginBottom: 0 }}>
+                <div className="form-group">
+                  <label htmlFor="m-start">Start Time</label>
+                  <input id="m-start" type="time" className="form-input" value={startTime} onChange={e => setStartTime(e.target.value)} required />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="m-end">End Time</label>
+                  <input id="m-end" type="time" className="form-input" value={endTime} onChange={e => setEndTime(e.target.value)} required />
+                </div>
               </div>
-              <div className="form-group">
-                <label htmlFor="m-close">Attendance Logging Closing Time</label>
-                <input id="m-close" type="time" className="form-input" value={closeTime} onChange={e => setCloseTime(e.target.value)} required />
-              </div>
-            </div>
+            </FormSection>
 
-            <div className="meeting-form-grid">
-              <div className="form-group">
-                <label htmlFor="m-pin">Custom Meeting PIN (Optional)</label>
-                <input
-                  id="m-pin"
-                  type="text"
-                  maxLength={6}
-                  className="form-input"
-                  placeholder="6-digit numeric code (e.g. 581294) - leave blank to auto-generate"
-                  value={customPin}
-                  onChange={e => setCustomPin(e.target.value)}
-                />
+            <FormSection
+              step={3}
+              title="Attendance Window & Security"
+              helperText="Controls when the sign-in link becomes active, and the PIN participants need to access it."
+              icon={<ShieldCheck size={16} style={{ color: '#5645d4' }} />}
+            >
+              <div className="meeting-form-grid">
+                <div className="form-group">
+                  <label htmlFor="m-open">Attendance Logging Opening Time</label>
+                  <input id="m-open" type="time" className="form-input" value={openTime} onChange={e => setOpenTime(e.target.value)} required />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="m-close">Attendance Logging Closing Time</label>
+                  <input id="m-close" type="time" className="form-input" value={closeTime} onChange={e => setCloseTime(e.target.value)} required />
+                </div>
               </div>
+
+              <div className="meeting-form-grid" style={{ marginBottom: 0 }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label htmlFor="m-pin">Custom Meeting PIN (Optional)</label>
+                  <input
+                    id="m-pin"
+                    type="text"
+                    maxLength={6}
+                    className="form-input"
+                    placeholder="6-digit numeric code (e.g. 581294) - leave blank to auto-generate"
+                    value={customPin}
+                    onChange={e => setCustomPin(e.target.value)}
+                  />
+                </div>
+              </div>
+            </FormSection>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <Sliders size={16} style={{ color: '#5645d4' }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                4. Attendance Form Builder
+              </span>
             </div>
+            <p style={{ margin: '2px 0 12px', fontSize: 12, color: '#64748b' }}>
+              Choose which fields staff and visitors fill in, add custom columns, and decide whether external visitors may sign in at all.
+            </p>
 
             {/* Attendance Form & Register Column Customizer */}
             <FormFieldsCustomizer config={formConfig} onChange={setFormConfig} />

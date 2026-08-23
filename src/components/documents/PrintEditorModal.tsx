@@ -9,12 +9,12 @@ import {
 import {
   Document, Packer, Paragraph, Table, TableRow, TableCell,
   TextRun, ImageRun, AlignmentType, WidthType, VerticalAlign,
-  Header, Footer,
+  Header, Footer, PageOrientation, BorderStyle,
 } from 'docx';
 import { saveAs } from 'file-saver';
 // @ts-ignore — mammoth ships browser remaps via package.json browser field
 import mammoth from 'mammoth';
-import { parseMeetingFormConfig, getDynamicRegisterColumns, aggregateMultiDayAttendees, formatAttendanceDate } from '../../types/formConfig';
+import { parseMeetingFormConfig, getDynamicRegisterColumns, aggregateMultiDayAttendees, formatAttendanceDate, resolveDepartmentDisplay } from '../../types/formConfig';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface StaffAttendee {
@@ -66,9 +66,9 @@ const ToolbarBtn = ({ onClick, title, children, active = false, danger = false }
   <button type="button" title={title} onClick={onClick} style={{
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
     padding: '4px 8px', borderRadius: 4, border: '1px solid',
-    borderColor: danger ? '#fca5a5' : active ? '#2563eb' : '#d1d5db',
-    background: danger ? '#fef2f2' : active ? '#eff6ff' : '#fff',
-    color: danger ? '#dc2626' : active ? '#1d4ed8' : '#374151',
+    borderColor: danger ? '#fca5a5' : active ? '#5645d4' : '#d1d5db',
+    background: danger ? '#fef2f2' : active ? '#f2effc' : '#fff',
+    color: danger ? '#dc2626' : active ? '#4534b3' : '#374151',
     cursor: 'pointer', fontSize: 12, fontWeight: active ? 600 : 400, transition: 'all .12s', whiteSpace: 'nowrap',
     height: 28,
   }}>{children}</button>
@@ -102,7 +102,7 @@ const InsertDataDropdown = ({ meeting, staff, visitors }: {
     { label: '📅 Meeting Date', html: meeting.meeting_date },
     { label: '⏰ Time (Start–End)', html: `${meeting.start_time} – ${meeting.end_time}` },
     { label: '📍 Venue', html: meeting.venue || 'Virtual / N/A' },
-    { label: '🏢 Department', html: meeting.departments?.name || 'KeNHA' },
+    { label: '🏢 Department', html: resolveDepartmentDisplay(meeting, 'KeNHA') },
     { label: '👤 Organizer', html: meeting.profiles?.email || '' },
     { label: '👥 Staff Count', html: `<strong>${staff.length}</strong>` },
     { label: '🌐 Visitor Count', html: `<strong>${visitors.length}</strong>` },
@@ -158,6 +158,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
   
   // Word Editor States
   const [activeTab, setActiveTab] = useState<'home' | 'insert' | 'layout' | 'view' | 'picture'>('home');
+  const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('landscape');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [showRulers, setShowRulers] = useState<boolean>(true);
   const [showGuides, setShowGuides] = useState<boolean>(true);
@@ -170,7 +171,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
   const [dragState, setDragState] = useState<{ startX: number; startY: number; origW: number; origH: number; ratio: number } | null>(null);
   const [lockAspect, setLockAspect] = useState<boolean>(true);
 
-  // ── Print CSS injected once ──
+  // ── Print CSS injected dynamically based on orientation ──
   useEffect(() => {
     if (!isOpen) return;
     const style = document.createElement('style');
@@ -178,7 +179,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     style.innerHTML = `
       @media print {
         @page {
-          size: A4 portrait;
+          size: A4 ${orientation};
           margin: 8mm 10mm;
         }
         html, body {
@@ -261,7 +262,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
         printStyleRef.current = null;
       }
     };
-  }, [isOpen]);
+  }, [isOpen, orientation]);
 
   // ── Attendee Scope State (all / staff / visitors) ──
   const [attendeeFilter, setAttendeeFilter] = useState<'all' | 'staff' | 'visitors'>('all');
@@ -270,7 +271,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
   const getAttendanceDates = useCallback(() => {
     const formConfig = parseMeetingFormConfig(meeting);
     if (formConfig.isMultiDay && formConfig.sessionDates && formConfig.sessionDates.length > 0) {
-      return formConfig.sessionDates;
+      return formConfig.sessionDates.map(d => formatAttendanceDate(d));
     }
 
     const targetAttendees = attendeeFilter === 'staff' ? staff : attendeeFilter === 'visitors' ? visitors : [...staff, ...visitors];
@@ -306,11 +307,18 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     const allAttendeesRaw = attendeeFilter === 'staff' ? staff : attendeeFilter === 'visitors' ? visitors : [...staff, ...visitors];
     const allAttendees = isMultiDay ? aggregateMultiDayAttendees(allAttendeesRaw, dates) : allAttendeesRaw;
     const totalRowsNeeded = Math.max(12, allAttendees.length);
+
+    // Deterministic column widths so the table always fits the page width
+    const totalColWeight = dynamicCols.reduce((sum, c) => sum + c.widthPercent, 0) || 1;
+    const dynamicColsPool = isMultiDay ? 60 : 73;
+    const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * dynamicColsPool));
+    const signatureBlockWidth = isMultiDay ? 35 : 11;
+    const perDateWidth = isMultiDay ? Math.max(5, Math.floor(signatureBlockWidth / Math.max(dates.length, 1))) : 0;
     const registerTitle = attendeeFilter === 'staff'
-      ? `STAFF ATTENDANCE REGISTER ${meeting?.departments?.name ? `– ${meeting.departments.name.toUpperCase()}` : ''}`
+      ? `STAFF ATTENDANCE REGISTER ${resolveDepartmentDisplay(meeting, '') ? `– ${resolveDepartmentDisplay(meeting, '').toUpperCase()}` : ''}`
       : attendeeFilter === 'visitors'
       ? 'VISITORS ATTENDANCE REGISTER'
-      : `ATTENDANCE REGISTER ${meeting?.departments?.name ? `– ${meeting.departments.name.toUpperCase()}` : ''}`;
+      : `ATTENDANCE REGISTER ${resolveDepartmentDisplay(meeting, '') ? `– ${resolveDepartmentDisplay(meeting, '').toUpperCase()}` : ''}`;
 
     // Format single attendee submitted date
     const getAttendeeDateStr = (attendee: any) => {
@@ -324,97 +332,102 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
       const rowNum = index + 1;
 
       const sigImg = attendee?.signature_data
-        ? `<img src="${attendee.signature_data}" style="height:26px; max-width:65px; object-fit:contain; display:block; margin:0 auto;" />`
+        ? `<img src="${attendee.signature_data}" style="height:18px; max-width:${isMultiDay ? '45px' : '60px'}; object-fit:contain; display:block; margin:0 auto;" />`
         : '';
       const signedDateStr = attendee ? getAttendeeDateStr(attendee) : '';
 
-      const cellsHtml = dynamicCols.map(col => {
-        const val = attendee ? col.getValue(attendee) : '';
-        const isName = col.key === 'name';
-        return `<td contenteditable="true" style="border:1px solid #000; padding:4px 8px; font-size:10px; font-weight:${isName && val ? '600' : '400'}; color:#000;">${val}</td>`;
-      }).join('');
-
       if (!isMultiDay) {
         // Single Day Layout: S/NO | [DYNAMIC COLUMNS] | DATE SIGNED | SIGNATURE
+        const cellsHtml = dynamicCols.map((col, idx) => {
+          const val = attendee ? col.getValue(attendee) : '';
+          const isName = col.key === 'name';
+          return `<td contenteditable="true" style="border:1px solid #000; padding:2px 6px; font-size:10.5px; font-weight:${isName && val ? '600' : '400'}; color:#000; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${val}</td>`;
+        }).join('');
+
         return `
-          <tr style="height:32px;">
-            <td style="border:1px solid #000; padding:4px; text-align:center; font-weight:600; font-size:10px;">${rowNum}.</td>
+          <tr style="height:22px;">
+            <td contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; font-weight:600; font-size:10.5px; width:5%;">${rowNum}.</td>
             ${cellsHtml}
-            <td contenteditable="true" style="border:1px solid #000; padding:4px; text-align:center; font-size:9.5px; color:#000;">${signedDateStr}</td>
-            <td contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; font-size:9px;">${sigImg}</td>
+            <td contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; font-size:10px; color:#000; width:11%;">${signedDateStr}</td>
+            <td contenteditable="true" style="border:1px solid #000; padding:1px; text-align:center; width:11%;">${sigImg}</td>
           </tr>
         `;
       }
 
       // Multi-Day Layout
+      const cellsHtml = dynamicCols.map((col, idx) => {
+        const val = attendee ? col.getValue(attendee) : '';
+        const isName = col.key === 'name';
+        return `<td contenteditable="true" style="border:1px solid #000; padding:2px 4px; font-size:9.5px; font-weight:${isName && val ? '600' : '400'}; color:#000; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${val}</td>`;
+      }).join('');
+
       return `
-        <tr style="height:32px;">
-          <td style="border:1px solid #000; padding:4px; text-align:center; font-weight:600; font-size:10px;">${rowNum}.</td>
+        <tr style="height:21px;">
+          <td contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; font-weight:600; font-size:9.5px; width:5%;">${rowNum}.</td>
           ${cellsHtml}
           ${dates.map(d => {
             const sig = (attendee as any)?.signaturesByDate?.[d] || (dates.length === 1 ? attendee?.signature_data : undefined);
-            const sigHtml = sig
-              ? `<img src="${sig}" style="height:26px; max-width:65px; object-fit:contain; display:block; margin:0 auto;" />`
+            const sigItem = sig
+              ? `<img src="${sig}" style="height:17px; max-width:38px; object-fit:contain; display:block; margin:0 auto;" />`
               : '';
-            return `<td contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; font-size:9px;">${sigHtml}</td>`;
+            return `<td contenteditable="true" style="border:1px solid #000; padding:1px; text-align:center; width:${perDateWidth}%;">${sigItem}</td>`;
           }).join('')}
         </tr>
       `;
     }).join('');
 
     return `
-<div class="kenha-page-wrapper" style="position:relative; font-family:Arial, 'Helvetica Neue', sans-serif; color:#000; background:#fff; min-height:265mm; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
+<div class="kenha-page-wrapper" style="position:relative; font-family:'Times New Roman', Times, serif; font-size:11px; color:#000; background:#fff; min-height:${orientation === 'landscape' ? '180mm' : '265mm'}; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
 
   <!-- ==================== EDITABLE HEADER REGION (WORD STYLE) ==================== -->
-  <header contenteditable="true" style="margin-bottom:8px; border:1px transparent solid; outline:none; transition:border .2s;" title="Header Region - Click to edit or replace">
+  <header contenteditable="true" style="margin-bottom:4px; border:1px transparent solid; outline:none; transition:border .2s;" title="Header Region - Click to edit or replace">
     <!-- Document Reference Code Top Right -->
-    <div style="text-align:right; font-size:11px; font-weight:800; color:#000000; font-family:Arial, sans-serif; margin-bottom:3px; letter-spacing:0.3px;">
+    <div style="text-align:right; font-size:12px; font-weight:800; color:#000000; font-family:'Times New Roman', Times, serif; margin-bottom:2px; letter-spacing:0.3px;">
       KeNHA/DG/F01
     </div>
 
     <!-- Full-Width Stretched KeNHA Header Banner Image -->
-    <div style="width:100%; margin-bottom:4px; overflow:hidden;">
-      <img src="/kenha_header_banner.png" alt="Kenya National Highways Authority Header" style="width:100%; height:auto; max-height:90px; object-fit:fill; display:block;" />
+    <div style="width:100%; margin-bottom:2px; overflow:hidden;">
+      <img src="/kenha_header_banner.png" alt="Kenya National Highways Authority Header" style="width:100%; height:auto; max-height:58px; object-fit:fill; display:block;" />
     </div>
   </header>
 
   <!-- ==================== BODY CONTENT ==================== -->
-  <main style="flex:1;">
+  <main style="flex:1; display:flex; flex-direction:column;">
     <!-- Title Section -->
-    <div style="text-align:center; margin:14px 0 12px;">
-      <div contenteditable="true" style="font-size:13px; font-weight:800; text-transform:uppercase; color:#000; line-height:1.4; letter-spacing:0.2px;">
+    <div style="text-align:center; margin:6px 0 8px;">
+      <div contenteditable="true" style="font-size:14px; font-weight:800; text-transform:uppercase; color:#000; line-height:1.25; letter-spacing:0.2px;">
         ${meeting?.title || 'MEETING & TRAINING ATTENDANCE REGISTER'}
       </div>
-      <div contenteditable="true" style="font-size:12px; font-weight:800; text-transform:uppercase; color:#000; margin-top:4px; letter-spacing:0.4px;">
+      <div contenteditable="true" style="font-size:12px; font-weight:800; text-transform:uppercase; color:#000; margin-top:2px; letter-spacing:0.3px;">
         ${registerTitle}
-      </div>
-      <div style="font-size:10px; color:#374151; font-weight:600; margin-top:4px;">
-        Date: ${dates.join(', ')} &nbsp;|&nbsp; Venue: ${meeting?.venue || 'KeNHA Headquarters'} &nbsp;|&nbsp; Time: ${meeting?.start_time || ''} - ${meeting?.end_time || ''}
       </div>
     </div>
 
     <!-- Attendance Register Table with Dynamic Configured Columns -->
-    <table style="width:100%; border-collapse:collapse; font-size:10px; table-layout:fixed; border:1.5px solid #000; margin-bottom:12px;">
+    <table id="main-attendance-table" class="main-attendance-table" border="1" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:10.5px; table-layout:fixed; border:1.5px solid #000; margin-bottom:6px; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;">
       <thead>
         ${!isMultiDay ? `
-          <tr style="background:#f8fafc; text-align:left; font-weight:700; color:#000;">
-            <th style="border:1px solid #000; padding:6px 4px; text-align:center; width:5%;">S/NO</th>
-            ${dynamicCols.map(col => `
-              <th style="border:1px solid #000; padding:6px 8px;">${col.header}</th>
+          <tr style="background:#ffffff; text-align:left; font-weight:700; color:#000; height:24px;">
+            <th contenteditable="true" style="border:1px solid #000; padding:3px; text-align:center; width:5%; word-wrap:break-word;">S/NO</th>
+            ${dynamicCols.map((col, idx) => `
+              <th contenteditable="true" style="border:1px solid #000; padding:3px 6px; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${col.header}</th>
             `).join('')}
-            <th style="border:1px solid #000; padding:6px 4px; text-align:center; width:11%;">DATE SIGNED</th>
-            <th style="border:1px solid #000; padding:6px 4px; text-align:center; width:11%;">SIGNATURE</th>
+            <th contenteditable="true" style="border:1px solid #000; padding:3px; text-align:center; width:11%; word-wrap:break-word;">DATE SIGNED</th>
+            <th contenteditable="true" style="border:1px solid #000; padding:3px; text-align:center; width:11%; word-wrap:break-word;">SIGNATURE</th>
           </tr>
         ` : `
-          <tr style="background:#f8fafc; text-align:left; font-weight:700; color:#000;">
-            <th rowspan="2" style="border:1px solid #000; padding:6px 4px; text-align:center; width:5%;">S/NO</th>
-            ${dynamicCols.map(col => `
-              <th rowspan="2" style="border:1px solid #000; padding:6px 8px;">${col.header}</th>
+          <tr style="background:#ffffff; text-align:left; font-weight:700; color:#000; height:20px;">
+            <th rowspan="2" contenteditable="true" style="border:1px solid #000; padding:3px; text-align:center; width:5%; word-wrap:break-word;">S/NO</th>
+            ${dynamicCols.map((col, idx) => `
+              <th rowspan="2" contenteditable="true" style="border:1px solid #000; padding:3px 4px; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${col.header}</th>
             `).join('')}
-            <th colspan="${dates.length}" style="border:1px solid #000; padding:6px 4px; text-align:center; width:28%;">SIGNATURE</th>
+            <th colspan="${dates.length}" contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; width:${signatureBlockWidth}%; word-wrap:break-word;">SIGNATURE</th>
           </tr>
-          <tr style="background:#f8fafc; text-align:center; font-weight:700; color:#000;">
-            ${dates.map(d => `<th style="border:1px solid #000; padding:4px 2px; font-size:9.5px;">${d}</th>`).join('')}
+          <tr style="background:#ffffff; text-align:center; font-weight:700; color:#000; height:18px;">
+            ${dates.map(d => {
+              return `<th contenteditable="true" style="border:1px solid #000; padding:2px 1px; width:${perDateWidth}%; font-size:8.5px; word-wrap:break-word; white-space:nowrap;">${d}</th>`;
+            }).join('')}
           </tr>
         `}
       </thead>
@@ -425,45 +438,45 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
   </main>
 
   <!-- ==================== EDITABLE FOOTER REGION (PINNED TO LOWEST PART) ==================== -->
-  <footer contenteditable="true" style="margin-top:auto; padding-top:12px; border:1px transparent solid; outline:none; transition:border .2s; width:100%;" title="Footer Region - Click any text or section to edit directly like in Microsoft Word">
+  <footer contenteditable="true" style="margin-top:auto; padding-top:4px; border:1px transparent solid; outline:none; transition:border .2s; width:100%;" title="Footer Region - Click any text or section to edit directly like in Microsoft Word">
     <!-- Top Double Accent Line (High Contrast Black + Gold) -->
-    <div style="border-top:3px solid #1f2937; width:100%; margin-bottom:1.5px;"></div>
-    <div style="border-top:2px solid #EAB308; width:100%; margin-bottom:5px;"></div>
+    <div style="border-top:2px solid #1f2937; width:100%; margin-bottom:1px;"></div>
+    <div style="border-top:1.5px solid #EAB308; width:100%; margin-bottom:3px;"></div>
 
     <!-- Vision & Mission (Crisp, Sleek High-Contrast Text) -->
-    <div style="text-align:center; font-size:8.5px; color:#1e293b; line-height:1.35; font-family:Arial, sans-serif;">
+    <div style="text-align:center; font-size:7.5px; color:#1e293b; line-height:1.25; font-family:Arial, sans-serif;">
       <div><strong style="color:#0f172a; font-weight:800;">Vision:</strong> A quality National Trunk Road Network to all for prosperity</div>
       <div style="margin-top:1px;"><strong style="color:#0f172a; font-weight:800;">Mission:</strong> To develop and manage resilient, safe, and adequate National Trunk Roads for sustainable development through innovation and optimal utilization of resources</div>
     </div>
 
-    <!-- Core Values Segmented Matrix (Clean Horizontal Row with Dividers) -->
-    <div style="margin:4px auto; display:flex; justify-content:center;">
-      <table style="border-collapse:collapse; font-size:8.5px; text-align:center; color:#1e293b; background:#ffffff; border-top:1px dashed #cbd5e1; border-bottom:1px dashed #cbd5e1;">
+    <!-- Core Values Segmented Matrix -->
+    <div id="footer-core-values" style="margin:2px auto; display:flex; justify-content:center;">
+      <table class="footer-values-table" style="border-collapse:collapse; font-size:7.5px; text-align:center; color:#1e293b; background:#ffffff; border-top:1px dashed #cbd5e1; border-bottom:1px dashed #cbd5e1;">
         <tbody>
           <tr>
-            <td style="padding:1px 10px; font-weight:800; color:#0f172a; border-right:1px solid #cbd5e1;">Core Values:</td>
-            <td style="padding:1px 10px; font-weight:600; border-right:1px solid #cbd5e1;">Accountability</td>
-            <td style="padding:1px 10px; font-weight:600; border-right:1px solid #cbd5e1;">Sustainability</td>
-            <td style="padding:1px 10px; font-weight:600; border-right:1px solid #cbd5e1;">Innovation</td>
-            <td style="padding:1px 10px; font-weight:600;">Teamwork</td>
+            <td style="padding:1px 8px; font-weight:800; color:#0f172a; border-right:1px solid #cbd5e1;">Core Values:</td>
+            <td style="padding:1px 8px; font-weight:600; border-right:1px solid #cbd5e1;">Accountability</td>
+            <td style="padding:1px 8px; font-weight:600; border-right:1px solid #cbd5e1;">Sustainability</td>
+            <td style="padding:1px 8px; font-weight:600; border-right:1px solid #cbd5e1;">Innovation</td>
+            <td style="padding:1px 8px; font-weight:600;">Teamwork</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <!-- Social Media Bar (Strictly Single Line, Non-Wrapping) -->
-    <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:3px; font-size:7.5px; font-weight:600; color:#1e293b; font-family:Arial, sans-serif; white-space:nowrap; overflow:hidden;">
-      <span style="display:inline-flex; align-items:center; gap:3px;"><strong style="font-weight:900; font-size:8.5px;">𝕏</strong> @KeNHAKenya</span>
-      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="background:#1877F2; color:#fff; font-size:7px; font-weight:900; padding:0 3px; border-radius:2px;">f</span> Kenya National Highways Authority</span>
-      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#FF0000; font-size:8px;">▶</span> Kenya National Highways Authority</span>
-      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="background:#0A66C2; color:#fff; font-size:7px; font-weight:900; padding:0 3px; border-radius:2px;">in</span> Kenya National Highways Authority</span>
-      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="background:linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color:#fff; font-size:7px; font-weight:900; padding:0 2px; border-radius:2px;">📷</span> kenha_kenya</span>
-      <span style="display:inline-flex; align-items:center; gap:3px;"><strong style="font-weight:900; font-size:8.5px;">🎵</strong> @kenhaofficial</span>
+    <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:2px; font-size:6.8px; font-weight:600; color:#1e293b; font-family:Arial, sans-serif; white-space:nowrap; overflow:hidden;">
+      <span style="display:inline-flex; align-items:center; gap:2px;"><strong style="font-weight:900; font-size:7.5px;">𝕏</strong> @KeNHAKenya</span>
+      <span style="display:inline-flex; align-items:center; gap:2px;"><span style="background:#1877F2; color:#fff; font-size:6.5px; font-weight:900; padding:0 2px; border-radius:2px;">f</span> Kenya National Highways Authority</span>
+      <span style="display:inline-flex; align-items:center; gap:2px;"><span style="color:#FF0000; font-size:7px;">▶</span> Kenya National Highways Authority</span>
+      <span style="display:inline-flex; align-items:center; gap:2px;"><span style="background:#0A66C2; color:#fff; font-size:6.5px; font-weight:900; padding:0 2px; border-radius:2px;">in</span> Kenya National Highways Authority</span>
+      <span style="display:inline-flex; align-items:center; gap:2px;"><span style="background:linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color:#fff; font-size:6.5px; font-weight:900; padding:0 2px; border-radius:2px;">📷</span> kenha_kenya</span>
+      <span style="display:inline-flex; align-items:center; gap:2px;"><strong style="font-weight:900; font-size:7.5px;">🎵</strong> @kenhaofficial</span>
     </div>
 
     <!-- Tapered Yellow ISO 9001:2015 Ribbon Badge -->
-    <div style="display:flex; justify-content:center; margin-top:3px;">
-      <div style="background:#FEE75C; color:#000000; padding:2px 30px; font-size:8.5px; font-weight:800; letter-spacing:0.5px; border:1px solid #E6B800; clip-path:polygon(3% 0%, 97% 0%, 100% 50%, 97% 100%, 3% 100%, 0% 50%); display:inline-block;">
+    <div style="display:flex; justify-content:center; margin-top:2px;">
+      <div style="background:#FEE75C; color:#000000; padding:1px 24px; font-size:7.5px; font-weight:800; letter-spacing:0.5px; border:1px solid #E6B800; clip-path:polygon(3% 0%, 97% 0%, 100% 50%, 97% 100%, 3% 100%, 0% 50%); display:inline-block;">
         ISO 9001 : 2015 Certified
       </div>
     </div>
@@ -471,11 +484,11 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
 
 </div>
 `;
-  }, [meeting, staff, visitors, getAttendanceDates]);
+  }, [meeting, staff, visitors, getAttendanceDates, orientation]);
 
   // ── Inject placeholders into uploaded template ──────────────────────────────────
   const injectMeetingData = useCallback((html: string): string => {
-    const dept = meeting.departments?.name || 'KeNHA Department';
+    const dept = resolveDepartmentDisplay(meeting, 'KeNHA Department');
     const organizer = meeting.profiles?.email || '';
     const replacements: [RegExp, string][] = [
       [/\{\{?\s*meeting_?title\s*\}?\}/gi, `<strong>${meeting.title}</strong>`],
@@ -707,7 +720,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     if (header) {
       (header as HTMLElement).focus();
       header.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      (header as HTMLElement).style.border = '2px dashed #2563eb';
+      (header as HTMLElement).style.border = '2px dashed #5645d4';
       setTimeout(() => { (header as HTMLElement).style.border = '1px transparent solid'; }, 2500);
     }
   }, []);
@@ -719,7 +732,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     if (footer) {
       (footer as HTMLElement).focus();
       footer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      (footer as HTMLElement).style.border = '2px dashed #2563eb';
+      (footer as HTMLElement).style.border = '2px dashed #5645d4';
       setTimeout(() => { (footer as HTMLElement).style.border = '1px transparent solid'; }, 2500);
     }
   }, []);
@@ -768,7 +781,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
   // ── Print using isolated print frame ─────────────────────────────────────────
   const handlePrint = useCallback(() => {
     const canvas = document.getElementById('print-doc-canvas');
-    const content = canvas ? canvas.innerHTML : buildDefaultContent();
+    const rawContent = canvas ? canvas.innerHTML : buildDefaultContent();
 
     // Clean up old print frame if exists
     const oldIframe = document.getElementById('kenha-print-frame');
@@ -790,20 +803,26 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     const doc = iframe.contentWindow?.document;
     if (!doc) return;
 
+    // Check if rawContent already contains the wrapper to avoid duplicate nesting
+    const hasWrapper = rawContent.includes('kenha-page-wrapper');
+    const bodyHtml = hasWrapper
+      ? rawContent
+      : `<div class="kenha-page-wrapper" style="position:relative; font-family:'Times New Roman', Times, serif; font-size:11px; color:#000; background:#fff; min-height:${orientation === 'landscape' ? '180mm' : '265mm'}; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">${rawContent}</div>`;
+
     doc.open();
     doc.write(`
       <!DOCTYPE html>
       <html lang="en">
       <head>
         <meta charset="utf-8" />
-        <title>KeNHA Official Attendance Register</title>
+        <title>${meeting?.title || 'KeNHA Official Attendance Register'}</title>
         <style>
           @page {
-            size: A4 portrait;
-            margin: 8mm 10mm;
+            size: A4 ${orientation};
+            margin: 6mm 8mm;
           }
           * {
-            box-sizing: border-box;
+            box-sizing: border-box !important;
             margin: 0;
             padding: 0;
             -webkit-print-color-adjust: exact !important;
@@ -813,61 +832,83 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
           html, body {
             margin: 0;
             padding: 0;
+            width: 100%;
             height: 100%;
             background: #ffffff !important;
             color: #000000 !important;
-            font-family: Arial, 'Helvetica Neue', sans-serif;
+            font-family: 'Times New Roman', Times, serif;
             font-size: 11px;
-            width: 100%;
-            line-height: 1.3;
+            line-height: 1.2;
           }
           .kenha-page-wrapper {
             width: 100%;
-            min-height: calc(297mm - 24mm);
-            height: 100%;
+            min-height: ${orientation === 'landscape' ? '180mm' : '265mm'};
             display: flex !important;
             flex-direction: column !important;
             justify-content: space-between !important;
             box-sizing: border-box !important;
+            font-family: 'Times New Roman', Times, serif;
           }
           header {
-            margin-top: 0 !important;
-            padding-top: 0 !important;
+            margin-bottom: 4px;
+            width: 100%;
             flex-shrink: 0;
+          }
+          header img {
+            width: 100%;
+            height: auto;
+            max-height: 58px;
+            object-fit: fill;
+            display: block;
           }
           main {
             flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+          }
+          table, .main-attendance-table, #main-attendance-table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            border-spacing: 0 !important;
+            border: 1.5px solid #000000 !important;
+            margin-bottom: 6px;
+            table-layout: fixed;
+          }
+          table th, table td, .main-attendance-table th, .main-attendance-table td {
+            border: 1px solid #000000 !important;
+            word-wrap: break-word;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .footer-values-table {
+            border-collapse: collapse !important;
+            border: none !important;
+          }
+          .footer-values-table td {
+            border: none !important;
+            border-right: 1px solid #cbd5e1 !important;
+          }
+          .footer-values-table td:last-child {
+            border-right: none !important;
           }
           footer {
             margin-top: auto !important;
-            padding-bottom: 0 !important;
+            padding-top: 4px;
+            width: 100%;
             flex-shrink: 0;
           }
-          table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-            border: 1.5px solid #000000 !important;
-            margin-bottom: 12px;
-          }
-          tr {
-            page-break-inside: avoid;
-          }
-          th, td {
-            border: 1px solid #000000 !important;
-          }
           img {
-            max-height: 65px;
-            object-fit: contain;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            max-width: 100%;
           }
-          .word-guide-tag, .word-guide-line, .no-print {
+          .word-guide-tag, .word-guide-line, .no-print, #image-resize-overlay, #image-toolbar {
             display: none !important;
           }
         </style>
       </head>
       <body>
-        <div class="kenha-page-wrapper">
-          ${content}
-        </div>
+        ${bodyHtml}
       </body>
       </html>
     `);
@@ -882,20 +923,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
         console.error('Print frame error:', e);
       }
     }, 250);
-  }, [buildDefaultContent]);
-
-  // ── Keyboard shortcut for Print (Ctrl+P / Cmd+P) ─────────────
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
-        e.preventDefault();
-        handlePrint();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, handlePrint]);
+  }, [buildDefaultContent, orientation, meeting]);
 
   // ── Helper to convert base64 data URL to Uint8Array ──
   const base64ToUint8 = (base64Str?: string): Uint8Array | null => {
@@ -914,7 +942,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     }
   };
 
-  // ── Download Word ────────────────────────────────────────────────────────────
+  // ── Download Word (.docx) — Faithful mirror of the live canvas in landscape ──
   const handleDownloadWord = useCallback(async () => {
     const dates = getAttendanceDates();
     const isMultiDay = dates.length > 1;
@@ -928,135 +956,212 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     });
 
     const canvas = document.getElementById('print-doc-canvas');
-    let extractedRows: { sno: string; name: string; designation: string; department: string; dateSigned: string; signatureData?: string }[] = [];
+
+    // 2. Extract Document Reference & Title text from live canvas
+    let docRef = 'KeNHA/DG/F01';
+    let docTitle = meeting?.title || 'MEETING & TRAINING ATTENDANCE REGISTER';
+    let docSubtitle = attendeeFilter === 'staff'
+      ? `STAFF ATTENDANCE REGISTER ${resolveDepartmentDisplay(meeting, '') ? `– ${resolveDepartmentDisplay(meeting, '').toUpperCase()}` : ''}`
+      : attendeeFilter === 'visitors'
+      ? 'VISITORS ATTENDANCE REGISTER'
+      : `ATTENDANCE REGISTER ${resolveDepartmentDisplay(meeting, '') ? `– ${resolveDepartmentDisplay(meeting, '').toUpperCase()}` : ''}`;
 
     if (canvas) {
-      const trList = canvas.querySelectorAll('table tbody tr');
-      trList.forEach((tr, index) => {
-        const cells = tr.querySelectorAll('td');
-        if (cells.length >= 5) {
-          const sno = cells[0]?.textContent?.trim() || `${index + 1}.`;
-          const name = cells[1]?.textContent?.trim() || '';
-          const designation = cells[2]?.textContent?.trim() || '';
-          const department = cells[3]?.textContent?.trim() || '';
-          const dateSigned = cells[4]?.textContent?.trim() || '';
-          const img = tr.querySelector('img');
-          const signatureData = img?.src?.startsWith('data:image') ? img.src : sigMap[name.toLowerCase()];
+      const headerDiv = canvas.querySelector('header div');
+      if (headerDiv?.textContent?.trim()) {
+        docRef = headerDiv.textContent.trim();
+      }
 
-          if (name || designation || department) {
-            extractedRows.push({ sno, name, designation, department, dateSigned, signatureData });
-          }
-        }
-      });
-    }
-
-    // Fallback to props according to attendeeFilter if canvas was empty
-    if (extractedRows.length === 0) {
-      const targetAttendees = attendeeFilter === 'staff' ? staff : attendeeFilter === 'visitors' ? visitors : [...staff, ...visitors];
-      extractedRows = targetAttendees.map((a: any, i: number) => ({
-        sno: `${i + 1}.`,
-        name: a.full_name || '',
-        designation: ('designation' in a ? a.designation : (a as VisitorAttendee).position_title || 'Visitor') || '',
-        department: ('departments' in a ? a.departments?.name || 'Internal' : (a as VisitorAttendee).organization || 'External') || '',
-        dateSigned: a.submitted_at ? new Date(a.submitted_at).toLocaleDateString('en-GB') : (meeting?.meeting_date ? new Date(meeting.meeting_date).toLocaleDateString('en-GB') : ''),
-        signatureData: a.signature_data || ''
-      }));
-    }
-
-    const totalRowsNeeded = Math.max(12, extractedRows.length);
-    while (extractedRows.length < totalRowsNeeded) {
-      extractedRows.push({
-        sno: `${extractedRows.length + 1}.`,
-        name: '',
-        designation: '',
-        department: '',
-        dateSigned: '',
-      });
+      const titleElements = canvas.querySelectorAll('main > div:first-child div[contenteditable="true"]');
+      if (titleElements.length >= 1 && titleElements[0]?.textContent?.trim()) {
+        docTitle = titleElements[0].textContent.trim();
+      }
+      if (titleElements.length >= 2 && titleElements[1]?.textContent?.trim()) {
+        docSubtitle = titleElements[1].textContent.trim();
+      }
     }
 
     const formConfig = parseMeetingFormConfig(meeting);
     const dynamicCols = getDynamicRegisterColumns(formConfig, attendeeFilter);
     const totalColWeight = dynamicCols.reduce((sum, c) => sum + c.widthPercent, 0) || 1;
+    const dynamicColsPool = isMultiDay ? 60 : 73;
+    const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * dynamicColsPool));
+    const signatureBlockWidth = isMultiDay ? 35 : 11;
+    const perDateWidth = isMultiDay ? Math.max(5, Math.floor(signatureBlockWidth / Math.max(dates.length, 1))) : 0;
 
-    let tableHeaderRows: TableRow[];
+    // Target ONLY the main attendance table (avoiding footer core values table)
+    const mainTable = canvas ? (canvas.querySelector('#main-attendance-table') || canvas.querySelector('main table') || canvas.querySelector('table')) : null;
 
-    if (!isMultiDay) {
-      // Remaining 73% width for custom/dynamic columns
-      const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * 73));
+    // 3. Extract Column Headers from live canvas table
+    const customHeaders: string[] = [];
+    if (mainTable) {
+      const thList = mainTable.querySelectorAll('thead tr:first-child th');
+      if (thList.length > 0) {
+        thList.forEach((th, idx) => {
+          if (idx >= 1 && idx <= dynamicCols.length) {
+            customHeaders.push(th.textContent?.trim() || dynamicCols[idx - 1]?.header || '');
+          }
+        });
+      }
+    }
 
-      tableHeaderRows = [
-        new TableRow({
-          children: [
-            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: { fill: '0F172A' }, children: [new Paragraph({ children: [new TextRun({ text: 'S/NO', bold: true, color: 'FFFFFF', size: 18 })], alignment: AlignmentType.CENTER })] }),
-            ...dynamicCols.map((col, idx) =>
-              new TableCell({
-                width: { size: dynamicColWidths[idx], type: WidthType.PERCENTAGE },
-                shading: { fill: '0F172A' },
-                children: [new Paragraph({ children: [new TextRun({ text: col.header, bold: true, color: 'FFFFFF', size: 18 })] })],
-              })
-            ),
-            new TableCell({ width: { size: 11, type: WidthType.PERCENTAGE }, shading: { fill: '0F172A' }, children: [new Paragraph({ children: [new TextRun({ text: 'DATE SIGNED', bold: true, color: 'FFFFFF', size: 18 })], alignment: AlignmentType.CENTER })] }),
-            new TableCell({ width: { size: 11, type: WidthType.PERCENTAGE }, shading: { fill: '0F172A' }, children: [new Paragraph({ children: [new TextRun({ text: 'SIGNATURE', bold: true, color: 'FFFFFF', size: 18 })], alignment: AlignmentType.CENTER })] }),
-          ],
-        }),
-      ];
-    } else {
-      // Multi-Day Header
-      const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * 67));
+    // 4. Extract Table Rows & Cells from live canvas main table
+    interface LiveAttendeeRow {
+      sno: string;
+      cells: string[];
+      dateSigned?: string;
+      signatureData?: string;
+      multiDaySignatures?: Record<string, string>;
+    }
 
-      tableHeaderRows = [
-        new TableRow({
-          children: [
-            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: { fill: '0F172A' }, children: [new Paragraph({ children: [new TextRun({ text: 'S/NO', bold: true, color: 'FFFFFF', size: 18 })], alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
-            ...dynamicCols.map((col, idx) =>
-              new TableCell({
-                width: { size: dynamicColWidths[idx], type: WidthType.PERCENTAGE },
-                shading: { fill: '0F172A' },
-                children: [new Paragraph({ children: [new TextRun({ text: col.header, bold: true, color: 'FFFFFF', size: 18 })] })],
-                rowSpan: 2,
-                verticalAlign: VerticalAlign.CENTER,
-              })
-            ),
-            new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, shading: { fill: '0F172A' }, children: [new Paragraph({ children: [new TextRun({ text: 'SIGNATURE', bold: true, color: 'FFFFFF', size: 18 })], alignment: AlignmentType.CENTER })], columnSpan: dates.length }),
-          ],
-        }),
-        new TableRow({
-          children: dates.map(d =>
-            new TableCell({ shading: { fill: '1E293B' }, children: [new Paragraph({ children: [new TextRun({ text: d, bold: true, size: 16, color: 'FFFFFF' })], alignment: AlignmentType.CENTER })] })
-          ),
-        }),
-      ];
+    const liveRows: LiveAttendeeRow[] = [];
+
+    if (mainTable) {
+      const trList = mainTable.querySelectorAll('tbody tr');
+      trList.forEach((tr, index) => {
+        const cells = tr.querySelectorAll('td');
+        if (cells.length > 0) {
+          const sno = cells[0]?.textContent?.trim() || `${index + 1}.`;
+          const rowCells: string[] = [];
+          
+          for (let c = 0; c < dynamicCols.length; c++) {
+            const cellEl = cells[c + 1];
+            rowCells.push(cellEl?.textContent?.trim() || '');
+          }
+
+          if (!isMultiDay) {
+            const dateCellIdx = dynamicCols.length + 1;
+            const sigCellIdx = dynamicCols.length + 2;
+            const dateSigned = cells[dateCellIdx]?.textContent?.trim() || '';
+            const sigImg = cells[sigCellIdx]?.querySelector('img');
+            const signatureData = sigImg?.src?.startsWith('data:image') ? sigImg.src : undefined;
+
+            const hasAnyData = rowCells.some(v => v.length > 0) || Boolean(dateSigned) || Boolean(signatureData);
+            if (hasAnyData) {
+              liveRows.push({ sno, cells: rowCells, dateSigned, signatureData });
+            }
+          } else {
+            const multiDaySigs: Record<string, string> = {};
+            dates.forEach((d, dIdx) => {
+              const sigCellIdx = dynamicCols.length + 1 + dIdx;
+              const sigImg = cells[sigCellIdx]?.querySelector('img');
+              if (sigImg?.src?.startsWith('data:image')) {
+                multiDaySigs[d] = sigImg.src;
+              }
+            });
+
+            const hasAnyData = rowCells.some(v => v.length > 0) || Object.keys(multiDaySigs).length > 0;
+            if (hasAnyData) {
+              liveRows.push({ sno, cells: rowCells, multiDaySignatures: multiDaySigs });
+            }
+          }
+        }
+      });
     }
 
     const allAttendeesRaw = attendeeFilter === 'staff' ? staff : attendeeFilter === 'visitors' ? visitors : [...staff, ...visitors];
     const allAttendeesList = isMultiDay ? aggregateMultiDayAttendees(allAttendeesRaw, dates) : allAttendeesRaw;
-    const totalRowsCount = Math.max(12, Math.max(extractedRows.length, allAttendeesList.length));
+    const totalRowsCount = Math.max(12, Math.max(liveRows.length, allAttendeesList.length));
+
+    // Format single attendee submitted date helper
+    const getAttendeeDateStr = (attendee: any) => {
+      if (!attendee?.submitted_at) return dates[0] || '';
+      return formatAttendanceDate(attendee.submitted_at) || dates[0] || '';
+    };
+
+    // Table Border Styling for Microsoft Word
+    const singleBorder = { style: BorderStyle.SINGLE, size: 6, color: '000000' };
+    const innerBorder = { style: BorderStyle.SINGLE, size: 4, color: '000000' };
+    const tableBorders = {
+      top: singleBorder,
+      bottom: singleBorder,
+      left: singleBorder,
+      right: singleBorder,
+      insideHorizontal: innerBorder,
+      insideVertical: innerBorder,
+    };
+
+    let tableHeaderRows: TableRow[];
+
+    if (!isMultiDay) {
+      tableHeaderRows = [
+        new TableRow({
+          children: [
+            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: { fill: 'FFFFFF' }, children: [new Paragraph({ children: [new TextRun({ text: 'S/NO', bold: true, color: '000000', size: 20 })], alignment: AlignmentType.CENTER })] }),
+            ...dynamicCols.map((col, idx) =>
+              new TableCell({
+                width: { size: dynamicColWidths[idx], type: WidthType.PERCENTAGE },
+                borders: tableBorders,
+                shading: { fill: 'FFFFFF' },
+                children: [new Paragraph({ children: [new TextRun({ text: customHeaders[idx] || col.header, bold: true, color: '000000', size: 20 })] })],
+              })
+            ),
+            new TableCell({ width: { size: 11, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: { fill: 'FFFFFF' }, children: [new Paragraph({ children: [new TextRun({ text: 'DATE SIGNED', bold: true, color: '000000', size: 20 })], alignment: AlignmentType.CENTER })] }),
+            new TableCell({ width: { size: 11, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: { fill: 'FFFFFF' }, children: [new Paragraph({ children: [new TextRun({ text: 'SIGNATURE', bold: true, color: '000000', size: 20 })], alignment: AlignmentType.CENTER })] }),
+          ],
+        }),
+      ];
+    } else {
+      tableHeaderRows = [
+        new TableRow({
+          children: [
+            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: { fill: 'FFFFFF' }, children: [new Paragraph({ children: [new TextRun({ text: 'S/NO', bold: true, color: '000000', size: 18 })], alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
+            ...dynamicCols.map((col, idx) =>
+              new TableCell({
+                width: { size: dynamicColWidths[idx], type: WidthType.PERCENTAGE },
+                borders: tableBorders,
+                shading: { fill: 'FFFFFF' },
+                children: [new Paragraph({ children: [new TextRun({ text: customHeaders[idx] || col.header, bold: true, color: '000000', size: 18 })] })],
+                rowSpan: 2,
+                verticalAlign: VerticalAlign.CENTER,
+              })
+            ),
+            new TableCell({ width: { size: signatureBlockWidth, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: { fill: 'FFFFFF' }, children: [new Paragraph({ children: [new TextRun({ text: 'SIGNATURE', bold: true, color: '000000', size: 18 })], alignment: AlignmentType.CENTER })], columnSpan: dates.length }),
+          ],
+        }),
+        new TableRow({
+          children: dates.map(d => {
+            return new TableCell({
+              width: { size: perDateWidth, type: WidthType.PERCENTAGE },
+              borders: tableBorders,
+              shading: { fill: 'FFFFFF' },
+              children: [new Paragraph({ children: [new TextRun({ text: d, bold: true, size: 14, color: '000000' })], alignment: AlignmentType.CENTER })],
+            });
+          }),
+        }),
+      ];
+    }
 
     const bodyRows: TableRow[] = Array.from({ length: totalRowsCount }).map((_, index) => {
-      const rowItem = extractedRows[index] || { sno: `${index + 1}.`, name: '', dateSigned: '' };
+      const liveRow = liveRows[index];
       const attendee = allAttendeesList[index];
+      const sno = liveRow?.sno || `${index + 1}.`;
       const isEven = index % 2 === 1;
       const cellShading = isEven ? { fill: 'F8FAFC' } : undefined;
-      const rawSig = attendee?.signature_data || rowItem.signatureData || sigMap[rowItem.name?.trim().toLowerCase()];
-      const sigBytes = base64ToUint8(rawSig);
 
       if (!isMultiDay) {
-        const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * 73));
+        const valName = liveRow?.cells?.[0] !== undefined ? liveRow.cells[0] : (attendee?.full_name || '');
+        const dateSigned = liveRow?.dateSigned !== undefined ? liveRow.dateSigned : (attendee ? getAttendeeDateStr(attendee) : '');
+        const rawSig = liveRow?.signatureData || attendee?.signature_data || sigMap[valName.trim().toLowerCase()];
+        const sigBytes = base64ToUint8(rawSig);
+
         return new TableRow({
           children: [
-            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: cellShading, children: [new Paragraph({ text: rowItem.sno || `${index + 1}.`, alignment: AlignmentType.CENTER })] }),
+            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: cellShading, children: [new Paragraph({ text: sno, alignment: AlignmentType.CENTER })] }),
             ...dynamicCols.map((col, idx) => {
-              const val = attendee ? col.getValue(attendee) : (col.key === 'name' ? rowItem.name : '');
+              const val = liveRow?.cells?.[idx] !== undefined ? liveRow.cells[idx] : (attendee ? col.getValue(attendee) : '');
               const isName = col.key === 'name';
               return new TableCell({
                 width: { size: dynamicColWidths[idx], type: WidthType.PERCENTAGE },
+                borders: tableBorders,
                 shading: cellShading,
                 children: [new Paragraph({ children: [new TextRun({ text: val, bold: isName && Boolean(val), size: 18 })] })],
               });
             }),
-            new TableCell({ width: { size: 11, type: WidthType.PERCENTAGE }, shading: cellShading, children: [new Paragraph({ children: [new TextRun({ text: rowItem.dateSigned || '', size: 18 })], alignment: AlignmentType.CENTER })] }),
+            new TableCell({ width: { size: 11, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: cellShading, children: [new Paragraph({ children: [new TextRun({ text: dateSigned, size: 18 })], alignment: AlignmentType.CENTER })] }),
             new TableCell({
               width: { size: 11, type: WidthType.PERCENTAGE },
+              borders: tableBorders,
               shading: cellShading,
               children: [
                 sigBytes
@@ -1064,14 +1169,14 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                       children: [
                         new ImageRun({
                           data: sigBytes,
-                          transformation: { width: 55, height: 20 },
+                          transformation: { width: 45, height: 16 },
                           type: 'png',
                         } as any),
                       ],
                       alignment: AlignmentType.CENTER,
                     })
                   : new Paragraph({
-                      children: [new TextRun({ text: (attendee || rowItem.name) ? 'Signed' : '', italics: true, size: 16 })],
+                      children: [new TextRun({ text: (dateSigned || valName) ? 'Signed' : '', italics: true, size: 18 })],
                       alignment: AlignmentType.CENTER,
                     }),
               ],
@@ -1080,23 +1185,27 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
         });
       }
 
-      const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * 67));
+      const valName = liveRow?.cells?.[0] !== undefined ? liveRow.cells[0] : (attendee?.full_name || '');
+
       return new TableRow({
         children: [
-          new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: cellShading, children: [new Paragraph({ text: rowItem.sno || `${index + 1}.`, alignment: AlignmentType.CENTER })] }),
+          new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: cellShading, children: [new Paragraph({ text: sno, alignment: AlignmentType.CENTER })] }),
           ...dynamicCols.map((col, idx) => {
-            const val = attendee ? col.getValue(attendee) : (col.key === 'name' ? rowItem.name : '');
+            const val = liveRow?.cells?.[idx] !== undefined ? liveRow.cells[idx] : (attendee ? col.getValue(attendee) : '');
             const isName = col.key === 'name';
             return new TableCell({
               width: { size: dynamicColWidths[idx], type: WidthType.PERCENTAGE },
+              borders: tableBorders,
               shading: cellShading,
-              children: [new Paragraph({ children: [new TextRun({ text: val, bold: isName && Boolean(val), size: 18 })] })],
+              children: [new Paragraph({ children: [new TextRun({ text: val, bold: isName && Boolean(val), size: 16 })] })],
             });
           }),
           ...dates.map(d => {
-            const rawSigDate = (attendee as any)?.signaturesByDate?.[d] || (dates.length === 1 ? (attendee?.signature_data || rowItem.signatureData) : undefined);
+            const rawSigDate = liveRow?.multiDaySignatures?.[d] || (attendee as any)?.signaturesByDate?.[d] || (dates.length === 1 ? (attendee?.signature_data || sigMap[valName.trim().toLowerCase()]) : undefined);
             const dateSigBytes = base64ToUint8(rawSigDate);
             return new TableCell({
+              width: { size: perDateWidth, type: WidthType.PERCENTAGE },
+              borders: tableBorders,
               shading: cellShading,
               children: [
                 dateSigBytes
@@ -1104,14 +1213,14 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                       children: [
                         new ImageRun({
                           data: dateSigBytes,
-                          transformation: { width: 55, height: 20 },
+                          transformation: { width: 35, height: 14 },
                           type: 'png',
                         } as any),
                       ],
                       alignment: AlignmentType.CENTER,
                     })
                   : new Paragraph({
-                      children: [new TextRun({ text: rawSigDate ? 'Signed' : '', italics: true })],
+                      children: [new TextRun({ text: rawSigDate ? 'Signed' : '', italics: true, size: 14 })],
                       alignment: AlignmentType.CENTER,
                     }),
               ],
@@ -1120,12 +1229,6 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
         ],
       });
     });
-
-    const registerTitle = attendeeFilter === 'staff'
-      ? `STAFF ATTENDANCE REGISTER ${meeting?.departments?.name ? `– ${meeting.departments.name.toUpperCase()}` : ''}`
-      : attendeeFilter === 'visitors'
-      ? 'VISITORS ATTENDANCE REGISTER'
-      : `ATTENDANCE REGISTER ${meeting?.departments?.name ? `– ${meeting.departments.name.toUpperCase()}` : ''}`;
 
     // Fetch KeNHA banner image and footer image buffer for Word document
     let bannerUint8: Uint8Array | null = null;
@@ -1144,27 +1247,43 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     } catch {}
 
     const doc = new Document({
+      styles: {
+        default: {
+          document: {
+            run: { font: 'Times New Roman', size: 20, color: '000000' },
+          },
+        },
+      },
       sections: [{
         properties: {
           page: {
-            margin: { top: 1200, right: 720, bottom: 1000, left: 720, header: 360, footer: 360 },
+            size: orientation === 'landscape' ? {
+              orientation: PageOrientation.LANDSCAPE,
+              width: 16838,
+              height: 11906,
+            } : {
+              orientation: PageOrientation.PORTRAIT,
+              width: 11906,
+              height: 16838,
+            },
+            margin: { top: 576, right: 576, bottom: 576, left: 576, header: 288, footer: 288 },
           },
         },
         headers: {
           default: new Header({
             children: [
-              new Paragraph({ children: [new TextRun({ text: 'KeNHA/DG/F01', bold: true, size: 18 })], alignment: AlignmentType.RIGHT }),
+              new Paragraph({ children: [new TextRun({ text: docRef, bold: true, size: 20 })], alignment: AlignmentType.RIGHT }),
               bannerUint8
                 ? new Paragraph({
                     children: [
                       new ImageRun({
                         data: bannerUint8,
-                        transformation: { width: 620, height: 75 },
+                        transformation: { width: orientation === 'landscape' ? 780 : 540, height: 60 },
                         type: 'png',
                       } as any),
                     ],
                     alignment: AlignmentType.CENTER,
-                    spacing: { after: 20 },
+                    spacing: { after: 10 },
                   })
                 : new Paragraph({ text: '' }),
             ],
@@ -1178,7 +1297,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                     children: [
                       new ImageRun({
                         data: footerUint8,
-                        transformation: { width: 620, height: 55 },
+                        transformation: { width: orientation === 'landscape' ? 780 : 540, height: 45 },
                         type: 'png',
                       } as any),
                     ],
@@ -1186,7 +1305,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                   })
                 : new Paragraph({
                     children: [
-                      new TextRun({ text: 'ISO 9001 : 2015 Certified', bold: true, size: 16 }),
+                      new TextRun({ text: 'ISO 9001 : 2015 Certified', bold: true, size: 14 }),
                     ],
                     alignment: AlignmentType.CENTER,
                   }),
@@ -1194,11 +1313,11 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
           }),
         },
         children: [
-          new Paragraph({ children: [new TextRun({ text: meeting?.title || 'CS MEETING PROGRAM', bold: true, size: 24, color: '000000' })], alignment: AlignmentType.CENTER }),
-          new Paragraph({ children: [new TextRun({ text: registerTitle, bold: true, size: 20, color: '000000' })], alignment: AlignmentType.CENTER }),
-          new Paragraph({ children: [new TextRun({ text: `Date: ${dates.join(', ')}  |  Venue: ${meeting?.venue || 'KeNHA Auditorium'}  |  Time: ${meeting?.start_time || ''} - ${meeting?.end_time || ''}`, size: 16, color: '475569' })], alignment: AlignmentType.CENTER, spacing: { after: 150 } }),
+          new Paragraph({ children: [new TextRun({ text: docTitle, bold: true, size: 26, color: '000000' })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new TextRun({ text: docSubtitle, bold: true, size: 22, color: '000000' })], alignment: AlignmentType.CENTER, spacing: { after: 120 } }),
           new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: tableBorders,
             rows: [...tableHeaderRows, ...bodyRows],
           }),
         ],
@@ -1207,16 +1326,33 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
 
     const blob = await Packer.toBlob(doc);
     const scopeTag = attendeeFilter === 'staff' ? '_staff' : attendeeFilter === 'visitors' ? '_visitors' : '_all';
-    const safeName = (meeting?.title || 'meeting').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const safeName = (docTitle || 'meeting').replace(/[^a-z0-9]/gi, '_').toLowerCase();
     saveAs(blob, `${safeName}_attendance${scopeTag}_${meeting?.meeting_date || 'doc'}.docx`);
-  }, [meeting, staff, visitors, getAttendanceDates, attendeeFilter]);
+  }, [meeting, staff, visitors, getAttendanceDates, attendeeFilter, orientation]);
+
+  // ── Keyboard shortcuts (Ctrl+P for Print, Ctrl+S for Save Word) ─────────────
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        handlePrint();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleDownloadWord();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, handlePrint, handleDownloadWord]);
 
   if (!isOpen) return null;
 
   const marginPaddingMap = {
-    normal: '18mm 22mm',
-    narrow: '10mm 12mm',
-    wide: '25mm 30mm',
+    normal: orientation === 'landscape' ? '12mm 18mm' : '18mm 22mm',
+    narrow: orientation === 'landscape' ? '8mm 10mm' : '10mm 12mm',
+    wide: orientation === 'landscape' ? '18mm 24mm' : '25mm 30mm',
   };
 
   return (
@@ -1252,7 +1388,20 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
               <FileText size={16} style={{ color: '#fff' }} />
             </div>
             <span style={{ fontSize: 13, fontWeight: 600, color: '#f8fafc', letterSpacing: 0.2 }}>
-              {meeting.title || 'KeNHA Document Editor'} - Microsoft Word
+              {meeting.title || 'KeNHA Document Editor'} KMTAMS Editor
+            </span>
+            <span style={{
+              fontSize: 10,
+              fontWeight: 700,
+              background: orientation === 'landscape' ? '#0e7490' : '#334155',
+              color: orientation === 'landscape' ? '#cffafe' : '#cbd5e1',
+              padding: '2px 8px',
+              borderRadius: 4,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              border: orientation === 'landscape' ? '1px solid #155e75' : '1px solid #475569',
+            }}>
+              {orientation.toUpperCase()}
             </span>
           </div>
 
@@ -1266,7 +1415,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                 padding: '4px 10px',
                 fontSize: 11,
                 fontWeight: attendeeFilter === 'all' ? 700 : 500,
-                background: attendeeFilter === 'all' ? '#2563eb' : 'transparent',
+                background: attendeeFilter === 'all' ? '#5645d4' : 'transparent',
                 color: attendeeFilter === 'all' ? '#ffffff' : '#cbd5e1',
                 border: 'none',
                 borderRadius: 4,
@@ -1287,7 +1436,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                 padding: '4px 10px',
                 fontSize: 11,
                 fontWeight: attendeeFilter === 'staff' ? 700 : 500,
-                background: attendeeFilter === 'staff' ? '#2563eb' : 'transparent',
+                background: attendeeFilter === 'staff' ? '#5645d4' : 'transparent',
                 color: attendeeFilter === 'staff' ? '#ffffff' : '#cbd5e1',
                 border: 'none',
                 borderRadius: 4,
@@ -1308,7 +1457,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                 padding: '4px 10px',
                 fontSize: 11,
                 fontWeight: attendeeFilter === 'visitors' ? 700 : 500,
-                background: attendeeFilter === 'visitors' ? '#2563eb' : 'transparent',
+                background: attendeeFilter === 'visitors' ? '#5645d4' : 'transparent',
                 color: attendeeFilter === 'visitors' ? '#ffffff' : '#cbd5e1',
                 border: 'none',
                 borderRadius: 4,
@@ -1327,7 +1476,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button type="button" onClick={handleDownloadWord} style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px',
-              borderRadius: 4, border: 'none', background: '#2563eb', color: '#fff',
+              borderRadius: 4, border: 'none', background: '#5645d4', color: '#fff',
               cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'background .15s',
             }} title="Export as Microsoft Word .docx">
               <FileDown size={14} /> Save .docx
@@ -1352,7 +1501,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
         </div>
 
         {/* Word Ribbon Tab Bar */}
-        <div style={{ display: 'flex', gap: 2, padding: '0 12px', background: '#1e3a8a', borderBottom: '1px solid #1d4ed8' }}>
+        <div style={{ display: 'flex', gap: 2, padding: '0 12px', background: '#1e3a8a', borderBottom: '1px solid #4534b3' }}>
           {[
             { id: 'home', label: 'Home' },
             { id: 'insert', label: 'Insert' },
@@ -1392,7 +1541,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
 
               {/* Font Family & Size */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <select onChange={e => execCmd('fontName', e.target.value)} defaultValue="Arial"
+                <select onChange={e => execCmd('fontName', e.target.value)} defaultValue="Times New Roman"
                   style={{ height: 26, border: '1px solid #cbd5e1', borderRadius: 4, fontSize: 12, padding: '0 6px', background: '#fff', color: '#334151' }}>
                   <option value="Arial">Arial</option>
                   <option value="Calibri">Calibri</option>
@@ -1401,7 +1550,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                   <option value="Georgia">Georgia</option>
                 </select>
 
-                <select onChange={e => execCmd('fontSize', e.target.value)} defaultValue="2"
+                <select onChange={e => execCmd('fontSize', e.target.value)} defaultValue="4"
                   style={{ height: 26, border: '1px solid #cbd5e1', borderRadius: 4, fontSize: 12, padding: '0 6px', background: '#fff', color: '#334151' }}>
                   <option value="1">8pt</option>
                   <option value="2">10pt</option>
@@ -1503,12 +1652,26 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
           {activeTab === 'layout' && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                <Layout size={13} style={{ color: '#475569' }} /> Orientation:
+                <select
+                  value={orientation}
+                  onChange={e => setOrientation(e.target.value as any)}
+                  style={{ height: 26, border: '1px solid #cbd5e1', borderRadius: 4, fontSize: 12, padding: '0 6px', background: '#fff', fontWeight: 600, color: '#1e3a8a' }}
+                >
+                  <option value="landscape">Landscape (Recommended / Default)</option>
+                  <option value="portrait">Portrait</option>
+                </select>
+              </div>
+
+              <div style={{ width: 1, height: 22, background: '#cbd5e1' }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
                 <Layout size={13} style={{ color: '#475569' }} /> Margins:
                 <select value={marginSize} onChange={e => setMarginSize(e.target.value as any)}
                   style={{ height: 26, border: '1px solid #cbd5e1', borderRadius: 4, fontSize: 12, padding: '0 6px', background: '#fff' }}>
-                  <option value="normal">Normal (22mm)</option>
-                  <option value="narrow">Narrow (12mm)</option>
-                  <option value="wide">Wide (30mm)</option>
+                  <option value="normal">Normal ({orientation === 'landscape' ? '18mm' : '22mm'})</option>
+                  <option value="narrow">Narrow ({orientation === 'landscape' ? '10mm' : '12mm'})</option>
+                  <option value="wide">Wide ({orientation === 'landscape' ? '24mm' : '30mm'})</option>
                 </select>
               </div>
 
@@ -1560,7 +1723,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                 <ToolbarBtn onClick={() => setImgAlign('right')} title="Align Right"><AlignRight size={13} /></ToolbarBtn>
               </div>
               <div style={{ width: 1, height: 22, background: '#cbd5e1' }} />
-              <button type="button" onClick={() => setLockAspect(!lockAspect)} style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: 4, background: lockAspect ? '#eff6ff' : '#fff', color: lockAspect ? '#2563eb' : '#334155', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button type="button" onClick={() => setLockAspect(!lockAspect)} style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: 4, background: lockAspect ? '#f2effc' : '#fff', color: lockAspect ? '#5645d4' : '#334155', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                 {lockAspect ? <Lock size={12} /> : <Unlock size={12} />} {lockAspect ? 'Aspect Ratio Locked' : 'Aspect Ratio Free'}
               </button>
               <button type="button" onClick={deleteSelectedImg} style={{ padding: '4px 8px', border: '1px solid #fca5a5', borderRadius: 4, background: '#fef2f2', color: '#dc2626', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1580,13 +1743,13 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
         {/* Top Horizontal Ruler */}
         {showRulers && (
           <div id="print-editor-ruler-top" style={{
-            width: '210mm', height: 20, background: '#e2e8f0', borderBottom: '1px solid #cbd5e1',
+            width: orientation === 'landscape' ? '297mm' : '210mm', height: 20, background: '#e2e8f0', borderBottom: '1px solid #cbd5e1',
             marginTop: 12, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
             padding: '0 20px', fontSize: 9, color: '#64748b', userSelect: 'none', position: 'sticky', top: 0, zIndex: 10,
             boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
           }}>
-            {Array.from({ length: 9 }).map((_, i) => (
-              <span key={i} style={{ borderLeft: '1px solid #94a3b8', height: i % 2 === 0 ? 10 : 5, paddingLeft: 2 }}>{i}</span>
+            {Array.from({ length: orientation === 'landscape' ? 14 : 9 }).map((_, i) => (
+              <span key={i} style={{ borderLeft: '1px solid #94a3b8', height: i % 2 === 0 ? 10 : 5, paddingLeft: 2 }}>{i * 2}</span>
             ))}
           </div>
         )}
@@ -1601,7 +1764,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
               boxShadow: '0 4px 20px rgba(0,0,0,.25)',
               fontSize: 13, color: '#374151', fontWeight: 500,
             }}>
-              <Loader2 size={18} style={{ color: '#2563eb', animation: 'spin 1s linear infinite' }} />
+              <Loader2 size={18} style={{ color: '#5645d4', animation: 'spin 1s linear infinite' }} />
               Merging meeting data into template...
             </div>
           )}
@@ -1610,7 +1773,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
             {/* MS Word Header Guide Tag */}
             {showGuides && (
               <div className="word-guide-tag" onClick={handleFocusHeader} style={{
-                position: 'absolute', top: 12, left: -95, background: '#eff6ff', color: '#1d4ed8',
+                position: 'absolute', top: 12, left: -95, background: '#f2effc', color: '#4534b3',
                 border: '1px dashed #3b82f6', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600,
                 cursor: 'pointer', zIndex: 5, display: 'flex', alignItems: 'center', gap: 4,
               }} title="Click to edit Header">
@@ -1621,7 +1784,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
             {/* MS Word Footer Guide Tag */}
             {showGuides && (
               <div className="word-guide-tag" onClick={handleFocusFooter} style={{
-                position: 'absolute', bottom: 20, left: -90, background: '#eff6ff', color: '#1d4ed8',
+                position: 'absolute', bottom: 20, left: -90, background: '#f2effc', color: '#4534b3',
                 border: '1px dashed #3b82f6', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600,
                 cursor: 'pointer', zIndex: 5, display: 'flex', alignItems: 'center', gap: 4,
               }} title="Click to edit Footer">
@@ -1637,7 +1800,8 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
               suppressContentEditableWarning
               spellCheck
               style={{
-                width: '210mm', minHeight: '297mm',
+                width: orientation === 'landscape' ? '297mm' : '210mm',
+                minHeight: orientation === 'landscape' ? '210mm' : '297mm',
                 background: '#ffffff',
                 boxShadow: '0 12px 36px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.05)',
                 borderRadius: 2,
@@ -1660,7 +1824,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                   left: imgOverlay.left,
                   width: imgOverlay.width,
                   height: imgOverlay.height,
-                  border: '2px solid #2563eb',
+                  border: '2px solid #5645d4',
                   pointerEvents: 'none',
                   zIndex: 30,
                   boxSizing: 'border-box',
@@ -1702,7 +1866,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                   <button type="button" onClick={() => setImgAlign('center')} title="Align Center" style={{ border: 'none', background: 'transparent', color: '#cbd5e1', cursor: 'pointer', padding: 2 }}><AlignCenter size={13} /></button>
                   <button type="button" onClick={() => setImgAlign('right')} title="Align Right" style={{ border: 'none', background: 'transparent', color: '#cbd5e1', cursor: 'pointer', padding: 2 }}><AlignRight size={13} /></button>
                   <div style={{ width: 1, height: 14, background: '#475569' }} />
-                  <button type="button" onClick={() => setLockAspect(!lockAspect)} title={lockAspect ? 'Lock Aspect Ratio (Active)' : 'Unlock Aspect Ratio'} style={{ border: 'none', background: lockAspect ? '#2563eb' : '#334155', color: '#fff', padding: '3px 6px', borderRadius: 3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 10 }}>
+                  <button type="button" onClick={() => setLockAspect(!lockAspect)} title={lockAspect ? 'Lock Aspect Ratio (Active)' : 'Unlock Aspect Ratio'} style={{ border: 'none', background: lockAspect ? '#5645d4' : '#334155', color: '#fff', padding: '3px 6px', borderRadius: 3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 10 }}>
                     {lockAspect ? <Lock size={11} /> : <Unlock size={11} />} {lockAspect ? 'Locked' : 'Free'}
                   </button>
                   <button type="button" onClick={deleteSelectedImg} title="Delete Image" style={{ border: 'none', background: '#dc2626', color: '#fff', padding: '3px 6px', borderRadius: 3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 10 }}>
@@ -1733,7 +1897,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                       width: 10,
                       height: 10,
                       background: '#ffffff',
-                      border: '2px solid #2563eb',
+                      border: '2px solid #5645d4',
                       borderRadius: 2,
                       cursor: h.cursor,
                       pointerEvents: 'auto',

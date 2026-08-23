@@ -4,6 +4,7 @@ import { PageSpinner } from '../../components/shared/Feedback';
 import { useGetMeetingsQuery, useGetMeetingAttendanceQuery } from '../../features/apis/apiSlice';
 import { GenerateDocumentModal } from '../../components/documents/GenerateDocumentModal';
 import { PrintEditorModal } from '../../components/documents/PrintEditorModal';
+import { resolveDepartmentDisplay } from '../../types/formConfig';
 
 import type { User } from '../../data/mockData';
 
@@ -81,7 +82,7 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
           <div className="panel-header" style={{ flexWrap: 'wrap', gap: 12 }}>
             <div>
               <span className="badge badge-submitted" style={{ marginRight: 8 }}>
-                {selectedMeeting.departments?.name || 'KeNHA Department'}
+                {resolveDepartmentDisplay(selectedMeeting, 'KeNHA Department')}
               </span>
               <span
                 className={`badge ${
@@ -306,7 +307,7 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
                           {m.meeting_date} | {m.start_time}-{m.end_time}
                         </div>
                       </td>
-                      <td>{m.departments?.name || 'KeNHA Department'}</td>
+                      <td>{resolveDepartmentDisplay(m, 'KeNHA Department')}</td>
                       <td>{m.profiles?.email || 'N/A'}</td>
                       <td>
                         <span className={`badge ${m.attendance_status === 'open' ? 'badge-active' : m.attendance_status === 'not_started' ? 'badge-closed' : 'badge-submitted'}`}>

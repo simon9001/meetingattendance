@@ -122,6 +122,10 @@ export const apiSlice = createApi({
       query: () => '/meetings',
       providesTags: ['Meeting'],
     }),
+    getMeetingDashboardStats: builder.query<{ success: boolean; data: { totalAttendanceStaff: number; totalAttendanceVisitors: number; totalAttendance: number } }, void>({
+      query: () => '/meetings/dashboard-stats',
+      providesTags: ['Attendance'],
+    }),
     getMeeting: builder.query({
       query: (id) => `/meetings/${id}`,
       providesTags: (_result, _error, id) => [{ type: 'Meeting', id }],
@@ -292,6 +296,7 @@ export const {
   useDeleteDepartmentMutation,
   // Meetings
   useGetMeetingsQuery,
+  useGetMeetingDashboardStatsQuery,
   useGetMeetingQuery,
   useGetLiveMeetingQuery,
   useCreateMeetingMutation,

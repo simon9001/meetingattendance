@@ -3,7 +3,7 @@ import { X, FileText, Download, CheckCircle2, FileType, FileCode, Hash, Sparkles
 import {
   Document, Packer, Paragraph, Table, TableRow, TableCell,
   TextRun, ImageRun, AlignmentType, WidthType, VerticalAlign,
-  Header, Footer,
+  Header, Footer, PageOrientation, BorderStyle,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { useGetTemplatesQuery, useRenderDocumentMutation } from '../../features/apis/documentsApi';
@@ -12,7 +12,7 @@ import {
   useGetMeetingAttendanceQuery,
 } from '../../features/apis/apiSlice';
 import { AlertError, InlineSpinner } from '../shared/Feedback';
-import { parseMeetingFormConfig, getDynamicRegisterColumns, aggregateMultiDayAttendees, formatAttendanceDate } from '../../types/formConfig';
+import { parseMeetingFormConfig, getDynamicRegisterColumns, aggregateMultiDayAttendees, formatAttendanceDate, resolveDepartmentDisplay } from '../../types/formConfig';
 
 interface GenerateDocumentModalProps {
   isOpen: boolean;
@@ -71,7 +71,7 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
   const getAttendanceDates = () => {
     const formConfig = parseMeetingFormConfig(meeting);
     if (formConfig.isMultiDay && formConfig.sessionDates && formConfig.sessionDates.length > 0) {
-      return formConfig.sessionDates;
+      return formConfig.sessionDates.map(d => formatAttendanceDate(d));
     }
 
     const targetAttendees = attendeeScope === 'staff' ? staff : attendeeScope === 'visitors' ? visitors : [...staff, ...visitors];
@@ -131,6 +131,18 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
       return formatAttendanceDate(attendee.submitted_at) || dates[0] || '';
     };
 
+    // Table Border Styling for Microsoft Word
+    const singleBorder = { style: BorderStyle.SINGLE, size: 6, color: '000000' };
+    const innerBorder = { style: BorderStyle.SINGLE, size: 4, color: '000000' };
+    const tableBorders = {
+      top: singleBorder,
+      bottom: singleBorder,
+      left: singleBorder,
+      right: singleBorder,
+      insideHorizontal: innerBorder,
+      insideVertical: innerBorder,
+    };
+
     let tableHeaderRows: TableRow[];
 
     if (!isMultiDay) {
@@ -139,42 +151,50 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
       tableHeaderRows = [
         new TableRow({
           children: [
-            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: { fill: '0F172A' }, children: [new Paragraph({ children: [new TextRun({ text: 'S/NO', bold: true, color: 'FFFFFF', size: 18 })], alignment: AlignmentType.CENTER })] }),
+            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: { fill: 'FFFFFF' }, children: [new Paragraph({ children: [new TextRun({ text: 'S/NO', bold: true, color: '000000', size: 20 })], alignment: AlignmentType.CENTER })] }),
             ...dynamicCols.map((col, idx) =>
               new TableCell({
                 width: { size: dynamicColWidths[idx], type: WidthType.PERCENTAGE },
-                shading: { fill: '0F172A' },
-                children: [new Paragraph({ children: [new TextRun({ text: col.header, bold: true, color: 'FFFFFF', size: 18 })] })],
+                borders: tableBorders,
+                shading: { fill: 'FFFFFF' },
+                children: [new Paragraph({ children: [new TextRun({ text: col.header, bold: true, color: '000000', size: 20 })] })],
               })
             ),
-            new TableCell({ width: { size: 11, type: WidthType.PERCENTAGE }, shading: { fill: '0F172A' }, children: [new Paragraph({ children: [new TextRun({ text: 'DATE SIGNED', bold: true, color: 'FFFFFF', size: 18 })], alignment: AlignmentType.CENTER })] }),
-            new TableCell({ width: { size: 11, type: WidthType.PERCENTAGE }, shading: { fill: '0F172A' }, children: [new Paragraph({ children: [new TextRun({ text: 'SIGNATURE', bold: true, color: 'FFFFFF', size: 18 })], alignment: AlignmentType.CENTER })] }),
+            new TableCell({ width: { size: 11, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: { fill: 'FFFFFF' }, children: [new Paragraph({ children: [new TextRun({ text: 'DATE SIGNED', bold: true, color: '000000', size: 20 })], alignment: AlignmentType.CENTER })] }),
+            new TableCell({ width: { size: 11, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: { fill: 'FFFFFF' }, children: [new Paragraph({ children: [new TextRun({ text: 'SIGNATURE', bold: true, color: '000000', size: 20 })], alignment: AlignmentType.CENTER })] }),
           ],
         }),
       ];
     } else {
       // Multi-Day Header
-      const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * 67));
+      const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * 60));
+      const perDateWidth = Math.max(5, Math.floor(35 / Math.max(dates.length, 1)));
       tableHeaderRows = [
         new TableRow({
           children: [
-            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: { fill: '0F172A' }, children: [new Paragraph({ children: [new TextRun({ text: 'S/NO', bold: true, color: 'FFFFFF', size: 18 })], alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
+            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: { fill: 'FFFFFF' }, children: [new Paragraph({ children: [new TextRun({ text: 'S/NO', bold: true, color: '000000', size: 18 })], alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
             ...dynamicCols.map((col, idx) =>
               new TableCell({
                 width: { size: dynamicColWidths[idx], type: WidthType.PERCENTAGE },
-                shading: { fill: '0F172A' },
-                children: [new Paragraph({ children: [new TextRun({ text: col.header, bold: true, color: 'FFFFFF', size: 18 })] })],
+                borders: tableBorders,
+                shading: { fill: 'FFFFFF' },
+                children: [new Paragraph({ children: [new TextRun({ text: col.header, bold: true, color: '000000', size: 18 })] })],
                 rowSpan: 2,
                 verticalAlign: VerticalAlign.CENTER,
               })
             ),
-            new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, shading: { fill: '0F172A' }, children: [new Paragraph({ children: [new TextRun({ text: 'SIGNATURE', bold: true, color: 'FFFFFF', size: 18 })], alignment: AlignmentType.CENTER })], columnSpan: dates.length }),
+            new TableCell({ width: { size: 35, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: { fill: 'FFFFFF' }, children: [new Paragraph({ children: [new TextRun({ text: 'SIGNATURE', bold: true, color: '000000', size: 18 })], alignment: AlignmentType.CENTER })], columnSpan: dates.length }),
           ],
         }),
         new TableRow({
-          children: dates.map(d =>
-            new TableCell({ shading: { fill: '1E293B' }, children: [new Paragraph({ children: [new TextRun({ text: d, bold: true, size: 16, color: 'FFFFFF' })], alignment: AlignmentType.CENTER })] })
-          ),
+          children: dates.map(d => {
+            return new TableCell({
+              width: { size: perDateWidth, type: WidthType.PERCENTAGE },
+              borders: tableBorders,
+              shading: { fill: 'FFFFFF' },
+              children: [new Paragraph({ children: [new TextRun({ text: d, bold: true, size: 14, color: '000000' })], alignment: AlignmentType.CENTER })],
+            });
+          }),
         }),
       ];
     }
@@ -190,19 +210,21 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
         const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * 73));
         return new TableRow({
           children: [
-            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: cellShading, children: [new Paragraph({ text: `${index + 1}.`, alignment: AlignmentType.CENTER })] }),
+            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: cellShading, children: [new Paragraph({ text: `${index + 1}.`, alignment: AlignmentType.CENTER })] }),
             ...dynamicCols.map((col, idx) => {
               const val = attendee ? col.getValue(attendee) : '';
               const isName = col.key === 'name';
               return new TableCell({
                 width: { size: dynamicColWidths[idx], type: WidthType.PERCENTAGE },
+                borders: tableBorders,
                 shading: cellShading,
                 children: [new Paragraph({ children: [new TextRun({ text: val, bold: isName && Boolean(val), size: 18 })] })],
               });
             }),
-            new TableCell({ width: { size: 11, type: WidthType.PERCENTAGE }, shading: cellShading, children: [new Paragraph({ children: [new TextRun({ text: signedDateStr, size: 18 })], alignment: AlignmentType.CENTER })] }),
+            new TableCell({ width: { size: 11, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: cellShading, children: [new Paragraph({ children: [new TextRun({ text: signedDateStr, size: 18 })], alignment: AlignmentType.CENTER })] }),
             new TableCell({
               width: { size: 11, type: WidthType.PERCENTAGE },
+              borders: tableBorders,
               shading: cellShading,
               children: [
                 sigBytes
@@ -210,14 +232,14 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
                       children: [
                         new ImageRun({
                           data: sigBytes,
-                          transformation: { width: 55, height: 20 },
+                          transformation: { width: 45, height: 16 },
                           type: 'png',
                         } as any),
                       ],
                       alignment: AlignmentType.CENTER,
                     })
                   : new Paragraph({
-                      children: [new TextRun({ text: attendee ? 'Signed' : '', italics: true, size: 16 })],
+                      children: [new TextRun({ text: attendee ? 'Signed' : '', italics: true, size: 18 })],
                       alignment: AlignmentType.CENTER,
                     }),
               ],
@@ -226,23 +248,27 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
         });
       }
 
-      const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * 67));
+      const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * 60));
+      const perDateWidth = Math.max(5, Math.floor(35 / Math.max(dates.length, 1)));
       return new TableRow({
         children: [
-          new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: cellShading, children: [new Paragraph({ text: `${index + 1}.`, alignment: AlignmentType.CENTER })] }),
+          new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: cellShading, children: [new Paragraph({ text: `${index + 1}.`, alignment: AlignmentType.CENTER })] }),
           ...dynamicCols.map((col, idx) => {
             const val = attendee ? col.getValue(attendee) : '';
             const isName = col.key === 'name';
             return new TableCell({
               width: { size: dynamicColWidths[idx], type: WidthType.PERCENTAGE },
+              borders: tableBorders,
               shading: cellShading,
-              children: [new Paragraph({ children: [new TextRun({ text: val, bold: isName && Boolean(val), size: 18 })] })],
+              children: [new Paragraph({ children: [new TextRun({ text: val, bold: isName && Boolean(val), size: 16 })] })],
             });
           }),
           ...dates.map(d => {
             const rawSigDate = attendee?.signaturesByDate?.[d] || (dates.length === 1 ? attendee?.signature_data : undefined);
             const dateSigBytes = base64ToUint8(rawSigDate);
             return new TableCell({
+              width: { size: perDateWidth, type: WidthType.PERCENTAGE },
+              borders: tableBorders,
               shading: cellShading,
               children: [
                 dateSigBytes
@@ -250,14 +276,14 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
                       children: [
                         new ImageRun({
                           data: dateSigBytes,
-                          transformation: { width: 55, height: 20 },
+                          transformation: { width: 35, height: 14 },
                           type: 'png',
                         } as any),
                       ],
                       alignment: AlignmentType.CENTER,
                     })
                   : new Paragraph({
-                      children: [new TextRun({ text: rawSigDate ? 'Signed' : '', italics: true })],
+                      children: [new TextRun({ text: rawSigDate ? 'Signed' : '', italics: true, size: 14 })],
                       alignment: AlignmentType.CENTER,
                     }),
               ],
@@ -268,10 +294,10 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
     });
 
     const registerTitle = attendeeScope === 'staff'
-      ? `STAFF ATTENDANCE REGISTER ${meeting?.departments?.name ? `– ${meeting.departments.name.toUpperCase()}` : ''}`
+      ? `STAFF ATTENDANCE REGISTER ${resolveDepartmentDisplay(meeting, '') ? `– ${resolveDepartmentDisplay(meeting, '').toUpperCase()}` : ''}`
       : attendeeScope === 'visitors'
       ? 'VISITORS ATTENDANCE REGISTER'
-      : `ATTENDANCE REGISTER ${meeting?.departments?.name ? `– ${meeting.departments.name.toUpperCase()}` : ''}`;
+      : `ATTENDANCE REGISTER ${resolveDepartmentDisplay(meeting, '') ? `– ${resolveDepartmentDisplay(meeting, '').toUpperCase()}` : ''}`;
 
     // Fetch KeNHA banner image and footer image buffer for Word document
     let bannerUint8: Uint8Array | null = null;
@@ -290,27 +316,39 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
     } catch {}
 
     const doc = new Document({
+      styles: {
+        default: {
+          document: {
+            run: { font: 'Times New Roman', size: 20, color: '000000' },
+          },
+        },
+      },
       sections: [{
         properties: {
           page: {
-            margin: { top: 1200, right: 720, bottom: 1000, left: 720, header: 360, footer: 360 },
+            size: {
+              orientation: PageOrientation.LANDSCAPE,
+              width: 16838,
+              height: 11906,
+            },
+            margin: { top: 576, right: 576, bottom: 576, left: 576, header: 288, footer: 288 },
           },
         },
         headers: {
           default: new Header({
             children: [
-              new Paragraph({ children: [new TextRun({ text: documentNumber || 'KeNHA/DG/F01', bold: true, size: 18 })], alignment: AlignmentType.RIGHT }),
+              new Paragraph({ children: [new TextRun({ text: documentNumber || 'KeNHA/DG/F01', bold: true, size: 20 })], alignment: AlignmentType.RIGHT }),
               bannerUint8
                 ? new Paragraph({
                     children: [
                       new ImageRun({
                         data: bannerUint8,
-                        transformation: { width: 620, height: 75 },
+                        transformation: { width: 780, height: 60 },
                         type: 'png',
                       } as any),
                     ],
                     alignment: AlignmentType.CENTER,
-                    spacing: { after: 20 },
+                    spacing: { after: 10 },
                   })
                 : new Paragraph({ text: '' }),
             ],
@@ -324,7 +362,7 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
                     children: [
                       new ImageRun({
                         data: footerUint8,
-                        transformation: { width: 620, height: 55 },
+                        transformation: { width: 780, height: 45 },
                         type: 'png',
                       } as any),
                     ],
@@ -332,7 +370,7 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
                   })
                 : new Paragraph({
                     children: [
-                      new TextRun({ text: 'ISO 9001 : 2015 Certified', bold: true, size: 16 }),
+                      new TextRun({ text: 'ISO 9001 : 2015 Certified', bold: true, size: 14 }),
                     ],
                     alignment: AlignmentType.CENTER,
                   }),
@@ -340,11 +378,11 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
           }),
         },
         children: [
-          new Paragraph({ children: [new TextRun({ text: meeting?.title || 'CS MEETING PROGRAM', bold: true, size: 24, color: '000000' })], alignment: AlignmentType.CENTER }),
-          new Paragraph({ children: [new TextRun({ text: registerTitle, bold: true, size: 20, color: '000000' })], alignment: AlignmentType.CENTER }),
-          new Paragraph({ children: [new TextRun({ text: `Date: ${dates.join(', ')}  |  Venue: ${meeting?.venue || 'KeNHA Auditorium'}  |  Time: ${meeting?.start_time || ''} - ${meeting?.end_time || ''}`, size: 16, color: '475569' })], alignment: AlignmentType.CENTER, spacing: { after: 150 } }),
+          new Paragraph({ children: [new TextRun({ text: meeting?.title || 'CS MEETING PROGRAM', bold: true, size: 26, color: '000000' })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new TextRun({ text: registerTitle, bold: true, size: 22, color: '000000' })], alignment: AlignmentType.CENTER, spacing: { after: 120 } }),
           new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: tableBorders,
             rows: [...tableHeaderRows, ...bodyRows],
           }),
         ],
@@ -458,8 +496,8 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
 
         {/* Header */}
         <div className="flex items-center gap-3.5 mb-6">
-          <div className="w-11 h-11 bg-amber-400/15 text-amber-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-xs border border-amber-400/20">
-            <Sparkles size={22} className="text-amber-500" />
+          <div className="w-11 h-11 bg-brand-600/15 text-brand-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-xs border border-brand-600/20">
+            <Sparkles size={22} className="text-brand-600" />
           </div>
           <div>
             <h3 className="text-lg font-extrabold tracking-tight text-base-content leading-tight">
@@ -488,7 +526,7 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
                 <button
                   type="button"
                   onClick={() => saveAs(downloadInfo.blob!, downloadInfo.filename || 'attendance_register.docx')}
-                  className="btn bg-amber-400 hover:bg-amber-500 text-slate-900 border-none w-full rounded-xl font-bold gap-2 shadow-md shadow-amber-400/20"
+                  className="btn bg-brand-600 hover:bg-brand-700 text-white border-none w-full rounded-xl font-bold gap-2 shadow-md shadow-brand-600/20"
                 >
                   <Download size={18} />
                   Download {downloadInfo.format.toUpperCase()} Report
@@ -498,7 +536,7 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
                   href={downloadInfo.url} 
                   target="_blank" 
                   rel="noreferrer"
-                  className="btn bg-amber-400 hover:bg-amber-500 text-slate-900 border-none w-full rounded-xl font-bold gap-2 shadow-md shadow-amber-400/20"
+                  className="btn bg-brand-600 hover:bg-brand-700 text-white border-none w-full rounded-xl font-bold gap-2 shadow-md shadow-brand-600/20"
                   download
                 >
                   <Download size={18} />
@@ -515,7 +553,7 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
                     onOpenEditor();
                   }}
                 >
-                  <FileText size={18} className="text-amber-500" />
+                  <FileText size={18} className="text-brand-600" />
                   Open &amp; Edit / Print in MS Word Editor
                 </button>
               )}
@@ -540,7 +578,7 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
               </label>
               <div className="relative">
                 <select
-                  className="select select-bordered w-full h-11 rounded-xl text-sm font-medium focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 focus:outline-none bg-base-100 transition-all"
+                  className="select select-bordered w-full h-11 rounded-xl text-sm font-medium focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 focus:outline-none bg-base-100 transition-all"
                   value={selectedTemplate}
                   onChange={(e) => setSelectedTemplate(e.target.value)}
                   disabled={isTemplatesLoading}
@@ -563,7 +601,7 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
             {/* Attendee Scope Selector */}
             <div className="form-control w-full">
               <label className="block text-[11px] font-bold text-base-content/70 uppercase tracking-wider mb-1.5">
-                Attendee Scope <span className="text-amber-500 font-bold">*</span>
+                Attendee Scope <span className="text-brand-600 font-bold">*</span>
               </label>
               <div className="grid grid-cols-3 gap-2">
                 <button
@@ -571,11 +609,11 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
                   onClick={() => setAttendeeScope('all')}
                   className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all ${
                     attendeeScope === 'all'
-                      ? 'border-amber-400 bg-amber-500/10 text-base-content ring-2 ring-amber-400/30'
+                      ? 'border-brand-600 bg-brand-600/10 text-base-content ring-2 ring-brand-600/30'
                       : 'border-base-300 bg-base-200/40 text-base-content/70 hover:bg-base-200'
                   }`}
                 >
-                  <Users size={16} className={attendeeScope === 'all' ? 'text-amber-500' : 'text-base-content/60'} />
+                  <Users size={16} className={attendeeScope === 'all' ? 'text-brand-600' : 'text-base-content/60'} />
                   <span className="text-xs font-bold mt-1">Merged (All)</span>
                   <span className="text-[10px] text-base-content/50">Staff &amp; Visitors ({staff.length + visitors.length})</span>
                 </button>
@@ -585,11 +623,11 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
                   onClick={() => setAttendeeScope('staff')}
                   className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all ${
                     attendeeScope === 'staff'
-                      ? 'border-amber-400 bg-amber-500/10 text-base-content ring-2 ring-amber-400/30'
+                      ? 'border-brand-600 bg-brand-600/10 text-base-content ring-2 ring-brand-600/30'
                       : 'border-base-300 bg-base-200/40 text-base-content/70 hover:bg-base-200'
                   }`}
                 >
-                  <UserCheck size={16} className={attendeeScope === 'staff' ? 'text-amber-500' : 'text-base-content/60'} />
+                  <UserCheck size={16} className={attendeeScope === 'staff' ? 'text-brand-600' : 'text-base-content/60'} />
                   <span className="text-xs font-bold mt-1">Staff Only</span>
                   <span className="text-[10px] text-base-content/50">KeNHA Staff ({staff.length})</span>
                 </button>
@@ -599,11 +637,11 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
                   onClick={() => setAttendeeScope('visitors')}
                   className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all ${
                     attendeeScope === 'visitors'
-                      ? 'border-amber-400 bg-amber-500/10 text-base-content ring-2 ring-amber-400/30'
+                      ? 'border-brand-600 bg-brand-600/10 text-base-content ring-2 ring-brand-600/30'
                       : 'border-base-300 bg-base-200/40 text-base-content/70 hover:bg-base-200'
                   }`}
                 >
-                  <UserPlus size={16} className={attendeeScope === 'visitors' ? 'text-amber-500' : 'text-base-content/60'} />
+                  <UserPlus size={16} className={attendeeScope === 'visitors' ? 'text-brand-600' : 'text-base-content/60'} />
                   <span className="text-xs font-bold mt-1">Visitors Only</span>
                   <span className="text-[10px] text-base-content/50">External ({visitors.length})</span>
                 </button>
@@ -613,7 +651,7 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
             {/* Output Format Selector — Visual Cards */}
             <div className="form-control w-full">
               <label className="block text-[11px] font-bold text-base-content/70 uppercase tracking-wider mb-1.5">
-                Output Format <span className="text-amber-500 font-bold">*</span>
+                Output Format <span className="text-brand-600 font-bold">*</span>
               </label>
               <div className="grid grid-cols-2 gap-3">
                 
@@ -623,7 +661,7 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
                   onClick={() => setFormat('pdf')}
                   className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
                     format === 'pdf'
-                      ? 'border-amber-400 bg-amber-500/10 text-base-content ring-2 ring-amber-400/30'
+                      ? 'border-brand-600 bg-brand-600/10 text-base-content ring-2 ring-brand-600/30'
                       : 'border-base-300 bg-base-200/40 text-base-content/70 hover:bg-base-200 hover:border-base-300'
                   }`}
                 >
@@ -644,7 +682,7 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
                   onClick={() => setFormat('docx')}
                   className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
                     format === 'docx'
-                      ? 'border-amber-400 bg-amber-500/10 text-base-content ring-2 ring-amber-400/30'
+                      ? 'border-brand-600 bg-brand-600/10 text-base-content ring-2 ring-brand-600/30'
                       : 'border-base-300 bg-base-200/40 text-base-content/70 hover:bg-base-200 hover:border-base-300'
                   }`}
                 >
@@ -671,7 +709,7 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
                 <input
                   type="text"
                   placeholder="e.g. KeNHA/HR/2026/001"
-                  className="input input-bordered w-full h-11 pl-10 rounded-xl text-sm font-medium focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 focus:outline-none transition-all"
+                  className="input input-bordered w-full h-11 pl-10 rounded-xl text-sm font-medium focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 focus:outline-none transition-all"
                   value={documentNumber}
                   onChange={(e) => setDocumentNumber(e.target.value)}
                 />
@@ -690,7 +728,7 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
               </button>
               <button 
                 type="submit" 
-                className="btn bg-amber-400 hover:bg-amber-500 text-slate-900 border-none font-bold rounded-xl px-6 text-xs gap-2 shadow-md shadow-amber-400/20" 
+                className="btn bg-brand-600 hover:bg-brand-700 text-white border-none font-bold rounded-xl px-6 text-xs gap-2 shadow-md shadow-brand-600/20"
                 disabled={isGenerating || !selectedTemplate}
               >
                 {isGenerating ? <InlineSpinner /> : (

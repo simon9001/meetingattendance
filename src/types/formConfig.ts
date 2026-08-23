@@ -25,6 +25,9 @@ export interface MeetingFormConfig {
   includePurpose: boolean; // default: true (visitor)
   includeSignature: boolean; // default: true (digital signature)
 
+  // Visitor / external participant access
+  allowVisitors: boolean; // default: true — when false, only staff may sign in
+
   // Multi-Day Meeting Schedule Configuration
   isMultiDay?: boolean; // default: false
   sessionDates?: string[]; // e.g. ['23/02/2026', '24/02/2026', '25/02/2026', '26/02/2026', '27/02/2026']
@@ -43,6 +46,7 @@ export const DEFAULT_MEETING_FORM_CONFIG: MeetingFormConfig = {
   includePosition: true,
   includePurpose: true,
   includeSignature: true,
+  allowVisitors: true,
   isMultiDay: false,
   sessionDates: [],
   activeSessionDate: '',
@@ -125,38 +129,56 @@ export function serializeMeetingDescription(userDescription: string, config: Mee
  * Parses form config from meeting object or description
  */
 export function parseMeetingFormConfig(meetingOrDesc: any): MeetingFormConfig {
-  if (!meetingOrDesc) return DEFAULT_MEETING_FORM_CONFIG;
+  if (!meetingOrDesc) return { ...DEFAULT_MEETING_FORM_CONFIG };
 
-  if (typeof meetingOrDesc === 'object') {
-    if (meetingOrDesc.form_config && typeof meetingOrDesc.form_config === 'object') {
-      return {
-        ...DEFAULT_MEETING_FORM_CONFIG,
-        ...meetingOrDesc.form_config,
-        customFields: meetingOrDesc.form_config.customFields || [],
-      };
-    }
-    if (Array.isArray(meetingOrDesc.custom_fields)) {
-      return {
-        ...DEFAULT_MEETING_FORM_CONFIG,
-        customFields: meetingOrDesc.custom_fields,
-      };
+  // 1. Direct form_config object on meeting object
+  if (typeof meetingOrDesc === 'object' && meetingOrDesc !== null) {
+    if (meetingOrDesc.form_config) {
+      if (typeof meetingOrDesc.form_config === 'object') {
+        return {
+          ...DEFAULT_MEETING_FORM_CONFIG,
+          ...meetingOrDesc.form_config,
+          customFields: meetingOrDesc.form_config.customFields || (Array.isArray(meetingOrDesc.custom_fields) ? meetingOrDesc.custom_fields : []),
+        };
+      }
+      if (typeof meetingOrDesc.form_config === 'string' && meetingOrDesc.form_config.trim().startsWith('{')) {
+        try {
+          const parsed = JSON.parse(meetingOrDesc.form_config);
+          return {
+            ...DEFAULT_MEETING_FORM_CONFIG,
+            ...parsed,
+            customFields: parsed.customFields || (Array.isArray(meetingOrDesc.custom_fields) ? meetingOrDesc.custom_fields : []),
+          };
+        } catch {}
+      }
     }
   }
 
+  // 2. Check HTML comment in description
   const desc = typeof meetingOrDesc === 'string' ? meetingOrDesc : (meetingOrDesc?.description || '');
-  const match = desc.match(/<!--KMTAMS_FORM_CONFIG:(.*?)-->/s);
-  if (match && match[1]) {
-    try {
-      const parsed = JSON.parse(match[1]);
-      return {
-        ...DEFAULT_MEETING_FORM_CONFIG,
-        ...parsed,
-        customFields: parsed.customFields || [],
-      };
-    } catch {}
+  if (typeof desc === 'string' && desc.includes('<!--KMTAMS_FORM_CONFIG:')) {
+    const match = desc.match(/<!--KMTAMS_FORM_CONFIG:(.*?)-->/s);
+    if (match && match[1]) {
+      try {
+        const parsed = JSON.parse(match[1]);
+        return {
+          ...DEFAULT_MEETING_FORM_CONFIG,
+          ...parsed,
+          customFields: parsed.customFields || (Array.isArray(meetingOrDesc?.custom_fields) ? meetingOrDesc.custom_fields : []),
+        };
+      } catch {}
+    }
   }
 
-  return DEFAULT_MEETING_FORM_CONFIG;
+  // 3. Check custom_fields array on object if present
+  if (typeof meetingOrDesc === 'object' && Array.isArray(meetingOrDesc?.custom_fields) && meetingOrDesc.custom_fields.length > 0) {
+    return {
+      ...DEFAULT_MEETING_FORM_CONFIG,
+      customFields: meetingOrDesc.custom_fields,
+    };
+  }
+
+  return { ...DEFAULT_MEETING_FORM_CONFIG };
 }
 
 /**
@@ -165,6 +187,19 @@ export function parseMeetingFormConfig(meetingOrDesc: any): MeetingFormConfig {
 export function getCleanMeetingDescription(description?: string | null): string {
   if (!description) return '';
   return description.replace(/<!--KMTAMS_FORM_CONFIG:.*?-->/gs, '').trim();
+}
+
+/**
+ * Resolves a meeting's department for display: a single picked
+ * department (via the `departments` relation) takes priority, then a
+ * free-text label (for meetings spanning multiple/no specific
+ * department), then the caller-supplied fallback.
+ */
+export function resolveDepartmentDisplay(
+  meeting: { departments?: { name?: string } | null; department_label?: string | null } | null | undefined,
+  fallback: string
+): string {
+  return meeting?.departments?.name || meeting?.department_label || fallback;
 }
 
 export interface RegisterColumn {
@@ -193,8 +228,9 @@ export function getDynamicRegisterColumns(
 
   // 2. Designation / Position
   const showDesignation =
-    (attendeeScope !== 'visitors' && config.includeDesignation) ||
-    (attendeeScope === 'visitors' && config.includePosition);
+    (attendeeScope === 'staff' && Boolean(config.includeDesignation)) ||
+    (attendeeScope === 'visitors' && Boolean(config.includePosition)) ||
+    (attendeeScope === 'all' && Boolean(config.includeDesignation || config.includePosition));
 
   if (showDesignation) {
     cols.push({
@@ -207,9 +243,9 @@ export function getDynamicRegisterColumns(
 
   // 3. Department / Organization
   const showDeptOrg =
-    (attendeeScope !== 'visitors' && config.includeDepartment) ||
-    (attendeeScope === 'visitors' && config.includeOrganization) ||
-    (attendeeScope === 'all' && (config.includeDepartment || config.includeOrganization));
+    (attendeeScope === 'staff' && Boolean(config.includeDepartment)) ||
+    (attendeeScope === 'visitors' && Boolean(config.includeOrganization)) ||
+    (attendeeScope === 'all' && Boolean(config.includeDepartment || config.includeOrganization));
 
   if (showDeptOrg) {
     cols.push({
@@ -277,15 +313,41 @@ export interface AggregatedAttendeeRow {
 
 export function formatAttendanceDate(dateInput?: string): string {
   if (!dateInput) return '';
+  const str = String(dateInput).trim();
+  if (!str) return '';
+
+  // If already in DD/MM/YYYY format, return as is
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
+    return str;
+  }
+
+  // Match YYYY-MM-DD or YYYY/MM/DD
+  const ymdMatch = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (ymdMatch) {
+    const yyyy = ymdMatch[1];
+    const mm = ymdMatch[2].padStart(2, '0');
+    const dd = ymdMatch[3].padStart(2, '0');
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  // Match DD-MM-YYYY or D/M/YYYY
+  const dmyMatch = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (dmyMatch) {
+    const dd = dmyMatch[1].padStart(2, '0');
+    const mm = dmyMatch[2].padStart(2, '0');
+    const yyyy = dmyMatch[3];
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
   try {
-    const d = new Date(dateInput);
-    if (isNaN(d.getTime())) return String(dateInput);
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return str;
     const dd = String(d.getDate()).padStart(2, '0');
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const yyyy = d.getFullYear();
     return `${dd}/${mm}/${yyyy}`;
   } catch {
-    return String(dateInput || '');
+    return str;
   }
 }
 
