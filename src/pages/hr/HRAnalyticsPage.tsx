@@ -11,8 +11,8 @@ export const HRAnalyticsPage: React.FC = () => {
     pollingInterval: 5000,
   });
 
-  const meetings = meetingsResponse?.data || [];
-  const reports = reportsResponse?.data || [];
+  const meetings = Array.isArray(meetingsResponse?.data) ? meetingsResponse.data : [];
+  const reports = Array.isArray(reportsResponse?.data) ? reportsResponse.data : [];
 
   const totalMeetings = meetings.length;
   const archivedCount = reports.filter((r: any) => r.status === 'archived' || r.status === 'submitted_to_hr').length;

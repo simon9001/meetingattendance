@@ -12,7 +12,7 @@ export const HRRepositoryPage: React.FC = () => {
   });
 
   const reports = React.useMemo(() => {
-    if (!reportsResponse?.data) return [];
+    if (!Array.isArray(reportsResponse?.data)) return [];
     return reportsResponse.data.filter(
       (r: any) => r.status === 'submitted_to_hr' || r.status === 'archived'
     );

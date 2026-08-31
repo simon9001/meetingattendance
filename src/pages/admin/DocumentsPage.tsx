@@ -75,7 +75,7 @@ export const DocumentsPage: React.FC<DocumentsPageProps> = ({ showToast }) => {
       <div className="bg-base-100 rounded-xl shadow-sm border border-base-200">
         {activeTab === 'templates' && (
           <TemplatesTab 
-            templates={templatesRes?.data || []} 
+            templates={Array.isArray(templatesRes?.data) ? templatesRes.data : []} 
             isLoading={isTemplatesLoading} 
             expandedTemplateId={expandedTemplateId}
             setExpandedTemplateId={setExpandedTemplateId}

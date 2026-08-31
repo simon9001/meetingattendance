@@ -11,7 +11,7 @@ export const AdminLogsPage: React.FC = () => {
   });
 
   const logs = React.useMemo(() => {
-    if (!logsResponse?.data) return [];
+    if (!Array.isArray(logsResponse?.data)) return [];
     return logsResponse.data.map((log: any) => ({
       id: log.log_id,
       timestamp: log.created_at,

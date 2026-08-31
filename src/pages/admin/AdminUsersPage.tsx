@@ -57,9 +57,10 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ showToast }) => 
 
   // Map backend users to frontend models
   const users = React.useMemo(() => {
-    if (!usersResponse?.data) return [];
+    if (!Array.isArray(usersResponse?.data)) return [];
+    const depts = Array.isArray(deptsResponse?.data) ? deptsResponse.data : [];
     return usersResponse.data.map((profile: any) => {
-      const deptObj = deptsResponse?.data?.find(
+      const deptObj = depts.find(
         (d: any) => d.department_id === profile.department_id
       );
       return mapProfileToUser(profile, deptObj?.name);

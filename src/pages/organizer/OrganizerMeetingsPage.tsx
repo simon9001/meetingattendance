@@ -89,7 +89,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
   const [extendAttendance, { isLoading: isExtending }] = useExtendMeetingAttendanceMutation();
   const [submitToHR] = useSubmitReportToHRMutation();
 
-  const allMeetings: any[] = meetingsResponse?.data || [];
+  const allMeetings: any[] = Array.isArray(meetingsResponse?.data) ? meetingsResponse.data : [];
 
   // Compute Top Summary Metrics
   const stats = useMemo(() => {
@@ -320,7 +320,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
   // VIEW REGISTER DETAIL SCREEN (When a meeting is clicked)
   // ──────────────────────────────────────────────────────────────────────────
   if (selectedMeeting) {
-    const rawAttendees: any[] = attendanceResponse?.data || [];
+    const rawAttendees: any[] = Array.isArray(attendanceResponse?.data) ? attendanceResponse.data : [];
     const staffAttendees = rawAttendees.filter((a: any) => a.participant_type === 'staff');
     const visitorAttendees = rawAttendees.filter((a: any) => a.participant_type === 'visitor');
     const totalCount = rawAttendees.length;

@@ -96,7 +96,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ currentUser, setActi
   const meetingResults = useMemo(() => {
     if (!hasQuery) return [];
     const q = trimmed.toLowerCase();
-    const meetings = meetingsResponse?.data || [];
+    const meetings: any[] = Array.isArray(meetingsResponse?.data) ? meetingsResponse.data : [];
     // Quick-search is a personal convenience, not a system-wide lookup tool —
     // even though HR/admin list endpoints return every meeting (they need
     // that on the dedicated Meetings page), only surface the signed-in
@@ -114,7 +114,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ currentUser, setActi
   const userResults = useMemo(() => {
     if (!hasQuery || currentUser.role !== 'admin') return [];
     const q = trimmed.toLowerCase();
-    const users = usersResponse?.data || [];
+    const users: any[] = Array.isArray(usersResponse?.data) ? usersResponse.data : [];
     return users
       .filter((u: any) =>
         (u.full_name || '').toLowerCase().includes(q) ||
@@ -126,7 +126,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ currentUser, setActi
   const deptResults = useMemo(() => {
     if (!hasQuery || currentUser.role !== 'admin') return [];
     const q = trimmed.toLowerCase();
-    const depts = deptsResponse?.data || [];
+    const depts: any[] = Array.isArray(deptsResponse?.data) ? deptsResponse.data : [];
     return depts.filter((d: any) => (d.name || '').toLowerCase().includes(q)).slice(0, 5);
   }, [deptsResponse, hasQuery, trimmed, currentUser.role]);
 

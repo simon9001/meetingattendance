@@ -26,7 +26,7 @@ export const AdminDepartmentsPage: React.FC<AdminDepartmentsPageProps> = ({ show
     e.preventDefault();
     if (!newDeptName) return;
 
-    const exists = deptsResponse?.data?.some(
+    const exists = Array.isArray(deptsResponse?.data) && deptsResponse.data.some(
       (d: any) => d.name.toLowerCase() === newDeptName.toLowerCase()
     );
     if (exists) {

@@ -38,12 +38,12 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
   );
 
   const selectedMeeting = React.useMemo(() => {
-    if (!selectedMeetingId || !meetingsResponse?.data) return null;
+    if (!selectedMeetingId || !Array.isArray(meetingsResponse?.data)) return null;
     return meetingsResponse.data.find((m: any) => m.meeting_id === selectedMeetingId);
   }, [selectedMeetingId, meetingsResponse]);
 
   const filteredMeetings = React.useMemo(() => {
-    if (!meetingsResponse?.data) return [];
+    if (!Array.isArray(meetingsResponse?.data)) return [];
     return meetingsResponse.data.filter((m: any) => {
       const matchesSearch =
         m.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -57,8 +57,8 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
   const handlePrint = () => setPrintEditorOpen(true);
 
   if (selectedMeetingId && selectedMeeting) {
-    const staffAttendees = attendanceResponse?.data?.staff || [];
-    const visitorAttendees = attendanceResponse?.data?.visitors || [];
+    const staffAttendees = Array.isArray(attendanceResponse?.data?.staff) ? attendanceResponse.data.staff : [];
+    const visitorAttendees = Array.isArray(attendanceResponse?.data?.visitors) ? attendanceResponse.data.visitors : [];
     const totalCount = attendanceResponse?.data?.total || 0;
 
     return (

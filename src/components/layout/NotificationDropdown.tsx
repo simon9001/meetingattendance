@@ -49,22 +49,24 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Queries
+  // Queries — skip all if user is not logged in
   const { data: notifsResponse, refetch: refetchNotifs } = useGetNotificationsQuery(undefined, {
+    skip: !currentUser?.id && !currentUser?.email,
     pollingInterval: 10000,
   });
 
   const { data: meetingsResponse, refetch: refetchMeetings } = useGetMeetingsQuery(undefined, {
+    skip: !currentUser?.id && !currentUser?.email,
     pollingInterval: 10000,
   });
 
   const { data: auditLogsResponse, refetch: refetchAudit } = useGetAuditLogsQuery(undefined, {
-    skip: currentUser.role !== 'admin',
+    skip: !currentUser || currentUser.role !== 'admin',
     pollingInterval: 10000,
   });
 
   const { data: reportsResponse, refetch: refetchReports } = useGetReportsQuery(undefined, {
-    skip: currentUser.role !== 'hr',
+    skip: !currentUser || currentUser.role !== 'hr',
     pollingInterval: 10000,
   });
 
@@ -108,7 +110,11 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     const todayStr = now.toISOString().split('T')[0];
 
     // 1. Database Notifications
-    const dbNotifs: any[] = notifsResponse?.data?.notifications || notifsResponse?.data || [];
+    const dbNotifs: any[] = Array.isArray(notifsResponse?.data?.notifications)
+      ? notifsResponse.data.notifications
+      : Array.isArray(notifsResponse?.data)
+      ? notifsResponse.data
+      : [];
     dbNotifs.forEach((n: any) => {
       const id = n.notification_id || `db_${n.id}`;
       const isRead = n.is_read || localReadIds.has(id);
@@ -141,13 +147,8 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
       });
     });
 
-    // 2. Real-Time Meeting Alerts — scoped to meetings the signed-in user
-    // actually created. HR/admin list endpoints return every meeting in the
-    // system (they need that for the dedicated Meetings page), but the
-    // notification bell is a personal feed — it must not surface another
-    // organizer's meeting activity (signature open/closed, who's arriving)
-    // to someone who didn't create that meeting.
-    const allMeetings: any[] = meetingsResponse?.data || [];
+    // 2. Real-Time Meeting Alerts
+    const allMeetings: any[] = Array.isArray(meetingsResponse?.data) ? meetingsResponse.data : [];
     const meetings = allMeetings.filter((m: any) => m.created_by === currentUser.id);
     meetings.forEach((m: any) => {
       const isToday = m.meeting_date === todayStr;
@@ -181,7 +182,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
           id,
           type: 'signature_closed',
           title: 'Signature Window Closed',
-          message: `The attendance window for "${m.title}" has closed. You can now compile the register and generate documents.`,
+          message: `Attendance is closed for "${m.title}". Ready for report generation or submission to HR.`,
           timestamp: m.attendance_close_time || m.updated_at || new Date().toISOString(),
           timeLabel: closeTime ? closeTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Closed',
           isRead: localReadIds.has(id),
@@ -192,10 +193,34 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         });
       }
 
-      // C) Meeting Time Has Arrived (Starting Today)
-      if (isToday) {
-        if (nowHoursMins >= meetingStart && nowHoursMins <= meetingEnd) {
-          const id = `meeting_now_${m.meeting_id}`;
+      // C) Meeting Starting in < 15 mins (Countdown Alert)
+      if (m.attendance_status === 'not_started' && isToday && meetingStart > nowHoursMins) {
+        const [startH, startM] = meetingStart.split(':').map(Number);
+        const [nowH, nowM] = nowHoursMins.split(':').map(Number);
+        const diffMins = (startH * 60 + startM) - (nowH * 60 + nowM);
+
+        if (diffMins > 0 && diffMins <= 15) {
+          const id = `countdown_${m.meeting_id}`;
+          list.push({
+            id,
+            type: 'meeting_arrived',
+            title: `Meeting Starts in ${diffMins} min${diffMins === 1 ? '' : 's'}`,
+            message: `"${m.title}" is scheduled to begin at ${meetingStart} (${m.venue || 'KeNHA'}). Click to open attendance.`,
+            timestamp: new Date().toISOString(),
+            timeLabel: `in ${diffMins}m`,
+            isRead: localReadIds.has(id),
+            severity: 'critical',
+            meetingId: m.meeting_id,
+            actionTab: 'meetings',
+            actionLabel: 'Open Attendance Now',
+          });
+        }
+      }
+
+      // D) Meeting In Session Today
+      if (isToday && meetingStart <= nowHoursMins && meetingEnd >= nowHoursMins && m.attendance_status !== 'closed') {
+        if (!list.some(item => item.id === `sig_open_${m.meeting_id}`)) {
+          const id = `insession_${m.meeting_id}`;
           list.push({
             id,
             type: 'meeting_arrived',
@@ -215,7 +240,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
 
     // 3. Admin Anomalies & System Failures (For ICT Admin)
     if (currentUser.role === 'admin') {
-      const logs: any[] = auditLogsResponse?.data || [];
+      const logs: any[] = Array.isArray(auditLogsResponse?.data) ? auditLogsResponse.data : [];
       
       // Anomaly Detection in Audit Logs
       logs.slice(0, 50).forEach((log: any) => {
@@ -247,7 +272,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         }
       });
 
-      // Structural Data Anomaly: Meetings with missing PINs or corrupted configs
+      // Structural Data Anomaly
       meetings.forEach((m: any) => {
         if (!m.meeting_pin && !m.pin) {
           const id = `anomaly_missing_pin_${m.meeting_id}`;
@@ -270,7 +295,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
 
     // 4. HR Review Alerts (For HR Officers)
     if (currentUser.role === 'hr') {
-      const reports: any[] = reportsResponse?.data || [];
+      const reports: any[] = Array.isArray(reportsResponse?.data) ? reportsResponse.data : [];
       reports.forEach((r: any) => {
         if (r.status === 'submitted_to_hr') {
           const id = `hr_sub_${r.report_id}`;
@@ -290,7 +315,6 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
       });
     }
 
-    // Sort newest first
     return list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [
     notifsResponse,
@@ -303,11 +327,13 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
 
   // Unread Count
   const unreadCount = useMemo(() => {
+    if (!Array.isArray(allNotifications)) return 0;
     return allNotifications.filter(n => !n.isRead).length;
   }, [allNotifications]);
 
   // Filtered Notifications
   const filteredNotifications = useMemo(() => {
+    if (!Array.isArray(allNotifications)) return [];
     if (activeFilter === 'unread') return allNotifications.filter(n => !n.isRead);
     if (activeFilter === 'meetings') return allNotifications.filter(n => n.type === 'meeting_arrived' || n.type === 'signature_open' || n.type === 'signature_closed');
     if (activeFilter === 'anomalies') return allNotifications.filter(n => n.type === 'anomaly');

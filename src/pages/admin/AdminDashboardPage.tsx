@@ -31,10 +31,10 @@ export const AdminDashboardPage: React.FC = () => {
     pollingInterval: 5000,
   });
 
-  const meetings = meetingsResponse?.data || [];
-  const users = usersResponse?.data || [];
-  const departments = deptsResponse?.data || [];
-  const logs = logsResponse?.data || [];
+  const meetings = Array.isArray(meetingsResponse?.data) ? meetingsResponse.data : [];
+  const users = Array.isArray(usersResponse?.data) ? usersResponse.data : [];
+  const departments = Array.isArray(deptsResponse?.data) ? deptsResponse.data : [];
+  const logs = Array.isArray(logsResponse?.data) ? logsResponse.data : [];
 
   const totalMeetings = meetings.length;
   const totalUsers = users.length;
