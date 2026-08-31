@@ -320,10 +320,20 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
   // VIEW REGISTER DETAIL SCREEN (When a meeting is clicked)
   // ──────────────────────────────────────────────────────────────────────────
   if (selectedMeeting) {
-    const rawAttendees: any[] = Array.isArray(attendanceResponse?.data) ? attendanceResponse.data : [];
-    const staffAttendees = rawAttendees.filter((a: any) => a.participant_type === 'staff');
-    const visitorAttendees = rawAttendees.filter((a: any) => a.participant_type === 'visitor');
-    const totalCount = rawAttendees.length;
+    const staffAttendees: any[] = Array.isArray(attendanceResponse?.data?.staff)
+      ? attendanceResponse.data.staff
+      : Array.isArray(attendanceResponse?.data)
+      ? attendanceResponse.data.filter((a: any) => a.participant_type === 'staff')
+      : [];
+
+    const visitorAttendees: any[] = Array.isArray(attendanceResponse?.data?.visitors)
+      ? attendanceResponse.data.visitors
+      : Array.isArray(attendanceResponse?.data)
+      ? attendanceResponse.data.filter((a: any) => a.participant_type === 'visitor')
+      : [];
+
+    const rawAttendees: any[] = [...staffAttendees, ...visitorAttendees];
+    const totalCount = attendanceResponse?.data?.total ?? rawAttendees.length;
 
     return (
       <div style={{ padding: '4px 0 32px 0' }}>

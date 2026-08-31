@@ -56,7 +56,23 @@ export const LiveDashboardPage: React.FC<LiveDashboardPageProps> = ({
   const [closeMeetingAttendance, { isLoading: isClosing }] = useCloseMeetingAttendanceMutation();
 
   const meeting = meetingResponse?.data;
-  const attendees: any[] = attendanceResponse?.data || [];
+  
+  const staffAttendees: any[] = Array.isArray(attendanceResponse?.data?.staff)
+    ? attendanceResponse.data.staff
+    : Array.isArray(attendanceResponse?.data)
+    ? attendanceResponse.data.filter((a: any) => a.participant_type === 'staff')
+    : [];
+
+  const visitorAttendees: any[] = Array.isArray(attendanceResponse?.data?.visitors)
+    ? attendanceResponse.data.visitors
+    : Array.isArray(attendanceResponse?.data)
+    ? attendanceResponse.data.filter((a: any) => a.participant_type === 'visitor')
+    : [];
+
+  const attendees: any[] = [...staffAttendees, ...visitorAttendees];
+  const staffCount = staffAttendees.length;
+  const visitorCount = visitorAttendees.length;
+  const totalCount = attendanceResponse?.data?.total ?? attendees.length;
 
   const isStatusLoading = isOpening || isClosing;
 
@@ -94,12 +110,6 @@ export const LiveDashboardPage: React.FC<LiveDashboardPageProps> = ({
       </div>
     );
   }
-
-  const staffAttendees = attendees.filter(a => a.participant_type === 'staff');
-  const visitorAttendees = attendees.filter(a => a.participant_type === 'visitor');
-  const staffCount = staffAttendees.length;
-  const visitorCount = visitorAttendees.length;
-  const totalCount = attendees.length;
 
   const isOpen = meeting.attendance_status === 'open';
 
