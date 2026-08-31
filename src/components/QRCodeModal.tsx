@@ -33,139 +33,188 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
   };
 
   const handlePrint = () => {
+    const svgElement = document.querySelector('#qr-svg-source svg') || document.querySelector('.qr-modal-svg svg');
+    const svgHtml = svgElement ? svgElement.outerHTML : '';
+    const logoUrl = `${window.location.origin}/kenhalogo.png`;
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
+    printWindow.document.open();
     printWindow.document.write(`
+      <!DOCTYPE html>
       <html>
         <head>
+          <meta charset="utf-8" />
           <title>Attendance Registration - ${meetingTitle}</title>
           <style>
+            @page {
+              size: A4 portrait;
+              margin: 12mm 15mm;
+            }
+            * {
+              box-sizing: border-box;
+            }
             body {
-              font-family: 'Segoe UI', system-ui, sans-serif;
+              font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
               text-align: center;
-              padding: 40px;
+              padding: 20px 40px;
               color: #111827;
-            }
-            .header {
-              border-bottom: 2px solid #F9D616;
-              padding-bottom: 20px;
-              margin-bottom: 30px;
-            }
-            .logo-text {
-              font-size: 32px;
-              font-weight: 800;
-              letter-spacing: 2px;
-              color: #000;
+              background: #ffffff;
               margin: 0;
             }
+            .poster-container {
+              max-width: 600px;
+              margin: 0 auto;
+            }
+            .header {
+              border-bottom: 3px solid #F9D616;
+              padding-bottom: 16px;
+              margin-bottom: 24px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+            }
+            .logo-img {
+              height: 75px;
+              max-width: 160px;
+              object-fit: contain;
+              margin-bottom: 8px;
+            }
+            .logo-text {
+              font-size: 17px;
+              font-weight: 800;
+              letter-spacing: 1.5px;
+              color: #000000;
+              margin: 0;
+              text-transform: uppercase;
+            }
             .subtitle {
-              font-size: 14px;
+              font-size: 12px;
               color: #4B5563;
-              margin-top: 5px;
+              margin-top: 3px;
+              font-style: italic;
             }
             .title {
-              font-size: 24px;
-              font-weight: 700;
-              margin: 20px 0 10px 0;
+              font-size: 22px;
+              font-weight: 800;
+              color: #111827;
+              margin: 16px 0 6px 0;
+              line-height: 1.3;
+            }
+            .scan-instructions {
+              font-size: 14px;
+              color: #4B5563;
+              margin: 0 0 20px 0;
             }
             .qr-container {
-              margin: 30px auto;
-              padding: 20px;
-              border: 1px solid #E5E7EB;
-              border-radius: 12px;
-              display: inline-block;
-              background: white;
+              margin: 8px auto 20px;
+              padding: 16px;
+              border: 2px solid #E5E7EB;
+              border-radius: 16px;
+              display: inline-flex;
+              justify-content: center;
+              align-items: center;
+              background: #ffffff;
+              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             }
-            .pin-box {
-              background: #F3F4F6;
-              border: 2px dashed #9CA3AF;
-              border-radius: 8px;
-              padding: 15px 30px;
-              display: inline-block;
-              font-size: 28px;
-              font-weight: 800;
-              letter-spacing: 4px;
-              margin: 20px 0;
+            .qr-container svg {
+              display: block;
+              width: 220px !important;
+              height: 220px !important;
+            }
+            .pin-section {
+              margin: 10px 0 18px;
             }
             .pin-label {
               font-size: 12px;
               color: #4B5563;
               text-transform: uppercase;
-              letter-spacing: 1px;
-              margin-bottom: 5px;
-              font-weight: 600;
+              letter-spacing: 1.5px;
+              margin-bottom: 6px;
+              font-weight: 700;
+            }
+            .pin-box {
+              background: #F3F4F6;
+              border: 2px dashed #9CA3AF;
+              border-radius: 8px;
+              padding: 12px 28px;
+              display: inline-block;
+              font-size: 32px;
+              font-weight: 800;
+              letter-spacing: 6px;
+              color: #111827;
             }
             .instructions {
-              max-width: 400px;
-              margin: 20px auto;
-              font-size: 14px;
-              line-height: 1.5;
+              max-width: 440px;
+              margin: 16px auto 0;
+              font-size: 13px;
+              line-height: 1.6;
               color: #374151;
+              text-align: left;
+              background: #F9FAFB;
+              padding: 14px 20px;
+              border-radius: 8px;
+              border: 1px solid #E5E7EB;
             }
-            .footer-url {
-              font-family: monospace;
-              font-size: 12px;
-              color: #6B7280;
-              word-break: break-all;
-              margin-top: 30px;
+            .instructions strong {
+              display: block;
+              margin-bottom: 6px;
+              font-size: 13px;
+              color: #111827;
             }
             @media print {
-              button { display: none; }
+              body {
+                padding: 0;
+              }
+              .qr-container {
+                box-shadow: none;
+              }
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1 class="logo-text">KeNHA</h1>
-            <div class="subtitle">Kenya National Highways Authority</div>
+          <div class="poster-container">
+            <div class="header">
+              <img src="${logoUrl}" alt="KeNHA Logo" class="logo-img" />
+              <div class="logo-text">Kenya National Highways Authority</div>
+              <div class="subtitle">Quality Highways, Better Connections</div>
+            </div>
+
+            <div class="title">${meetingTitle}</div>
+            <p class="scan-instructions">Scan the QR code below using your mobile device to register attendance.</p>
+            
+            <div class="qr-container">
+              ${svgHtml}
+            </div>
+            
+            <div class="pin-section">
+              <div class="pin-label">Required Meeting PIN</div>
+              <div class="pin-box">${meetingPin}</div>
+            </div>
+            
+            <div class="instructions">
+              <strong>Instructions:</strong>
+              1. Open your camera or QR code scanner.<br/>
+              2. Point your device at the QR code above.<br/>
+              3. Enter the Meeting PIN when prompted.<br/>
+              4. Fill out the digital form and provide your signature.
+            </div>
           </div>
-          <div class="title">${meetingTitle}</div>
-          <p style="color: #4B5563;">Scan the QR code below using your mobile device to register attendance.</p>
-          
-          <div class="qr-container" id="qr-target"></div>
-          
-          <div>
-            <div class="pin-label">Required Meeting PIN</div>
-            <div class="pin-box">${meetingPin}</div>
-          </div>
-          
-          <div class="instructions">
-            <strong>Instructions:</strong><br/>
-            1. Open your camera or QR code scanner.<br/>
-            2. Point your device at the QR code above.<br/>
-            3. Enter the Meeting PIN when prompted.<br/>
-            4. Fill out the digital form and provide your signature.
-          </div>
-          
-          <div class="footer-url">${attendanceUrl}</div>
 
           <script>
-            // Render QR code inside print window using simple image or SVG clone from parent
-            const svgContent = document.getElementById('qr-svg-source').outerHTML;
-            document.getElementById('qr-target').innerHTML = svgContent;
             window.onload = function() {
-              window.print();
-            }
+              setTimeout(function() {
+                window.focus();
+                window.print();
+              }, 300);
+            };
           </script>
         </body>
       </html>
     `);
-    
-    // Inject the SVG source for printing
-    const svgElement = document.querySelector('.qr-modal-svg svg');
-    if (svgElement && printWindow.document.getElementById('qr-svg-source')) {
-      // SVG exists, print window script will pick it up
-    } else if (printWindow) {
-      // Fallback injection of SVG directly
-      const svgHtml = svgElement ? svgElement.outerHTML : '';
-      printWindow.document.write(`
-        <div style="display:none">
-          <div id="qr-svg-source">${svgHtml}</div>
-        </div>
-      `);
-      printWindow.document.close();
-    }
+    printWindow.document.close();
   };
 
   return (
