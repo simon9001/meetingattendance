@@ -130,14 +130,39 @@ function App() {
     localStorage.removeItem('kmtams_theme');
   }, []);
 
-  // --- Default tab per role ---
+  // --- Default tab per role and sync with URL paths ---
   useEffect(() => {
     if (currentUser) {
-      if (currentUser.role === 'admin') setActiveDashboardTab('dashboard');
-      else if (currentUser.role === 'hr') setActiveDashboardTab('meetings');
-      else if (currentUser.role === 'organizer') setActiveDashboardTab('meetings');
+      const cleanPath = currentPath.split('?')[0].replace(/\/+$/, '');
+      const pathToTab: Record<string, string> = {
+        '/dashboard': currentUser.role === 'admin' ? 'dashboard' : 'meetings',
+        '/users': 'users',
+        '/departments': 'departments',
+        '/security': 'security',
+        '/logs': 'logs',
+        '/documents': 'documents',
+        '/meetings': 'meetings',
+        '/create-meeting': 'create_meeting',
+        '/create_meeting': 'create_meeting',
+        '/my-submissions': 'my_submissions',
+        '/submissions': 'my_submissions',
+        '/archive': 'hr_archive',
+        '/hr-archive': 'hr_archive',
+        '/analytics': 'hr_analytics',
+        '/hr-analytics': 'hr_analytics',
+        '/profile': 'profile',
+      };
+
+      const matchedTab = pathToTab[cleanPath];
+      if (matchedTab) {
+        setActiveDashboardTab(matchedTab);
+      } else if (!activeDashboardTab) {
+        if (currentUser.role === 'admin') setActiveDashboardTab('dashboard');
+        else if (currentUser.role === 'hr') setActiveDashboardTab('meetings');
+        else if (currentUser.role === 'organizer') setActiveDashboardTab('meetings');
+      }
     }
-  }, [currentUser]);
+  }, [currentUser, currentPath]);
 
   // --- Toast Helper ---
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -167,10 +192,12 @@ function App() {
   // ROUTING
   // ==========================================
 
+  const cleanPath = currentPath.split('?')[0].replace(/\/+$/, '');
+
   // Public attendance route: /attend/:id
-  const isAttendRoute = currentPath.startsWith('/attend/');
-  if (isAttendRoute) {
-    const meetingId = currentPath.split('/')[2];
+  const attendMatch = cleanPath.match(/^\/attend\/([^/]+)/);
+  if (attendMatch) {
+    const meetingId = attendMatch[1];
     return (
       <>
         <PublicAttendPage
@@ -188,9 +215,9 @@ function App() {
   }
 
   // Live dashboard route: /meeting/:id/live
-  const isLiveDashboardRoute = currentPath.startsWith('/meeting/') && currentPath.endsWith('/live');
-  if (isLiveDashboardRoute) {
-    const meetingId = currentPath.split('/')[2];
+  const liveMatch = cleanPath.match(/^\/meeting\/([^/]+)\/live/);
+  if (liveMatch) {
+    const meetingId = liveMatch[1];
     return (
       <>
         <LiveDashboardPage
