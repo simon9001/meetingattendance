@@ -72,15 +72,15 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
             }
             .header {
               border-bottom: 3px solid #F9D616;
-              padding-bottom: 14px;
-              margin-bottom: 20px;
+              padding-bottom: 16px;
+              margin-bottom: 22px;
               display: flex;
               justify-content: center;
               align-items: center;
             }
             .logo-banner-img {
-              max-width: 380px;
-              width: 100%;
+              max-width: 480px;
+              width: 95%;
               height: auto;
               object-fit: contain;
               display: block;
@@ -90,7 +90,7 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
               font-size: 22px;
               font-weight: 800;
               color: #111827;
-              margin: 14px 0 8px 0;
+              margin: 16px 0 8px 0;
               line-height: 1.3;
               text-transform: uppercase;
             }

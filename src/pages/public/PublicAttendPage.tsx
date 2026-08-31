@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Moon, Sun, ShieldAlert, ShieldCheck, CheckCircle, UserCheck, Users, Clock, RefreshCw, AlertCircle } from 'lucide-react';
 import { PageSpinner, InlineSpinner, AlertError } from '../../components/shared/Feedback';
-import { KeNHALogo } from '../../components/KeNHALogo';
 import { SignaturePad } from '../../components/SignaturePad';
 import type { Attendance } from '../../data/mockData';
 import confetti from 'canvas-confetti';
@@ -160,21 +159,99 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!fullName.trim()) {
-      showToast('Name is required', 'error');
+    const trimmedName = fullName.trim();
+    if (!trimmedName) {
+      showToast('Full Name is required', 'error');
+      return;
+    }
+    if (trimmedName.length < 2) {
+      showToast('Please enter a valid full name (at least 2 characters)', 'error');
       return;
     }
 
-    // Validate custom required fields
+    if (attendType === 'staff') {
+      if (formConfig.includeDesignation && !designation.trim()) {
+        showToast('Designation / Title is required', 'error');
+        return;
+      }
+      if (formConfig.includeDepartment && !deptId) {
+        showToast('Department selection is required', 'error');
+        return;
+      }
+    } else {
+      // Visitor validations
+      if (formConfig.includeOrganization && !company.trim()) {
+        showToast('Company / Organization name is required', 'error');
+        return;
+      }
+      if (formConfig.includeOrganization && company.trim().length < 2) {
+        showToast('Please enter a valid Company / Organization name', 'error');
+        return;
+      }
+      if (formConfig.includePosition && !position.trim()) {
+        showToast('Position / Title is required', 'error');
+        return;
+      }
+      if (formConfig.includePurpose && !purpose) {
+        showToast('Purpose of attendance is required', 'error');
+        return;
+      }
+    }
+
+    // Validate all custom fields (including phone numbers, emails, numbers, and required fields)
     for (const cf of formConfig.customFields) {
       const applies =
         cf.appliesTo === 'all' ||
         (attendType === 'staff' && cf.appliesTo === 'staff') ||
         (attendType === 'visitor' && cf.appliesTo === 'visitor');
 
-      if (applies && cf.required && (!customResponses[cf.key] || !customResponses[cf.key].trim())) {
+      if (!applies) continue;
+
+      const val = (customResponses[cf.key] || '').trim();
+
+      if (cf.required && !val) {
         showToast(`${cf.label} is required`, 'error');
         return;
+      }
+
+      // Phone / Mobile Validation (field type 'tel' or key/label containing 'phone' or 'mobile')
+      const isPhoneField =
+        cf.type === 'tel' ||
+        cf.key.toLowerCase().includes('phone') ||
+        cf.key.toLowerCase().includes('mobile') ||
+        cf.label.toLowerCase().includes('phone') ||
+        cf.label.toLowerCase().includes('mobile');
+
+      if (val && isPhoneField) {
+        const cleanPhone = val.replace(/[\s\-().]/g, '');
+        // Validate valid phone formats: e.g. 07XXXXXXXX, 01XXXXXXXX, +254XXXXXXXXX, or standard 9-15 digit phone
+        const phoneRegex = /^(?:\+?\d{9,15}|0[17]\d{8})$/;
+        if (!phoneRegex.test(cleanPhone)) {
+          showToast(`Please enter a valid phone number for ${cf.label} (e.g. 0712345678 or +254712345678)`, 'error');
+          return;
+        }
+      }
+
+      // Email validation if field type is 'email' or key/label contains 'email'
+      const isEmailField =
+        cf.type === 'email' ||
+        cf.key.toLowerCase().includes('email') ||
+        cf.label.toLowerCase().includes('email');
+
+      if (val && isEmailField) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(val)) {
+          showToast(`Please enter a valid email address for ${cf.label}`, 'error');
+          return;
+        }
+      }
+
+      // Numeric validation if field type is 'number'
+      if (val && cf.type === 'number') {
+        if (isNaN(Number(val))) {
+          showToast(`Please enter a valid numeric value for ${cf.label}`, 'error');
+          return;
+        }
       }
     }
 
@@ -184,7 +261,7 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
     }
 
     if (!acceptedDisclaimer) {
-      showToast('Please check the declaration box to submit your attendance', 'error');
+      showToast('Please accept the declaration & data consent to submit your attendance', 'error');
       return;
     }
 
@@ -193,20 +270,12 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
     let payload: any = {
       meeting_id: meetingId,
       meeting_pin: enteredPin,
-      full_name: fullName.trim(),
+      full_name: trimmedName,
       signature_data: signatureData || (formConfig.includeSignature === false ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' : ''),
       custom_responses: customResponses,
     };
 
     if (attendType === 'staff') {
-      if (formConfig.includeDesignation && !designation.trim()) {
-        showToast('Designation is required', 'error');
-        return;
-      }
-      if (formConfig.includeDepartment && !deptId) {
-        showToast('Department selection is required', 'error');
-        return;
-      }
       payload = {
         ...payload,
         participant_type: 'staff',
@@ -214,10 +283,6 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
         department_id: deptId || deptsResponse?.data?.[0]?.department_id,
       };
     } else {
-      if (formConfig.includeOrganization && !company.trim()) {
-        showToast('Company/Organization name is required', 'error');
-        return;
-      }
       payload = {
         ...payload,
         participant_type: 'visitor',
@@ -283,8 +348,12 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
           {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
         </button>
 
-        <div className="login-logo-wrapper" style={{ marginBottom: 16 }}>
-          <KeNHALogo className="login-logo" width={110} height={55} />
+        <div className="login-logo-wrapper" style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+          <img
+            src="/kenha_banner_logo.png"
+            alt="Kenya National Highways Authority"
+            style={{ width: '100%', maxWidth: 280, height: 'auto', objectFit: 'contain', display: 'block', borderRadius: 4 }}
+          />
         </div>
 
         <div className="login-header" style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -586,7 +655,7 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
 
             {formConfig.includeSignature !== false && <SignaturePad onChange={setSignatureData} />}
 
-            {/* Attendance Declaration / Disclaimer */}
+            {/* Attendance Declaration / Data Consent */}
             <div style={{
               marginTop: 20,
               marginBottom: 12,
@@ -623,7 +692,7 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
                   userSelect: 'none',
                 }}
               >
-                <strong>Declaration:</strong> By submitting this form, I confirm and certify that the information provided is accurate and true, and that I am the attendee signing in for this attendance register.
+                <strong>Declaration & Data Consent:</strong> By submitting this form, I confirm that the information provided is accurate and true, and I consent to the collection, processing, and use of my personal data for official KeNHA attendance records and administrative verification in accordance with data protection guidelines.
               </label>
             </div>
 
