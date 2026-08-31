@@ -35,7 +35,7 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
   const handlePrint = () => {
     const svgElement = document.querySelector('#qr-svg-source svg') || document.querySelector('.qr-modal-svg svg');
     const svgHtml = svgElement ? svgElement.outerHTML : '';
-    const logoUrl = `${window.location.origin}/kenhalogo.png`;
+    const logoUrl = `${window.location.origin}/kenha_banner_logo.png`;
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -46,22 +46,25 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>Attendance Registration - ${meetingTitle}</title>
+          <title></title>
           <style>
             @page {
               size: A4 portrait;
-              margin: 12mm 15mm;
+              margin: 0;
             }
             * {
               box-sizing: border-box;
             }
+            html, body {
+              margin: 0;
+              padding: 0;
+            }
             body {
               font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
               text-align: center;
-              padding: 20px 40px;
+              padding: 14mm 16mm;
               color: #111827;
               background: #ffffff;
-              margin: 0;
             }
             .poster-container {
               max-width: 600px;
@@ -69,55 +72,44 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
             }
             .header {
               border-bottom: 3px solid #F9D616;
-              padding-bottom: 16px;
-              margin-bottom: 24px;
+              padding-bottom: 14px;
+              margin-bottom: 20px;
               display: flex;
-              flex-direction: column;
-              align-items: center;
               justify-content: center;
+              align-items: center;
             }
-            .logo-img {
-              height: 75px;
-              max-width: 160px;
+            .logo-banner-img {
+              max-width: 380px;
+              width: 100%;
+              height: auto;
               object-fit: contain;
-              margin-bottom: 8px;
-            }
-            .logo-text {
-              font-size: 17px;
-              font-weight: 800;
-              letter-spacing: 1.5px;
-              color: #000000;
-              margin: 0;
-              text-transform: uppercase;
-            }
-            .subtitle {
-              font-size: 12px;
-              color: #4B5563;
-              margin-top: 3px;
-              font-style: italic;
+              display: block;
+              border-radius: 4px;
             }
             .title {
               font-size: 22px;
               font-weight: 800;
               color: #111827;
-              margin: 16px 0 6px 0;
+              margin: 14px 0 8px 0;
               line-height: 1.3;
+              text-transform: uppercase;
             }
             .scan-instructions {
-              font-size: 14px;
-              color: #4B5563;
-              margin: 0 0 20px 0;
+              font-size: 15px;
+              font-weight: 700;
+              color: #111827;
+              margin: 0 0 16px 0;
+              line-height: 1.4;
             }
             .qr-container {
-              margin: 8px auto 20px;
+              margin: 6px auto 16px;
               padding: 16px;
-              border: 2px solid #E5E7EB;
+              border: 2.5px solid #111827;
               border-radius: 16px;
               display: inline-flex;
               justify-content: center;
               align-items: center;
               background: #ffffff;
-              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             }
             .qr-container svg {
               display: block;
@@ -125,21 +117,21 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
               height: 220px !important;
             }
             .pin-section {
-              margin: 10px 0 18px;
+              margin: 8px 0 16px;
             }
             .pin-label {
-              font-size: 12px;
-              color: #4B5563;
+              font-size: 12.5px;
+              color: #374151;
               text-transform: uppercase;
               letter-spacing: 1.5px;
               margin-bottom: 6px;
-              font-weight: 700;
+              font-weight: 800;
             }
             .pin-box {
               background: #F3F4F6;
-              border: 2px dashed #9CA3AF;
+              border: 2px dashed #4B5563;
               border-radius: 8px;
-              padding: 12px 28px;
+              padding: 10px 28px;
               display: inline-block;
               font-size: 32px;
               font-weight: 800;
@@ -147,29 +139,40 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
               color: #111827;
             }
             .instructions {
-              max-width: 440px;
+              max-width: 480px;
               margin: 16px auto 0;
-              font-size: 13px;
-              line-height: 1.6;
-              color: #374151;
+              font-size: 13.5px;
+              font-weight: 700;
+              line-height: 1.7;
+              color: #111827;
               text-align: left;
               background: #F9FAFB;
-              padding: 14px 20px;
-              border-radius: 8px;
-              border: 1px solid #E5E7EB;
+              padding: 14px 22px;
+              border-radius: 10px;
+              border: 2px solid #D1D5DB;
             }
-            .instructions strong {
-              display: block;
+            .instructions-heading {
+              font-weight: 800;
+              font-size: 14px;
+              color: #000000;
               margin-bottom: 6px;
-              font-size: 13px;
-              color: #111827;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .instructions-list {
+              margin: 0;
+              padding-left: 20px;
+              font-weight: 700;
+              color: #1f2937;
+            }
+            .instructions-list li {
+              margin-bottom: 4px;
+              font-weight: 700;
             }
             @media print {
-              body {
-                padding: 0;
-              }
-              .qr-container {
-                box-shadow: none;
+              html, body {
+                margin: 0 !important;
+                padding: 10mm 14mm !important;
               }
             }
           </style>
@@ -177,9 +180,7 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
         <body>
           <div class="poster-container">
             <div class="header">
-              <img src="${logoUrl}" alt="KeNHA Logo" class="logo-img" />
-              <div class="logo-text">Kenya National Highways Authority</div>
-              <div class="subtitle">Quality Highways, Better Connections</div>
+              <img src="${logoUrl}" alt="Kenya National Highways Authority" class="logo-banner-img" />
             </div>
 
             <div class="title">${meetingTitle}</div>
@@ -195,11 +196,13 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
             </div>
             
             <div class="instructions">
-              <strong>Instructions:</strong>
-              1. Open your camera or QR code scanner.<br/>
-              2. Point your device at the QR code above.<br/>
-              3. Enter the Meeting PIN when prompted.<br/>
-              4. Fill out the digital form and provide your signature.
+              <div class="instructions-heading">Instructions:</div>
+              <ol class="instructions-list">
+                <li>Open your camera or QR code scanner.</li>
+                <li>Point your device at the QR code above.</li>
+                <li>Enter the Meeting PIN when prompted.</li>
+                <li>Fill out the digital form and provide your signature.</li>
+              </ol>
             </div>
           </div>
 

@@ -62,6 +62,7 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
   const [customResponses, setCustomResponses] = useState<Record<string, string>>({});
 
   const [signatureData, setSignatureData] = useState<string | null>(null);
+  const [acceptedDisclaimer, setAcceptedDisclaimer] = useState(false);
 
   // Queries & Mutations
   const {
@@ -179,6 +180,11 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
 
     if (formConfig.includeSignature !== false && !signatureData) {
       showToast('Please draw your signature to register', 'error');
+      return;
+    }
+
+    if (!acceptedDisclaimer) {
+      showToast('Please check the declaration box to submit your attendance', 'error');
       return;
     }
 
@@ -580,8 +586,59 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
 
             {formConfig.includeSignature !== false && <SignaturePad onChange={setSignatureData} />}
 
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: 24 }} disabled={isSubmitting}>
-            {isSubmitting ? (
+            {/* Attendance Declaration / Disclaimer */}
+            <div style={{
+              marginTop: 20,
+              marginBottom: 12,
+              padding: '12px 14px',
+              background: 'var(--bg-app, #f9fafb)',
+              border: acceptedDisclaimer ? '1.5px solid #10b981' : '1.5px solid var(--border-color, #e5e7eb)',
+              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10,
+              transition: 'border-color 0.2s, background-color 0.2s',
+            }}>
+              <input
+                id="attendance-disclaimer"
+                type="checkbox"
+                checked={acceptedDisclaimer}
+                onChange={e => setAcceptedDisclaimer(e.target.checked)}
+                style={{
+                  marginTop: 3,
+                  width: 18,
+                  height: 18,
+                  accentColor: '#1e40af',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+              />
+              <label
+                htmlFor="attendance-disclaimer"
+                style={{
+                  fontSize: 12.5,
+                  lineHeight: 1.5,
+                  color: 'var(--text-main, #374151)',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+              >
+                <strong>Declaration:</strong> By submitting this form, I confirm and certify that the information provided is accurate and true, and that I am the attendee signing in for this attendance register.
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{
+                width: '100%',
+                marginTop: 12,
+                opacity: !acceptedDisclaimer ? 0.55 : 1,
+                cursor: !acceptedDisclaimer ? 'not-allowed' : 'pointer',
+              }}
+              disabled={!acceptedDisclaimer || isSubmitting}
+            >
+              {isSubmitting ? (
                 <>
                   <InlineSpinner />
                   Submitting Registration...
