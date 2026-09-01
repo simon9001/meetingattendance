@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, Menu, ChevronDown, UserCircle } from 'lucide-react';
+import { LogOut, Menu, ChevronDown, UserCircle, Home } from 'lucide-react';
 import type { User } from '../../data/mockData';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationDropdown } from './NotificationDropdown';
@@ -22,6 +22,11 @@ export const AppShell: React.FC<AppShellProps> = ({
   children,
   sidebar,
 }) => {
+  const handleGoHome = () => {
+    const homeTab = currentUser.role === 'admin' ? 'dashboard' : 'meetings';
+    setActiveDashboardTab?.(homeTab);
+  };
+
   return (
     <div className="drawer lg:drawer-open h-screen overflow-hidden">
       <input id="my-drawer-3" type="checkbox" className="drawer-toggle" />
@@ -32,7 +37,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         {/* ── STICKY Navbar ───────────────────────────────────────── */}
         <header className="navbar bg-white shadow-md sticky top-0 z-30 py-4 px-4 sm:px-6 gap-4 flex-shrink-0">
 
-          <div className="navbar-start flex-shrink-0 w-auto">
+          <div className="navbar-start flex-shrink-0 flex items-center gap-2 w-auto">
             {/* Mobile hamburger */}
             <label
               htmlFor="my-drawer-3"
@@ -41,6 +46,17 @@ export const AppShell: React.FC<AppShellProps> = ({
             >
               <Menu size={20} />
             </label>
+
+            {/* Home button */}
+            <button
+              type="button"
+              onClick={handleGoHome}
+              title="Go to Home Dashboard"
+              className="btn btn-ghost btn-sm gap-2 text-slate-700 hover:text-[#5645d4] hover:bg-indigo-50/70 font-semibold px-2.5 rounded-lg transition-all cursor-pointer"
+            >
+              <Home size={18} className="text-[#5645d4]" />
+              <span className="hidden sm:inline font-bold text-xs">Home</span>
+            </button>
           </div>
 
           {/* Search bar */}
@@ -82,6 +98,19 @@ export const AppShell: React.FC<AppShellProps> = ({
                   <div className="text-[11px] text-slate-500 font-normal truncate">{currentUser.email}</div>
                 </li>
                 <li className="mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleGoHome();
+                      (document.activeElement as HTMLElement | null)?.blur();
+                    }}
+                    className="flex items-center text-slate-700 hover:text-[#5645d4] cursor-pointer"
+                  >
+                    <Home className="mr-3 text-[#5645d4]" size={16} />
+                    Home Dashboard
+                  </button>
+                </li>
+                <li>
                   <button
                     type="button"
                     onClick={() => {

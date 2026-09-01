@@ -37,12 +37,68 @@ import { HRAnalyticsPage } from './pages/hr/HRAnalyticsPage';
 import { QRCodeModal } from './components/QRCodeModal';
 // Inline lightweight type for QR modal state (decoupled from mock data)
 interface ActiveQRMeeting { id: string; title: string; pin: string; }
+import { apiSlice } from './features/apis/apiSlice';
 import type { User } from './data/mockData';
 import type { Toast } from './types';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectCurrentUser, logout } from './features/slice/authSlice';
 import { selectCurrentToken } from './features/slice/authSlice';
 import { useLogoutMutation } from './features/apis/authApi';
+
+// Helpers for bidirectional Tab <-> URL routing
+export const getTabPath = (tab: string, role?: string): string => {
+  switch (tab) {
+    case 'dashboard':
+      return '/dashboard';
+    case 'users':
+      return '/users';
+    case 'departments':
+      return '/departments';
+    case 'security':
+      return '/security';
+    case 'logs':
+      return '/logs';
+    case 'documents':
+      return '/documents';
+    case 'meetings':
+      return role === 'admin' ? '/dashboard' : '/meetings';
+    case 'create_meeting':
+      return '/create-meeting';
+    case 'my_submissions':
+      return '/my-submissions';
+    case 'hr_archive':
+      return '/hr-archive';
+    case 'hr_analytics':
+      return '/hr-analytics';
+    case 'profile':
+      return '/profile';
+    default:
+      return role === 'admin' ? '/dashboard' : '/meetings';
+  }
+};
+
+export const getTabFromPath = (path: string, role?: string): string => {
+  const clean = path.split('?')[0].replace(/\/+$/, '') || '/';
+  const pathToTab: Record<string, string> = {
+    '/dashboard': role === 'admin' ? 'dashboard' : 'meetings',
+    '/users': 'users',
+    '/departments': 'departments',
+    '/security': 'security',
+    '/logs': 'logs',
+    '/documents': 'documents',
+    '/meetings': 'meetings',
+    '/create-meeting': 'create_meeting',
+    '/create_meeting': 'create_meeting',
+    '/my-submissions': 'my_submissions',
+    '/submissions': 'my_submissions',
+    '/archive': 'hr_archive',
+    '/hr-archive': 'hr_archive',
+    '/analytics': 'hr_analytics',
+    '/hr-analytics': 'hr_analytics',
+    '/profile': 'profile',
+  };
+  return pathToTab[clean] || (role === 'admin' ? 'dashboard' : 'meetings');
+};
 
 function App() {
   const dispatch = useDispatch();
@@ -53,6 +109,7 @@ function App() {
   const setCurrentUser = (u: User | null) => {
     if (u === null) {
       dispatch(logout());
+      dispatch(apiSlice.util.resetApiState());
     }
   };
 
@@ -72,6 +129,7 @@ function App() {
     const check = () => {
       if (currentToken && isExpired(currentToken)) {
         dispatch(logout());
+        dispatch(apiSlice.util.resetApiState());
         navigate('/login');
         showToast('Your session has expired. Please log in again.', 'error');
       }
@@ -103,8 +161,10 @@ function App() {
   // Refresh Trigger State
   const [dbTick, setDbTick] = useState(0);
 
-  // Active Dashboard Tab (role-specific)
-  const [activeDashboardTab, setActiveDashboardTab] = useState('');
+  // Active Dashboard Tab (role-specific, initialized from initial path)
+  const [activeDashboardTab, setActiveDashboardTab] = useState<string>(() => {
+    return getTabFromPath(window.location.pathname, currentUser?.role);
+  });
 
   // Password reset form state
   const [resetOldPass, setResetOldPass] = useState('');
@@ -117,11 +177,27 @@ function App() {
     setCurrentPath(path);
   };
 
+  // Centralized Tab Change Handler (syncs tab and URL)
+  const handleTabChange = (tab: string) => {
+    setActiveDashboardTab(tab);
+    const targetPath = getTabPath(tab, currentUser?.role);
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath);
+      setCurrentPath(targetPath);
+    }
+  };
+
   useEffect(() => {
-    const handlePopState = () => setCurrentPath(window.location.pathname);
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      setCurrentPath(path);
+      if (currentUser) {
+        setActiveDashboardTab(getTabFromPath(path, currentUser.role));
+      }
+    };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [currentUser]);
 
   // --- Enforce Pure Light Theme ---
   useEffect(() => {
@@ -130,37 +206,24 @@ function App() {
     localStorage.removeItem('kmtams_theme');
   }, []);
 
-  // --- Default tab per role and sync with URL paths ---
+  // --- Default tab per role and sync with URL paths on load / change ---
   useEffect(() => {
     if (currentUser) {
-      const cleanPath = currentPath.split('?')[0].replace(/\/+$/, '');
-      const pathToTab: Record<string, string> = {
-        '/dashboard': currentUser.role === 'admin' ? 'dashboard' : 'meetings',
-        '/users': 'users',
-        '/departments': 'departments',
-        '/security': 'security',
-        '/logs': 'logs',
-        '/documents': 'documents',
-        '/meetings': 'meetings',
-        '/create-meeting': 'create_meeting',
-        '/create_meeting': 'create_meeting',
-        '/my-submissions': 'my_submissions',
-        '/submissions': 'my_submissions',
-        '/archive': 'hr_archive',
-        '/hr-archive': 'hr_archive',
-        '/analytics': 'hr_analytics',
-        '/hr-analytics': 'hr_analytics',
-        '/profile': 'profile',
-      };
-
-      const matchedTab = pathToTab[cleanPath];
-      if (matchedTab) {
-        setActiveDashboardTab(matchedTab);
-      } else if (!activeDashboardTab) {
-        if (currentUser.role === 'admin') setActiveDashboardTab('dashboard');
-        else if (currentUser.role === 'hr') setActiveDashboardTab('meetings');
-        else if (currentUser.role === 'organizer') setActiveDashboardTab('meetings');
+      const clean = currentPath.split('?')[0].replace(/\/+$/, '') || '/';
+      // If user is at root '/', '/login', or '/reset-password', redirect to their role's home path
+      if (clean === '' || clean === '/' || clean === '/login') {
+        const homePath = currentUser.role === 'admin' ? '/dashboard' : '/meetings';
+        const homeTab = currentUser.role === 'admin' ? 'dashboard' : 'meetings';
+        setActiveDashboardTab(homeTab);
+        if (window.location.pathname !== homePath) {
+          window.history.replaceState(null, '', homePath);
+          setCurrentPath(homePath);
+        }
+        return;
       }
+
+      const matchedTab = getTabFromPath(clean, currentUser.role);
+      setActiveDashboardTab(matchedTab);
     }
   }, [currentUser, currentPath]);
 
@@ -180,6 +243,7 @@ function App() {
       console.error('Logout error:', e);
     }
     dispatch(logout());
+    dispatch(apiSlice.util.resetApiState());
     setLoginPassword('');
     showToast('Logged out successfully');
     navigate('/login');
@@ -343,7 +407,7 @@ function App() {
           triggerDbUpdate={triggerDbUpdate}
           navigate={navigate}
           setActiveQRMeeting={setActiveQRMeeting}
-          onCreateMeeting={() => setActiveDashboardTab('create_meeting')}
+          onCreateMeeting={() => handleTabChange('create_meeting')}
         />
       );
     }
@@ -353,7 +417,7 @@ function App() {
           currentUser={currentUser}
           showToast={showToast}
           triggerDbUpdate={triggerDbUpdate}
-          setActiveTab={setActiveDashboardTab}
+          setActiveTab={handleTabChange}
         />
       );
     }
@@ -390,13 +454,13 @@ function App() {
         currentUser={currentUser}
         handleLogout={handleLogout}
         activeDashboardTab={activeDashboardTab}
-        setActiveDashboardTab={setActiveDashboardTab}
-        onOpenProfile={() => setActiveDashboardTab('profile')}
+        setActiveDashboardTab={handleTabChange}
+        onOpenProfile={() => handleTabChange('profile')}
         sidebar={
           <Sidebar
             currentUser={currentUser}
             activeDashboardTab={activeDashboardTab}
-            setActiveDashboardTab={setActiveDashboardTab}
+            setActiveDashboardTab={handleTabChange}
           />
         }
       >

@@ -33,6 +33,7 @@ const baseQueryWithLogoutOn401: BaseQueryFn<
   const result = await rawBaseQuery(args, api, extraOptions);
   if (result.error && result.error.status === 401) {
     api.dispatch(logout());
+    api.dispatch(apiSlice.util.resetApiState());
   }
   return result;
 };

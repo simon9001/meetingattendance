@@ -4,6 +4,7 @@ import { KeNHALogo } from '../components/KeNHALogo';
 import type { User } from '../data/mockData';
 import { useLoginMutation } from '../features/apis/authApi';
 import { useDispatch } from 'react-redux';
+import { apiSlice } from '../features/apis/apiSlice';
 import { setCredentials, mapProfileToUser } from '../features/slice/authSlice';
 import { AlertError, AlertWarning, AlertInfo, InlineSpinner } from '../components/shared/Feedback';
 
@@ -85,11 +86,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         const { access_token, user: profile, must_change_password } = response.data;
         const mappedUser = mapProfileToUser(profile);
 
+        // Reset all RTK Query cache so that no previous user's cached data is shown
+        dispatch(apiSlice.util.resetApiState());
         dispatch(setCredentials({ user: mappedUser, token: access_token }));
         setCurrentUser(mappedUser);
 
         showToast(`Welcome back, ${mappedUser.name}!`);
-        navigate(must_change_password ? '/reset-password' : '/dashboard');
+        const targetHome = mappedUser.role === 'admin' ? '/dashboard' : '/meetings';
+        navigate(must_change_password ? '/reset-password' : targetHome);
       } else {
         const err = response.error || 'Invalid email or password';
         setErrorMsg(err);

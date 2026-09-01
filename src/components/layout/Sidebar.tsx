@@ -93,20 +93,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className="flex flex-col h-full w-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
 
-      {/* ── Brand / Portal Header ── */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-        <div className="flex-shrink-0 p-1 bg-white rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs">
+      {/* ── Brand / Portal Header (Clickable to return Home) ── */}
+      <button
+        type="button"
+        onClick={() => {
+          const homeTab = currentUser.role === 'admin' ? 'dashboard' : 'meetings';
+          setActiveDashboardTab(homeTab);
+          closeDrawer();
+        }}
+        title="Go to Home Dashboard"
+        className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-800 text-left w-full hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all cursor-pointer group select-none"
+      >
+        <div className="flex-shrink-0 p-1 bg-white rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs group-hover:scale-105 group-hover:shadow-sm transition-transform">
           <KeNHALogo height={28} width="auto" />
         </div>
-        <div className="flex flex-col leading-tight min-w-0">
-          <span className="text-[14px] font-extrabold text-slate-900 dark:text-white tracking-tight truncate">
+        <div className="flex flex-col leading-tight min-w-0 flex-1">
+          <span className="text-[14px] font-extrabold text-slate-900 dark:text-white tracking-tight truncate group-hover:text-[#5645d4] transition-colors">
             {currentPanel.title}
           </span>
           <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium truncate">
             {currentPanel.subtitle}
           </span>
         </div>
-      </div>
+      </button>
 
       {/* ── Navigation Menu ── */}
       <nav className="flex flex-col flex-1 p-3.5 gap-1.5 overflow-y-auto">
