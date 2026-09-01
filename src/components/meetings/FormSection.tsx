@@ -1,20 +1,76 @@
 import React from 'react';
+import { CheckCircle2 } from 'lucide-react';
 
-export const FormSection: React.FC<{
+interface FormSectionProps {
   step: number;
   title: string;
   helperText: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
+  isCompleted?: boolean;
+  badge?: React.ReactNode;
   children: React.ReactNode;
-}> = ({ step, title, helperText, icon, children }) => (
-  <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 18 }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-      {icon}
-      <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-        {step}. {title}
-      </span>
+}
+
+export const FormSection: React.FC<FormSectionProps> = ({
+  step,
+  title,
+  helperText,
+  icon,
+  isCompleted,
+  badge,
+  children,
+}) => (
+  <div
+    style={{
+      background: '#ffffff',
+      border: isCompleted ? '1.5px solid #dcfce7' : '1.5px solid #e2e8f0',
+      borderRadius: 12,
+      padding: '18px 20px',
+      marginBottom: 20,
+      boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+      transition: 'border-color 0.2s, box-shadow 0.2s',
+    }}
+  >
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: '50%',
+            background: isCompleted ? '#dcfce7' : '#f4f2fc',
+            color: isCompleted ? '#16a34a' : '#5645d4',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 13,
+            fontWeight: 800,
+            flexShrink: 0,
+          }}
+        >
+          {isCompleted ? <CheckCircle2 size={16} /> : step}
+        </div>
+        <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', letterSpacing: -0.2, display: 'flex', alignItems: 'center', gap: 6 }}>
+          {icon} {title}
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {badge}
+        {isCompleted && (
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '2px 8px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <CheckCircle2 size={12} /> Ready
+          </span>
+        )}
+      </div>
     </div>
-    <p style={{ margin: '2px 0 12px', fontSize: 12, color: '#64748b' }}>{helperText}</p>
-    {children}
+
+    <p style={{ margin: '0 0 14px 36px', fontSize: 12.5, color: '#64748b', lineHeight: 1.4 }}>
+      {helperText}
+    </p>
+
+    <div style={{ paddingLeft: 4 }}>
+      {children}
+    </div>
   </div>
 );

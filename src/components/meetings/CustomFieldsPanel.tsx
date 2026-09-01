@@ -15,6 +15,14 @@ interface CustomFieldsPanelProps {
   onChange: (newConfig: MeetingFormConfig) => void;
 }
 
+const FIELD_TYPE_HINTS: Record<FieldType, string> = {
+  text: 'General text input (e.g. Station name, ID number, Designation)',
+  tel: 'Telephone / Mobile number input with dial pad on phones',
+  number: 'Numeric values only (e.g. PIN, Badge No., Counter)',
+  email: 'Email address with validation',
+  select: 'Dropdown with multiple predefined choices to pick from',
+};
+
 export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
   target,
   label,
@@ -60,7 +68,7 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
 
     const id = `cf_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const options = newType === 'select'
-      ? newOptionsStr.split(',').map(s => s.trim()).filter(Boolean)
+      ? newOptionsStr.split(',').map((s: string) => s.trim()).filter(Boolean)
       : undefined;
 
     const newField: CustomField = {
@@ -105,11 +113,11 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#5645d4', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#5645d4', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
             {icon}
-            {label} Sign-In Fields ({visibleFields.length})
+            {label} Specific Columns &amp; Fields ({visibleFields.length})
           </div>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted, #64748b)' }}>
+          <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#64748b' }}>
             {disabled && disabledMessage ? disabledMessage : helperText}
           </p>
         </div>
@@ -123,16 +131,16 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
             style={{ fontSize: 12, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <Plus size={14} />
-            Add {label} Field
+            Add Custom Field for {label}
           </button>
         )}
       </div>
 
       {/* Quick Presets Bar */}
-      <div style={{ background: 'var(--bg-subtle, #f8fafc)', padding: '8px 12px', borderRadius: 8, border: '1px dashed var(--border-color, #cbd5e1)', marginBottom: 12 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #475569)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-          <Sparkles size={12} style={{ color: '#eab308' }} />
-          Quick-Add Popular Field Presets:
+      <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: 8, border: '1px dashed #cbd5e1', marginBottom: 12 }}>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: '#334155', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+          <Sparkles size={13} style={{ color: '#eab308' }} />
+          1-Click Popular Field Presets (Click to add immediately):
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {PRESET_CUSTOM_FIELDS.map(preset => {
@@ -144,21 +152,23 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
                 disabled={alreadyExists || disabled}
                 onClick={() => handleQuickAddPreset(preset)}
                 style={{
-                  fontSize: 11,
-                  padding: '3px 8px',
+                  fontSize: 11.5,
+                  padding: '4px 10px',
                   background: alreadyExists ? '#f1f5f9' : '#ffffff',
-                  color: alreadyExists ? '#94a3b8' : '#5645d4',
+                  color: alreadyExists ? '#94a3b8' : '#391c57',
                   border: '1px solid',
                   borderColor: alreadyExists ? '#e2e8f0' : '#bfdbfe',
-                  borderRadius: 5,
+                  borderRadius: 6,
                   cursor: alreadyExists ? 'default' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 4,
+                  gap: 5,
+                  boxShadow: alreadyExists ? 'none' : '0 1px 2px rgba(0,0,0,0.04)',
                 }}
               >
-                {alreadyExists ? <Check size={11} /> : <Plus size={11} />}
-                {preset.label}
+                {alreadyExists ? <Check size={12} style={{ color: '#16a34a' }} /> : <Plus size={12} style={{ color: '#5645d4' }} />}
+                <span>{preset.label}</span>
+                {alreadyExists && <span style={{ fontSize: 10, color: '#16a34a', fontWeight: 600 }}>(Added)</span>}
               </button>
             );
           })}
@@ -170,105 +180,123 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
         <form
           onSubmit={handleAddField}
           style={{
-            background: '#f8fafc',
+            background: '#ffffff',
             border: '2px solid #5645d4',
-            borderRadius: 8,
-            padding: 14,
+            borderRadius: 10,
+            padding: 16,
             marginBottom: 14,
-            boxShadow: '0 4px 12px rgba(86,69,212,0.08)',
+            boxShadow: '0 4px 16px rgba(86,69,212,0.1)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#391c57', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Plus size={15} /> New {label} Field
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#391c57', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Plus size={16} /> Add Custom Field for {label}
             </span>
             <button
               type="button"
               onClick={resetDraft}
               style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}
             >
-              <X size={16} />
+              <X size={18} />
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 12 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, marginBottom: 4, color: '#1e293b' }}>
-                Field / Column Label *
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, marginBottom: 4, color: '#0f172a' }}>
+                Field / Column Name *
               </label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="e.g. National ID No. / Mobile No."
+                placeholder="e.g. Station / Region, National ID No., Project Code"
                 value={newLabel}
                 onChange={e => setNewLabel(e.target.value)}
                 required
                 autoFocus
+                style={{ padding: '8px 10px', fontSize: 13 }}
               />
+              <span style={{ fontSize: 10.5, color: '#64748b' }}>
+                This label will become a column header in the attendance register.
+              </span>
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, marginBottom: 4, color: '#1e293b' }}>
-                Field Input Type
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, marginBottom: 4, color: '#0f172a' }}>
+                Input Type
               </label>
               <select
                 className="filter-select"
-                style={{ width: '100%' }}
+                style={{ width: '100%', padding: '8px 10px', fontSize: 13 }}
                 value={newType}
                 onChange={e => setNewType(e.target.value as FieldType)}
               >
-                <option value="text">Text (General string)</option>
+                <option value="text">Text (General string / name)</option>
                 <option value="tel">Phone / Mobile (Telephone)</option>
                 <option value="number">Number (Digits / ID)</option>
                 <option value="email">Email Address</option>
-                <option value="select">Dropdown Selection</option>
+                <option value="select">Dropdown List (Select options)</option>
               </select>
+              <span style={{ fontSize: 10.5, color: '#64748b' }}>
+                {FIELD_TYPE_HINTS[newType as FieldType] || ''}
+              </span>
             </div>
           </div>
 
           {newType === 'select' && (
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, marginBottom: 4, color: '#1e293b' }}>
-                Dropdown Options (Comma separated) *
+            <div style={{ marginBottom: 12, background: '#f8fafc', padding: 10, borderRadius: 6, border: '1px solid #e2e8f0' }}>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, marginBottom: 4, color: '#0f172a' }}>
+                Dropdown Choices (Separate each option with a comma) *
               </label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="e.g. Option A, Option B, Option C"
+                placeholder="e.g. Option A, Option B, Option C, None of the above"
                 value={newOptionsStr}
                 onChange={e => setNewOptionsStr(e.target.value)}
                 required={newType === 'select'}
+                style={{ padding: '8px 10px', fontSize: 13 }}
               />
+              <span style={{ fontSize: 10.5, color: '#64748b' }}>
+                Participants will pick one item from this dropdown when signing in.
+              </span>
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#1e293b', cursor: 'pointer' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, marginBottom: 14, background: '#f8fafc', padding: 10, borderRadius: 6 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 600, color: '#0f172a', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={newRequired}
                 onChange={e => setNewRequired(e.target.checked)}
-                style={{ width: 16, height: 16 }}
+                style={{ width: 16, height: 16, cursor: 'pointer' }}
               />
-              Participant Must Fill This (Required)
+              <div>
+                <span>Mandatory Field</span>
+                <div style={{ fontSize: 10.5, color: '#64748b', fontWeight: 400 }}>Attendees cannot submit without filling this</div>
+              </div>
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#1e293b', cursor: 'pointer' }}>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 600, color: '#0f172a', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={alsoShowToOther}
                 onChange={e => setAlsoShowToOther(e.target.checked)}
-                style={{ width: 16, height: 16 }}
+                style={{ width: 16, height: 16, cursor: 'pointer' }}
               />
-              Also show this field to {otherLabel}
+              <div>
+                <span>Also show to {otherLabel}</span>
+                <div style={{ fontSize: 10.5, color: '#64748b', fontWeight: 400 }}>Make this a shared column for everyone</div>
+              </div>
             </label>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <button type="button" onClick={resetDraft} className="btn btn-secondary" style={{ fontSize: 12, padding: '5px 12px' }}>
+            <button type="button" onClick={resetDraft} className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 14px' }}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" style={{ fontSize: 12, padding: '5px 14px' }}>
-              Save Field
+            <button type="submit" className="btn btn-primary" style={{ fontSize: 12, padding: '6px 16px' }}>
+              ✓ Save Field
             </button>
           </div>
         </form>
@@ -276,9 +304,10 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
 
       {/* List of fields visible to this audience */}
       {visibleFields.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '20px 16px', background: 'var(--bg-subtle, #f8fafc)', borderRadius: 8, border: '1px solid var(--border-color, #e2e8f0)', color: 'var(--text-muted, #64748b)' }}>
-          <FileSpreadsheet size={24} style={{ margin: '0 auto 6px', opacity: 0.5 }} />
-          <div style={{ fontSize: 12.5, fontWeight: 600 }}>No {label.toLowerCase()} fields added yet</div>
+        <div style={{ textAlign: 'center', padding: '18px 16px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', color: '#64748b' }}>
+          <FileSpreadsheet size={24} style={{ margin: '0 auto 6px', opacity: 0.5, color: '#5645d4' }} />
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: '#334155' }}>No custom {label.toLowerCase()} columns added yet</div>
+          <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Click a preset button above or click &ldquo;Add Custom Field&rdquo; to capture extra information.</div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -290,29 +319,34 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '10px 14px',
-                background: 'var(--bg-subtle, #ffffff)',
-                border: '1px solid var(--border-color, #e2e8f0)',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: 8,
                 flexWrap: 'wrap',
                 gap: 10,
+                boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main, #0f172a)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     {cf.label}
-                    {cf.appliesTo === 'all' && (
+                    {cf.appliesTo === 'all' ? (
                       <span style={{ fontSize: 10, fontWeight: 700, background: '#e6e0f5', color: '#391c57', padding: '1px 6px', borderRadius: 4 }}>
-                        Shared (All)
+                        Shared (Staff + Visitors)
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 10, fontWeight: 700, background: '#f1f5f9', color: '#475569', padding: '1px 6px', borderRadius: 4 }}>
+                        {label} only
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted, #64748b)', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span style={{ textTransform: 'capitalize' }}>Type: <strong>{cf.type}</strong></span>
+                  <div style={{ fontSize: 10.5, color: '#64748b', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 2 }}>
+                    <span>Input Type: <strong style={{ color: '#0f172a' }}>{cf.type}</strong></span>
                     {cf.options && (
                       <>
                         <span>•</span>
-                        <span>Options: ({cf.options.length})</span>
+                        <span>Dropdown Choices: ({cf.options.join(', ')})</span>
                       </>
                     )}
                   </div>
@@ -323,10 +357,11 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
                 <button
                   type="button"
                   onClick={() => handleToggleRequired(cf.id)}
+                  title="Click to toggle mandatory / optional"
                   style={{
                     fontSize: 11,
                     fontWeight: 600,
-                    padding: '3px 8px',
+                    padding: '4px 10px',
                     borderRadius: 4,
                     border: '1px solid',
                     borderColor: cf.required ? '#bbf7d0' : '#e2e8f0',
@@ -342,7 +377,7 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
                   type="button"
                   onClick={() => handleDelete(cf.id)}
                   style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 4, display: 'flex' }}
-                  title="Delete field"
+                  title="Remove this column"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -354,3 +389,4 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
     </div>
   );
 };
+
