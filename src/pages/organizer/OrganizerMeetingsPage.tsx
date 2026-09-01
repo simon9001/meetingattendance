@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Search, Eye, QrCode, Send, Edit3, FileText, Clock,
+  Search, Eye, QrCode, Edit3, FileText, Clock,
   PlayCircle, XCircle, Mail, Calendar, MapPin, Plus,
   ChevronLeft, ChevronRight, MoreVertical, SlidersHorizontal,
-  Grid, Activity, Award, UserCheck, Users
+  Grid, Activity, Award, UserCheck, Users, Trash2
 } from 'lucide-react';
 import { PageSpinner, InlineSpinner } from '../../components/shared/Feedback';
 import { GenerateDocumentModal } from '../../components/documents/GenerateDocumentModal';
@@ -17,7 +17,7 @@ import {
   useOpenMeetingAttendanceMutation,
   useCloseMeetingAttendanceMutation,
   useExtendMeetingAttendanceMutation,
-  useSubmitReportToHRMutation,
+  useDeleteMeetingMutation,
 } from '../../features/apis/apiSlice';
 import {
   parseMeetingFormConfig,
@@ -69,6 +69,10 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
     meeting: null,
     minutes: 30,
   });
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState<{ isOpen: boolean; meeting: any | null }>({
+    isOpen: false,
+    meeting: null,
+  });
 
   // Queries
   const { data: meetingsResponse, isLoading: isMeetingsLoading } = useGetMeetingsQuery(undefined, {
@@ -87,7 +91,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
   const [openAttendance, { isLoading: isOpening }] = useOpenMeetingAttendanceMutation();
   const [closeAttendance, { isLoading: isClosing }] = useCloseMeetingAttendanceMutation();
   const [extendAttendance, { isLoading: isExtending }] = useExtendMeetingAttendanceMutation();
-  const [submitToHR] = useSubmitReportToHRMutation();
+  const [deleteMeeting, { isLoading: isDeleting }] = useDeleteMeetingMutation();
 
   const allMeetings: any[] = Array.isArray(meetingsResponse?.data) ? meetingsResponse.data : [];
 
@@ -176,12 +180,17 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
     }
   };
 
-  const handleSubmitToHR = async (m: any) => {
+  const handleDeleteMeeting = async (meeting: any) => {
+    if (!meeting) return;
     try {
-      await submitToHR(m.meeting_id).unwrap();
-      showToast('Attendance report submitted to HR successfully!', 'success');
+      await deleteMeeting(meeting.meeting_id).unwrap();
+      showToast(`Meeting "${meeting.title}" deleted successfully!`, 'success');
+      if (selectedMeetingId === meeting.meeting_id) {
+        setSelectedMeetingId(null);
+      }
+      setDeleteConfirmModal({ isOpen: false, meeting: null });
     } catch (err: any) {
-      showToast(err?.data?.error || 'Failed to submit report to HR', 'error');
+      showToast(err?.data?.error || err?.data?.message || 'Failed to delete meeting', 'error');
     }
   };
 
@@ -439,19 +448,31 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
               )}
 
               {selectedMeeting.attendance_status === 'closed' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setExtendModal({ isOpen: true, meeting: selectedMeeting, minutes: 30 })}
-                    className="btn btn-warning"
-                  >
-                    <Clock size={16} /> Reopen / Extend
-                  </button>
-                  <button type="button" onClick={() => handleSubmitToHR(selectedMeeting)} className="btn btn-primary">
-                    <Send size={16} /> Submit to HR
-                  </button>
-                </>
+                <button
+                  type="button"
+                  onClick={() => setExtendModal({ isOpen: true, meeting: selectedMeeting, minutes: 30 })}
+                  className="btn btn-warning"
+                >
+                  <Clock size={16} /> Reopen / Extend
+                </button>
               )}
+
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmModal({ isOpen: true, meeting: selectedMeeting })}
+                className="btn btn-secondary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  color: '#dc2626',
+                  borderColor: '#fca5a5',
+                  backgroundColor: '#fef2f2',
+                }}
+                title="Permanently delete this meeting"
+              >
+                <Trash2 size={16} /> Delete Meeting
+              </button>
             </div>
           </div>
 
@@ -1500,6 +1521,31 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                                     <Clock size={14} color="#f59e0b" /> Reopen / Extend
                                   </button>
                                 )}
+
+                                <hr style={{ margin: '4px 0', border: 'none', borderTop: '1px solid var(--border-color)' }} />
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDeleteConfirmModal({ isOpen: true, meeting: m });
+                                    setActiveMenuId(null);
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px 14px',
+                                    border: 'none',
+                                    background: 'none',
+                                    fontSize: '12.5px',
+                                    fontWeight: 600,
+                                    color: '#dc2626',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                  }}
+                                >
+                                  <Trash2 size={14} color="#dc2626" /> Delete Meeting
+                                </button>
                               </div>
                             )}
                           </div>
@@ -1782,6 +1828,56 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
               >
                 {isExtending ? <InlineSpinner /> : <Clock size={16} />}
                 Confirm &amp; Extend ({extendModal.minutes} min)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteConfirmModal.isOpen && deleteConfirmModal.meeting && (
+        <div className="modal-overlay" style={{ zIndex: 99999 }}>
+          <div className="modal-content" style={{ maxWidth: 440, borderRadius: 14 }}>
+            <div className="modal-header" style={{ borderBottom: '1px solid #fee2e2', background: '#fff5f5' }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8, color: '#b91c1c', fontSize: 16 }}>
+                <Trash2 size={18} /> Confirm Delete Meeting
+              </h3>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmModal({ isOpen: false, meeting: null })}
+                className="modal-close-btn"
+                disabled={isDeleting}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="modal-body" style={{ padding: '20px' }}>
+              <p style={{ fontSize: 13.5, color: '#334155', margin: '0 0 12px 0', lineHeight: 1.5 }}>
+                Are you sure you want to delete <strong>"{deleteConfirmModal.meeting.title}"</strong>?
+              </p>
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
+                <p style={{ margin: 0, fontSize: 12, color: '#991b1b', lineHeight: 1.45 }}>
+                  ⚠️ <strong>Warning:</strong> This will permanently delete the meeting along with all recorded staff and visitor attendance logs, signatures, and associated reports. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="modal-footer" style={{ borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 20px' }}>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmModal({ isOpen: false, meeting: null })}
+                className="btn btn-secondary"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteMeeting(deleteConfirmModal.meeting)}
+                className="btn btn-danger"
+                style={{ background: '#dc2626', color: '#ffffff', borderColor: '#b91c1c', display: 'flex', alignItems: 'center', gap: 6 }}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (<><InlineSpinner /> Deleting...</>) : (<><Trash2 size={15} /> Yes, Delete Meeting</>)}
               </button>
             </div>
           </div>

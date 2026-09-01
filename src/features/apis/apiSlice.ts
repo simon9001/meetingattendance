@@ -189,6 +189,13 @@ export const apiSlice = createApi({
         'AuditLog',
       ],
     }),
+    deleteMeeting: builder.mutation<{ success: boolean; message: string }, string>({
+      query: (id) => ({
+        url: `/meetings/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Meeting', 'Attendance', 'Report', 'AuditLog'],
+    }),
     sendMeetingReminders: builder.mutation<any, { meetingId: string; dayLabel?: string; dateStr?: string; emails?: string[] }>({
       query: ({ meetingId, ...body }) => ({
         url: `/meetings/${meetingId}/send-reminders`,
@@ -305,6 +312,7 @@ export const {
   useOpenMeetingAttendanceMutation,
   useCloseMeetingAttendanceMutation,
   useExtendMeetingAttendanceMutation,
+  useDeleteMeetingMutation,
   useSendMeetingRemindersMutation,
   // Attendance
   useGetPublicMeetingInfoQuery,
