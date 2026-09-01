@@ -10,16 +10,34 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onChange, className 
   const [isDrawing, setIsDrawing] = useState(false);
   const [isEmpty, setIsEmpty] = useState(true);
 
-  // Setup canvas size and DPI scaling
+  // Setup canvas size and DPI scaling, preserving signature across resizes
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    let prevWidth = 0;
+    let prevHeight = 0;
+
     const resizeCanvas = () => {
       const rect = canvas.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
+      const targetWidth = Math.round(rect.width * dpr);
+      const targetHeight = Math.round(rect.height * dpr);
+
+      if (targetWidth === 0 || targetHeight === 0) return;
+
+      // If dimensions haven't changed, skip
+      if (targetWidth === prevWidth && targetHeight === prevHeight && canvas.width === targetWidth && canvas.height === targetHeight) {
+        return;
+      }
+
+      // If there was an existing drawing, capture it to restore after canvas resize
+      const existingDataUrl = !isEmpty && canvas.width > 0 && canvas.height > 0 ? canvas.toDataURL() : null;
+
+      prevWidth = targetWidth;
+      prevHeight = targetHeight;
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
       
       const ctx = canvas.getContext('2d');
       if (ctx) {
@@ -27,18 +45,22 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onChange, className 
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.lineWidth = 2.5;
-        // In light mode, signature should be dark charcoal (almost black)
-        // In dark mode, signature should be white/gold. Let's make it a nice dark charcoal #1E293B for standard documents
-        ctx.strokeStyle = '#1F2937'; 
+        ctx.strokeStyle = '#1F2937';
+
+        if (existingDataUrl) {
+          const img = new Image();
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0, rect.width, rect.height);
+          };
+          img.src = existingDataUrl;
+        }
       }
-      setIsEmpty(true);
-      onChange(null);
     };
 
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     return () => window.removeEventListener('resize', resizeCanvas);
-  }, []);
+  }, [isEmpty]);
 
   const getCoordinates = (e: React.MouseEvent | React.TouchEvent): { x: number; y: number } | null => {
     const canvas = canvasRef.current;

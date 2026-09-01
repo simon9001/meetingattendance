@@ -73,18 +73,30 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
   showToast,
   navigate,
 }) => {
-  // Extract recovery access_token if present in URL hash (#access_token=...)
-  const getAccessTokenFromHash = () => {
-    if (window.location.hash) {
-      const params = new URLSearchParams(window.location.hash.substring(1));
-      return params.get('access_token');
-    }
+  // Extract recovery token from URL search (?access_token=... or ?token=...) or hash (#access_token=...)
+  const getRecoveryToken = () => {
+    try {
+      if (window.location.search) {
+        const searchParams = new URLSearchParams(window.location.search);
+        const searchToken = searchParams.get('access_token') || searchParams.get('token');
+        if (searchToken) return searchToken;
+      }
+      if (window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+        const hashToken = hashParams.get('access_token') || hashParams.get('token');
+        if (hashToken) return hashToken;
+      }
+    } catch {}
     return null;
   };
 
-  const recoveryToken = getAccessTokenFromHash();
+  const recoveryToken = getRecoveryToken();
 
-  const [inputEmail, setInputEmail]   = useState(initialEmail || '');
+  const queryEmail = typeof window !== 'undefined' && window.location.search
+    ? new URLSearchParams(window.location.search).get('email')
+    : null;
+
+  const [inputEmail, setInputEmail]   = useState(initialEmail || queryEmail || '');
   const [showOld,     setShowOld]     = useState(false);
   const [showNew,     setShowNew]     = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -95,7 +107,7 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
 
   // Flow step: 'email' (input email for reset request) or 'change_password' (setting new password)
   const [step, setStep] = useState<'email' | 'change_password'>(
-    recoveryToken || initialEmail ? 'change_password' : 'email'
+    recoveryToken || initialEmail || queryEmail ? 'change_password' : 'email'
   );
 
   const [changePasswordApi] = useChangePasswordMutation();

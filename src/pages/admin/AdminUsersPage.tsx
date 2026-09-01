@@ -93,12 +93,15 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ showToast }) => 
   const handleCreateUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!newName || !newEmail) {
+    const trimmedEmail = newEmail.trim().toLowerCase();
+    const trimmedName = newName.trim();
+
+    if (!trimmedName || !trimmedEmail) {
       showToast('Name and Email are required fields', 'error');
       return;
     }
 
-    if (!newEmail.endsWith('@kenha.co.ke')) {
+    if (!trimmedEmail.endsWith('@kenha.co.ke')) {
       showToast('Only official @kenha.co.ke email domains are allowed', 'error');
       return;
     }
@@ -112,8 +115,8 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ showToast }) => 
 
     try {
       await createUser({
-        full_name: newName,
-        email: newEmail,
+        full_name: trimmedName,
+        email: trimmedEmail,
         role: backendRole,
         department_id: newDeptId || undefined,
         temp_password: chosenPassword

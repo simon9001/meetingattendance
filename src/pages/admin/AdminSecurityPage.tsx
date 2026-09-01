@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { ToggleLeft, ToggleRight } from 'lucide-react';
-import { MockDb } from '../../data/mockData';
 
 interface AdminSecurityPageProps {
   dbTick: number;
@@ -23,8 +22,7 @@ export const AdminSecurityPage: React.FC<AdminSecurityPageProps> = ({ dbTick, sh
     localStorage.setItem('kmtams_sec_timeout', timeout);
     localStorage.setItem('kmtams_sec_retry', pinRetry);
     localStorage.setItem('kmtams_sec_https', String(forceHttps));
-    MockDb.addAuditLog('admin@kenha.co.ke', 'SECURITY_CONFIG_UPDATE', 'Updated system-wide security settings');
-    showToast('Security configurations updated successfully');
+    showToast('Security configurations saved successfully.');
     triggerDbUpdate();
   };
 

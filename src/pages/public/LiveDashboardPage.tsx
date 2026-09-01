@@ -1,5 +1,5 @@
 import React from 'react';
-import { Moon, Sun, Users, UserCheck } from 'lucide-react';
+import { Users, UserCheck } from 'lucide-react';
 import { PageSpinner, InlineSpinner, AlertError } from '../../components/shared/Feedback';
 import { KeNHALogo } from '../../components/KeNHALogo';
 import type { User } from '../../data/mockData';
@@ -16,10 +16,10 @@ interface LiveDashboardPageProps {
   meetingId: string;
   showToast: (m: string, t?: 'success' | 'error') => void;
   navigate: (path: string) => void;
-  theme: string;
-  setTheme: React.Dispatch<React.SetStateAction<string>>;
-  dbTick: number;
-  triggerDbUpdate: () => void;
+  theme?: string;
+  setTheme?: React.Dispatch<React.SetStateAction<string>>;
+  dbTick?: number;
+  triggerDbUpdate?: () => void;
   currentUser: User | null;
 }
 
@@ -27,8 +27,6 @@ export const LiveDashboardPage: React.FC<LiveDashboardPageProps> = ({
   meetingId,
   showToast,
   navigate,
-  theme,
-  setTheme,
   currentUser,
 }) => {
   const authUser = useSelector((state: RootState) => state.auth.user);
@@ -130,13 +128,6 @@ export const LiveDashboardPage: React.FC<LiveDashboardPageProps> = ({
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button
-            type="button"
-            onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
-            className="theme-toggle-btn"
-          >
-            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-          </button>
           {effectiveUser ? (
             <button type="button" onClick={() => navigate('/dashboard')} className="btn btn-secondary">
               Back to Portal

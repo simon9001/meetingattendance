@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, ShieldAlert, ShieldCheck, CheckCircle, UserCheck, Users, Clock, RefreshCw, AlertCircle } from 'lucide-react';
+import { ShieldAlert, ShieldCheck, CheckCircle, UserCheck, Users, Clock, RefreshCw, AlertCircle } from 'lucide-react';
 import { PageSpinner, InlineSpinner, AlertError } from '../../components/shared/Feedback';
 import { SignaturePad } from '../../components/SignaturePad';
 import type { Attendance } from '../../data/mockData';
@@ -16,18 +16,16 @@ interface PublicAttendPageProps {
   meetingId: string;
   showToast: (m: string, t?: 'success' | 'error') => void;
   navigate: (path: string) => void;
-  theme: string;
-  setTheme: React.Dispatch<React.SetStateAction<string>>;
-  dbTick: number;
-  triggerDbUpdate: () => void;
+  theme?: string;
+  setTheme?: React.Dispatch<React.SetStateAction<string>>;
+  dbTick?: number;
+  triggerDbUpdate?: () => void;
 }
 
 export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
   meetingId,
   showToast,
   navigate,
-  theme,
-  setTheme,
 }) => {
   // Stages: 'pin' | 'form' | 'success' | 'expired' | 'not_started' | 'duplicate'
   const [stage, setStage] = useState<'pin' | 'form' | 'success' | 'expired' | 'not_started' | 'duplicate'>('pin');
@@ -155,6 +153,23 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
   };
 
   const formConfig = parseMeetingFormConfig(meeting);
+
+  const handleSignInAnotherUser = () => {
+    const todayDateStr = new Date().toISOString().split('T')[0];
+    const subKey = formConfig.isMultiDay ? `kmtams_submitted_${meetingId}_${todayDateStr}` : `kmtams_submitted_${meetingId}`;
+    localStorage.removeItem(subKey);
+    setStage('pin');
+    setPinDigits(['', '', '', '', '', '']);
+    setPinError(null);
+    setFullName('');
+    setDesignation('');
+    setCompany('');
+    setPosition('');
+    setCustomResponses({});
+    setSignatureData(null);
+    setAcceptedDisclaimer(false);
+    setTimeout(() => pinInputRefs[0].current?.focus(), 100);
+  };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -340,14 +355,6 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
   return (
     <div className="public-screen">
       <div className="public-card">
-        <button
-          onClick={() => setTheme(t => (t === 'light' ? 'dark' : 'light'))}
-          style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-          title="Toggle Theme"
-        >
-          {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-        </button>
-
         <div className="login-logo-wrapper" style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
           <img
             src="/kenha_banner_logo.png"
@@ -742,7 +749,7 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
               Your device has already submitted attendance for this meeting. Duplicate registrations are blocked by system security rules.
             </p>
             <button
-              onClick={() => { setStage('pin'); setPinDigits(['', '', '', '', '', '']); setPinError(null); }}
+              onClick={handleSignInAnotherUser}
               className="btn btn-secondary"
               style={{ width: '100%' }}
             >
@@ -760,16 +767,7 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
               Thank you! Your signature and attendance records have been securely stored in the KeNHA KMTAMS database.
             </p>
             <button
-              onClick={() => {
-                setStage('pin');
-                setPinDigits(['', '', '', '', '', '']);
-                setPinError(null);
-                setFullName('');
-                setDesignation('');
-                setCompany('');
-                setPosition('');
-                setSignatureData(null);
-              }}
+              onClick={handleSignInAnotherUser}
               className="btn btn-primary"
               style={{ width: '100%' }}
             >
