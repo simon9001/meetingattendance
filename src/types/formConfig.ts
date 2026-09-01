@@ -41,7 +41,7 @@ export interface MeetingFormConfig {
 
 export const DEFAULT_MEETING_FORM_CONFIG: MeetingFormConfig = {
   includeDesignation: true,
-  includeDepartment: true,
+  includeDepartment: false, // Default false for single department meetings (auto-activated if multi-department)
   includeOrganization: true,
   includePosition: true,
   includePurpose: true,

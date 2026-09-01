@@ -156,6 +156,15 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
     showToast(`Generated PIN: ${random}`, 'success');
   };
 
+  // Auto-toggle formConfig.includeDepartment when switching single vs multi-department mode
+  const handleDeptModeChange = (newMode: 'single' | 'custom') => {
+    setDeptMode(newMode);
+    setFormConfig(prev => ({
+      ...prev,
+      includeDepartment: newMode !== 'single',
+    }));
+  };
+
   // Step completion flags for visual indicators
   const isStep1Complete = Boolean(title.trim() && description.trim());
   const isStep2Complete = Boolean(
@@ -567,7 +576,7 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
                 deptId={deptId}
                 deptLabel={deptLabel}
                 departments={deptsResponse?.data || []}
-                onModeChange={setDeptMode}
+                onModeChange={handleDeptModeChange}
                 onDeptIdChange={setDeptId}
                 onDeptLabelChange={setDeptLabel}
               />

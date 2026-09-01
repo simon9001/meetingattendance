@@ -551,9 +551,13 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                 >
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: config.includeDepartment ? '#391c57' : '#64748b' }}>
-                      Department
+                      Department Field
                     </div>
-                    <div style={{ fontSize: 10.5, color: '#64748b' }}>Directorate / Division</div>
+                    <div style={{ fontSize: 10.5, color: '#64748b' }}>
+                      {config.includeDepartment
+                        ? 'Active — attendees pick department'
+                        : 'Deactivated — clean for Single Dept'}
+                    </div>
                   </div>
                   <div style={{ width: 36, height: 20, background: config.includeDepartment ? '#5645d4' : '#cbd5e1', borderRadius: 10, position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
                     <div style={{ width: 16, height: 16, background: '#ffffff', borderRadius: '50%', position: 'absolute', top: 2, left: config.includeDepartment ? 18 : 2, transition: 'left .2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />

@@ -74,6 +74,14 @@ export const EditMeetingModal: React.FC<EditMeetingModalProps> = ({ meeting, isO
 
   if (!isOpen || !meeting) return null;
 
+  const handleDeptModeChange = (newMode: 'single' | 'custom') => {
+    setDeptMode(newMode);
+    setFormConfig(prev => ({
+      ...prev,
+      includeDepartment: newMode !== 'single',
+    }));
+  };
+
   const combineDateAndTime = (dateStr: string, timeStr: string) => {
     const formattedTime = timeStr.split(':').slice(0, 2).join(':');
     const localDateTime = new Date(`${dateStr}T${formattedTime}:00`);
@@ -229,7 +237,7 @@ export const EditMeetingModal: React.FC<EditMeetingModalProps> = ({ meeting, isO
                 deptId={deptId}
                 deptLabel={deptLabel}
                 departments={deptsResponse?.data || []}
-                onModeChange={setDeptMode}
+                onModeChange={handleDeptModeChange}
                 onDeptIdChange={setDeptId}
                 onDeptLabelChange={setDeptLabel}
               />
