@@ -98,15 +98,15 @@ const InsertDataDropdown = ({ meeting, staff, visitors }: {
   };
 
   const items = [
-    { label: '📌 Meeting Title', html: `<strong>${meeting.title}</strong>` },
-    { label: '📅 Meeting Date', html: meeting.meeting_date },
-    { label: '⏰ Time (Start–End)', html: `${meeting.start_time} – ${meeting.end_time}` },
-    { label: '📍 Venue', html: meeting.venue || 'Virtual / N/A' },
-    { label: '🏢 Department', html: resolveDepartmentDisplay(meeting, 'KeNHA') },
-    { label: '👤 Organizer', html: meeting.profiles?.email || '' },
-    { label: '👥 Staff Count', html: `<strong>${staff.length}</strong>` },
-    { label: '🌐 Visitor Count', html: `<strong>${visitors.length}</strong>` },
-    { label: '✍️ Signature Box', html: `<div style="border-bottom:1px solid #000; width:150px; height:30px; margin:5px 0;"></div>` },
+    { label: 'Meeting Title', html: `<strong>${meeting.title}</strong>` },
+    { label: 'Meeting Date', html: meeting.meeting_date },
+    { label: 'Time (Start–End)', html: `${meeting.start_time} – ${meeting.end_time}` },
+    { label: 'Venue', html: meeting.venue || 'Virtual / N/A' },
+    { label: 'Department', html: resolveDepartmentDisplay(meeting, 'KeNHA') },
+    { label: 'Organizer', html: meeting.profiles?.email || '' },
+    { label: 'Staff Count', html: `<strong>${staff.length}</strong>` },
+    { label: 'Visitor Count', html: `<strong>${visitors.length}</strong>` },
+    { label: 'Signature Box', html: `<div style="border-bottom:1px solid #000; width:150px; height:30px; margin:5px 0;"></div>` },
   ];
 
   return (

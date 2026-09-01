@@ -296,7 +296,7 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" style={{ fontSize: 12, padding: '6px 16px' }}>
-              ✓ Save Field
+              Save Field
             </button>
           </div>
         </form>
@@ -370,7 +370,7 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
                     cursor: 'pointer',
                   }}
                 >
-                  {cf.required ? '✓ Mandatory' : 'Optional'}
+                  {cf.required ? 'Mandatory' : 'Optional'}
                 </button>
 
                 <button

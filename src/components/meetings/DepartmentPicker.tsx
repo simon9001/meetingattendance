@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, Building, Check, Sparkles, Plus, X, Layers, CheckSquare, Square } from 'lucide-react';
+import { Building2, Building, Check, Plus, X, Layers, CheckSquare, Square } from 'lucide-react';
 import { useCreateDepartmentMutation } from '../../features/apis/apiSlice';
 
 interface DepartmentOption {
@@ -442,7 +442,7 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
               style={{ fontSize: 12.5, padding: '7px 10px', width: '100%' }}
             />
             <span style={{ fontSize: 10.5, color: '#64748b', marginTop: 3, display: 'block' }}>
-              ✓ You can edit this text if you wish to adjust how the multi-department group is printed in the register.
+              You can edit this text to adjust how the multi-department group is displayed in the register.
             </span>
           </div>
         </div>
@@ -466,9 +466,7 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
           />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 11, color: '#64748b', display: 'flex', alignItems: 'center', gap: 3 }}>
-              <Sparkles size={12} style={{ color: '#eab308' }} /> 1-Click Presets:
-            </span>
+            <span style={{ fontSize: 11, color: '#64748b' }}>Presets:</span>
             {CUSTOM_DEPT_SUGGESTIONS.map(s => (
               <button
                 key={s}
