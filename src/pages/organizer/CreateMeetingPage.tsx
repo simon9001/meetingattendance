@@ -204,7 +204,7 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
     }
 
     if (deptMode === 'custom' && !deptLabel.trim()) {
-      showToast('Please enter a department label, or select a single department', 'error');
+      showToast('Please select at least one participating department, or enter a department label', 'error');
       return;
     }
 

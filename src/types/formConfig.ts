@@ -199,7 +199,7 @@ export function resolveDepartmentDisplay(
   meeting: { departments?: { name?: string } | null; department_label?: string | null } | null | undefined,
   fallback: string
 ): string {
-  return meeting?.departments?.name || meeting?.department_label || fallback;
+  return meeting?.department_label || meeting?.departments?.name || fallback;
 }
 
 export interface RegisterColumn {

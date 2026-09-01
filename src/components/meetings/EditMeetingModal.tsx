@@ -96,7 +96,7 @@ export const EditMeetingModal: React.FC<EditMeetingModalProps> = ({ meeting, isO
       return;
     }
     if (deptMode === 'custom' && !deptLabel.trim()) {
-      showToast('Please type a department label, or switch back to picking a single department', 'error');
+      showToast('Please select at least one participating department, or enter a department label', 'error');
       return;
     }
 
