@@ -66,10 +66,10 @@ const ToolbarBtn = ({ onClick, title, children, active = false, danger = false }
   <button type="button" title={title} onClick={onClick} style={{
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
     padding: '4px 8px', borderRadius: 4, border: '1px solid',
-    borderColor: danger ? '#fca5a5' : active ? '#5645d4' : '#d1d5db',
-    background: danger ? '#fef2f2' : active ? '#f2effc' : '#fff',
-    color: danger ? '#dc2626' : active ? '#4534b3' : '#374151',
-    cursor: 'pointer', fontSize: 12, fontWeight: active ? 600 : 400, transition: 'all .12s', whiteSpace: 'nowrap',
+    borderColor: danger ? '#fca5a5' : active ? '#facc15' : '#d1d5db',
+    background: danger ? '#fef2f2' : active ? '#fef9c3' : '#fff',
+    color: danger ? '#dc2626' : active ? '#854d0e' : '#374151',
+    cursor: 'pointer', fontSize: 12, fontWeight: active ? 700 : 400, transition: 'all .12s', whiteSpace: 'nowrap',
     height: 28,
   }}>{children}</button>
 );
@@ -720,7 +720,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     if (header) {
       (header as HTMLElement).focus();
       header.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      (header as HTMLElement).style.border = '2px dashed #5645d4';
+      (header as HTMLElement).style.border = '2px dashed #f9d616';
       setTimeout(() => { (header as HTMLElement).style.border = '1px transparent solid'; }, 2500);
     }
   }, []);
@@ -732,7 +732,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     if (footer) {
       (footer as HTMLElement).focus();
       footer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      (footer as HTMLElement).style.border = '2px dashed #5645d4';
+      (footer as HTMLElement).style.border = '2px dashed #f9d616';
       setTimeout(() => { (footer as HTMLElement).style.border = '1px transparent solid'; }, 2500);
     }
   }, []);
@@ -1415,8 +1415,8 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                 padding: '4px 10px',
                 fontSize: 11,
                 fontWeight: attendeeFilter === 'all' ? 700 : 500,
-                background: attendeeFilter === 'all' ? '#5645d4' : 'transparent',
-                color: attendeeFilter === 'all' ? '#ffffff' : '#cbd5e1',
+                background: attendeeFilter === 'all' ? '#111827' : 'transparent',
+                color: attendeeFilter === 'all' ? '#f9d616' : '#cbd5e1',
                 border: 'none',
                 borderRadius: 4,
                 cursor: 'pointer',
@@ -1436,8 +1436,8 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                 padding: '4px 10px',
                 fontSize: 11,
                 fontWeight: attendeeFilter === 'staff' ? 700 : 500,
-                background: attendeeFilter === 'staff' ? '#5645d4' : 'transparent',
-                color: attendeeFilter === 'staff' ? '#ffffff' : '#cbd5e1',
+                background: attendeeFilter === 'staff' ? '#111827' : 'transparent',
+                color: attendeeFilter === 'staff' ? '#f9d616' : '#cbd5e1',
                 border: 'none',
                 borderRadius: 4,
                 cursor: 'pointer',
@@ -1457,8 +1457,8 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                 padding: '4px 10px',
                 fontSize: 11,
                 fontWeight: attendeeFilter === 'visitors' ? 700 : 500,
-                background: attendeeFilter === 'visitors' ? '#5645d4' : 'transparent',
-                color: attendeeFilter === 'visitors' ? '#ffffff' : '#cbd5e1',
+                background: attendeeFilter === 'visitors' ? '#111827' : 'transparent',
+                color: attendeeFilter === 'visitors' ? '#f9d616' : '#cbd5e1',
                 border: 'none',
                 borderRadius: 4,
                 cursor: 'pointer',
@@ -1475,9 +1475,9 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button type="button" onClick={handleDownloadWord} style={{
-              display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px',
-              borderRadius: 4, border: 'none', background: '#5645d4', color: '#fff',
-              cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'background .15s',
+              display: 'flex', alignItems: 'center', gap: 6, padding: '5px 14px',
+              borderRadius: 4, border: 'none', background: '#f9d616', color: '#0b0d11',
+              cursor: 'pointer', fontSize: 12, fontWeight: 700, transition: 'background .15s',
             }} title="Export as Microsoft Word .docx">
               <FileDown size={14} /> Save .docx
             </button>
@@ -1501,7 +1501,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
         </div>
 
         {/* Word Ribbon Tab Bar */}
-        <div style={{ display: 'flex', gap: 2, padding: '0 12px', background: '#1e3a8a', borderBottom: '1px solid #4534b3' }}>
+        <div style={{ display: 'flex', gap: 2, padding: '0 12px', background: '#0b0d11', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
           {[
             { id: 'home', label: 'Home' },
             { id: 'insert', label: 'Insert' },
@@ -1723,7 +1723,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                 <ToolbarBtn onClick={() => setImgAlign('right')} title="Align Right"><AlignRight size={13} /></ToolbarBtn>
               </div>
               <div style={{ width: 1, height: 22, background: '#cbd5e1' }} />
-              <button type="button" onClick={() => setLockAspect(!lockAspect)} style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: 4, background: lockAspect ? '#f2effc' : '#fff', color: lockAspect ? '#5645d4' : '#334155', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button type="button" onClick={() => setLockAspect(!lockAspect)} style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: 4, background: lockAspect ? '#fef9c3' : '#fff', color: lockAspect ? '#854d0e' : '#334155', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                 {lockAspect ? <Lock size={12} /> : <Unlock size={12} />} {lockAspect ? 'Aspect Ratio Locked' : 'Aspect Ratio Free'}
               </button>
               <button type="button" onClick={deleteSelectedImg} style={{ padding: '4px 8px', border: '1px solid #fca5a5', borderRadius: 4, background: '#fef2f2', color: '#dc2626', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1764,7 +1764,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
               boxShadow: '0 4px 20px rgba(0,0,0,.25)',
               fontSize: 13, color: '#374151', fontWeight: 500,
             }}>
-              <Loader2 size={18} style={{ color: '#5645d4', animation: 'spin 1s linear infinite' }} />
+              <Loader2 size={18} style={{ color: '#b45309', animation: 'spin 1s linear infinite' }} />
               Merging meeting data into template...
             </div>
           )}
@@ -1773,8 +1773,8 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
             {/* MS Word Header Guide Tag */}
             {showGuides && (
               <div className="word-guide-tag" onClick={handleFocusHeader} style={{
-                position: 'absolute', top: 12, left: -95, background: '#f2effc', color: '#4534b3',
-                border: '1px dashed #3b82f6', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600,
+                position: 'absolute', top: 12, left: -95, background: '#fef9c3', color: '#854d0e',
+                border: '1px dashed #ca8a04', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 700,
                 cursor: 'pointer', zIndex: 5, display: 'flex', alignItems: 'center', gap: 4,
               }} title="Click to edit Header">
                 <Sparkles size={11} /> Header
@@ -1784,8 +1784,8 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
             {/* MS Word Footer Guide Tag */}
             {showGuides && (
               <div className="word-guide-tag" onClick={handleFocusFooter} style={{
-                position: 'absolute', bottom: 20, left: -90, background: '#f2effc', color: '#4534b3',
-                border: '1px dashed #3b82f6', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600,
+                position: 'absolute', bottom: 20, left: -90, background: '#fef9c3', color: '#854d0e',
+                border: '1px dashed #ca8a04', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 700,
                 cursor: 'pointer', zIndex: 5, display: 'flex', alignItems: 'center', gap: 4,
               }} title="Click to edit Footer">
                 <Sparkles size={11} /> Footer
@@ -1824,7 +1824,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                   left: imgOverlay.left,
                   width: imgOverlay.width,
                   height: imgOverlay.height,
-                  border: '2px solid #5645d4',
+                  border: '2px solid #f9d616',
                   pointerEvents: 'none',
                   zIndex: 30,
                   boxSizing: 'border-box',
@@ -1853,7 +1853,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                     border: '1px solid #334155',
                   }}
                 >
-                  <span style={{ color: '#93c5fd', fontSize: 10, fontWeight: 700 }}>
+                  <span style={{ color: '#fde047', fontSize: 10, fontWeight: 700 }}>
                     {Math.round(imgOverlay.width)} × {Math.round(imgOverlay.height)}px
                   </span>
                   <div style={{ width: 1, height: 14, background: '#475569' }} />
@@ -1866,7 +1866,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                   <button type="button" onClick={() => setImgAlign('center')} title="Align Center" style={{ border: 'none', background: 'transparent', color: '#cbd5e1', cursor: 'pointer', padding: 2 }}><AlignCenter size={13} /></button>
                   <button type="button" onClick={() => setImgAlign('right')} title="Align Right" style={{ border: 'none', background: 'transparent', color: '#cbd5e1', cursor: 'pointer', padding: 2 }}><AlignRight size={13} /></button>
                   <div style={{ width: 1, height: 14, background: '#475569' }} />
-                  <button type="button" onClick={() => setLockAspect(!lockAspect)} title={lockAspect ? 'Lock Aspect Ratio (Active)' : 'Unlock Aspect Ratio'} style={{ border: 'none', background: lockAspect ? '#5645d4' : '#334155', color: '#fff', padding: '3px 6px', borderRadius: 3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 10 }}>
+                  <button type="button" onClick={() => setLockAspect(!lockAspect)} title={lockAspect ? 'Lock Aspect Ratio (Active)' : 'Unlock Aspect Ratio'} style={{ border: 'none', background: lockAspect ? '#f9d616' : '#334155', color: lockAspect ? '#0b0d11' : '#fff', padding: '3px 6px', borderRadius: 3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700 }}>
                     {lockAspect ? <Lock size={11} /> : <Unlock size={11} />} {lockAspect ? 'Locked' : 'Free'}
                   </button>
                   <button type="button" onClick={deleteSelectedImg} title="Delete Image" style={{ border: 'none', background: '#dc2626', color: '#fff', padding: '3px 6px', borderRadius: 3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 10 }}>
@@ -1897,7 +1897,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
                       width: 10,
                       height: 10,
                       background: '#ffffff',
-                      border: '2px solid #5645d4',
+                      border: '2px solid #f9d616',
                       borderRadius: 2,
                       cursor: h.cursor,
                       pointerEvents: 'auto',

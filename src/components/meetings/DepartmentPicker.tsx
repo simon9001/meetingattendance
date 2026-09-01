@@ -179,7 +179,7 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
         <div>
           <label style={{ fontWeight: 700, color: '#0f172a', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Building2 size={16} style={{ color: '#5645d4' }} />
+            <Building2 size={16} className="text-[#B45309]" />
             Hosting Department / Directorate Scope *
           </label>
           <span style={{ fontSize: 11.5, color: '#64748b' }}>
@@ -196,9 +196,9 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
             gap: 4,
             fontSize: 11.5,
             fontWeight: 700,
-            color: '#5645d4',
-            background: '#f4f2fc',
-            border: '1px solid #c7d2fe',
+            color: '#854d0e',
+            background: '#fef9c3',
+            border: '1px solid #fde047',
             borderRadius: 6,
             padding: '4px 10px',
             cursor: 'pointer',
@@ -217,8 +217,8 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
           onClick={() => handleTabChange('single')}
           style={{
             padding: '10px 12px',
-            background: activeTab === 'single' ? '#f4f2fc' : '#ffffff',
-            border: activeTab === 'single' ? '2px solid #5645d4' : '1px solid #cbd5e1',
+            background: activeTab === 'single' ? '#fefce8' : '#ffffff',
+            border: activeTab === 'single' ? '2px solid #eab308' : '1px solid #cbd5e1',
             borderRadius: 8,
             cursor: 'pointer',
             textAlign: 'left',
@@ -230,15 +230,15 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Building2 size={16} style={{ color: activeTab === 'single' ? '#5645d4' : '#64748b' }} />
+            <Building2 size={16} style={{ color: activeTab === 'single' ? '#b45309' : '#64748b' }} />
             <div>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: activeTab === 'single' ? '#391c57' : '#334155' }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: activeTab === 'single' ? '#78350f' : '#334155' }}>
                 Single Department
               </div>
               <div style={{ fontSize: 10.5, color: '#64748b' }}>1 specific KeNHA unit</div>
             </div>
           </div>
-          {activeTab === 'single' && <Check size={14} style={{ color: '#5645d4', flexShrink: 0 }} />}
+          {activeTab === 'single' && <Check size={14} style={{ color: '#b45309', flexShrink: 0 }} />}
         </button>
 
         {/* Multiple Departments Option */}
@@ -247,8 +247,8 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
           onClick={() => handleTabChange('multi')}
           style={{
             padding: '10px 12px',
-            background: activeTab === 'multi' ? '#f4f2fc' : '#ffffff',
-            border: activeTab === 'multi' ? '2px solid #5645d4' : '1px solid #cbd5e1',
+            background: activeTab === 'multi' ? '#fefce8' : '#ffffff',
+            border: activeTab === 'multi' ? '2px solid #eab308' : '1px solid #cbd5e1',
             borderRadius: 8,
             cursor: 'pointer',
             textAlign: 'left',
@@ -260,15 +260,15 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Layers size={16} style={{ color: activeTab === 'multi' ? '#5645d4' : '#64748b' }} />
+            <Layers size={16} style={{ color: activeTab === 'multi' ? '#b45309' : '#64748b' }} />
             <div>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: activeTab === 'multi' ? '#391c57' : '#334155' }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: activeTab === 'multi' ? '#78350f' : '#334155' }}>
                 Multiple Departments
               </div>
               <div style={{ fontSize: 10.5, color: '#64748b' }}>Select 2 or more units</div>
             </div>
           </div>
-          {activeTab === 'multi' && <Check size={14} style={{ color: '#5645d4', flexShrink: 0 }} />}
+          {activeTab === 'multi' && <Check size={14} style={{ color: '#b45309', flexShrink: 0 }} />}
         </button>
 
         {/* Custom / Joint Label Option */}
@@ -277,8 +277,8 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
           onClick={() => handleTabChange('custom')}
           style={{
             padding: '10px 12px',
-            background: activeTab === 'custom' ? '#f4f2fc' : '#ffffff',
-            border: activeTab === 'custom' ? '2px solid #5645d4' : '1px solid #cbd5e1',
+            background: activeTab === 'custom' ? '#fefce8' : '#ffffff',
+            border: activeTab === 'custom' ? '2px solid #eab308' : '1px solid #cbd5e1',
             borderRadius: 8,
             cursor: 'pointer',
             textAlign: 'left',
@@ -290,15 +290,15 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Building size={16} style={{ color: activeTab === 'custom' ? '#5645d4' : '#64748b' }} />
+            <Building size={16} style={{ color: activeTab === 'custom' ? '#b45309' : '#64748b' }} />
             <div>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: activeTab === 'custom' ? '#391c57' : '#334155' }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: activeTab === 'custom' ? '#78350f' : '#334155' }}>
                 Custom / Joint Label
               </div>
               <div style={{ fontSize: 10.5, color: '#64748b' }}>Type custom joint name</div>
             </div>
           </div>
-          {activeTab === 'custom' && <Check size={14} style={{ color: '#5645d4', flexShrink: 0 }} />}
+          {activeTab === 'custom' && <Check size={14} style={{ color: '#b45309', flexShrink: 0 }} />}
         </button>
       </div>
 
@@ -342,9 +342,9 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
                   fontSize: 11,
                   fontWeight: 600,
                   padding: '3px 8px',
-                  background: '#e0e7ff',
-                  color: '#3730a3',
-                  border: '1px solid #c7d2fe',
+                  background: '#fef9c3',
+                  color: '#854d0e',
+                  border: '1px solid #facc15',
                   borderRadius: 4,
                   cursor: 'pointer',
                   display: 'flex',
@@ -390,8 +390,8 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
                     alignItems: 'center',
                     gap: 8,
                     padding: '8px 10px',
-                    background: isSelected ? '#f4f2fc' : '#ffffff',
-                    border: isSelected ? '1.5px solid #5645d4' : '1px solid #e2e8f0',
+                    background: isSelected ? '#fef9c3' : '#ffffff',
+                    border: isSelected ? '1.5px solid #eab308' : '1px solid #e2e8f0',
                     borderRadius: 6,
                     cursor: 'pointer',
                     textAlign: 'left',
@@ -403,18 +403,18 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
                       width: 18,
                       height: 18,
                       borderRadius: 4,
-                      background: isSelected ? '#5645d4' : '#ffffff',
-                      border: isSelected ? 'none' : '1.5px solid #94a3b8',
+                      background: isSelected ? '#f9d616' : '#ffffff',
+                      border: isSelected ? '1px solid #ca8a04' : '1.5px solid #94a3b8',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
                     }}
                   >
-                    {isSelected && <Check size={13} style={{ color: '#ffffff', strokeWidth: 3 }} />}
+                    {isSelected && <Check size={13} style={{ color: '#0b0d11', strokeWidth: 3 }} />}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: isSelected ? 700 : 500, color: isSelected ? '#391c57' : '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: 12, fontWeight: isSelected ? 700 : 500, color: isSelected ? '#78350f' : '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {d.name}
                     </div>
                     {d.department_code && (
@@ -475,11 +475,12 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
                 style={{
                   fontSize: 11,
                   padding: '3px 8px',
-                  background: deptLabel === s ? '#e6e0f5' : '#ffffff',
-                  color: deptLabel === s ? '#391c57' : '#475569',
-                  border: deptLabel === s ? '1px solid #5645d4' : '1px solid #cbd5e1',
+                  background: deptLabel === s ? '#fef9c3' : '#ffffff',
+                  color: deptLabel === s ? '#854d0e' : '#475569',
+                  border: deptLabel === s ? '1px solid #facc15' : '1px solid #cbd5e1',
                   borderRadius: 4,
                   cursor: 'pointer',
+                  fontWeight: deptLabel === s ? 700 : 500,
                 }}
               >
                 {s}
@@ -515,7 +516,7 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Plus size={16} style={{ color: '#5645d4' }} />
+                <Plus size={16} className="text-[#B45309]" />
                 Create New Department
               </h3>
               <button

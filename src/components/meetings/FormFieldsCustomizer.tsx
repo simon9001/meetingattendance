@@ -166,7 +166,7 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color, #e2e8f0)', paddingBottom: 12, marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Sliders size={18} style={{ color: 'var(--brand-primary, #5645d4)' }} />
+            <Sliders size={18} className="text-[#B45309]" />
             <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
               Meeting Schedule &amp; Attendance Form Customizer
             </h4>
@@ -229,7 +229,7 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
             {/* SECTION 0: SINGLE DAY vs MULTI-DAY SESSION MODE */}
             <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CalendarDays size={16} style={{ color: '#5645d4' }} />
+                <CalendarDays size={16} className="text-[#B45309]" />
                 1. Meeting Schedule Mode (Single-Day vs. Multi-Day)
               </div>
               <p style={{ margin: '0 0 12px', fontSize: 11.5, color: '#64748b' }}>
@@ -243,8 +243,8 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                   onClick={() => handleSetMultiDay(false)}
                   style={{
                     padding: '14px 16px',
-                    background: !config.isMultiDay ? '#f4f2fc' : '#ffffff',
-                    border: !config.isMultiDay ? '2px solid #5645d4' : '1px solid #cbd5e1',
+                    background: !config.isMultiDay ? '#fefce8' : '#ffffff',
+                    border: !config.isMultiDay ? '2px solid #eab308' : '1px solid #cbd5e1',
                     borderRadius: 8,
                     cursor: 'pointer',
                     textAlign: 'left',
@@ -258,8 +258,8 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                           width: 32,
                           height: 32,
                           borderRadius: 8,
-                          background: !config.isMultiDay ? '#5645d4' : '#f1f5f9',
-                          color: !config.isMultiDay ? '#ffffff' : '#64748b',
+                          background: !config.isMultiDay ? '#facc15' : '#f1f5f9',
+                          color: !config.isMultiDay ? '#0f172a' : '#64748b',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -269,13 +269,13 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                         <Calendar size={18} />
                       </div>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: !config.isMultiDay ? '#391c57' : '#334155' }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: !config.isMultiDay ? '#78350f' : '#334155' }}>
                           Single-Day Meeting
                         </div>
                         <div style={{ fontSize: 11, color: '#64748b' }}>Standard 1-day attendance register</div>
                       </div>
                     </div>
-                    {!config.isMultiDay && <Check size={18} style={{ color: '#5645d4', fontWeight: 800 }} />}
+                    {!config.isMultiDay && <Check size={18} style={{ color: '#b45309', fontWeight: 800 }} />}
                   </div>
                 </button>
 
@@ -285,8 +285,8 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                   onClick={() => handleSetMultiDay(true)}
                   style={{
                     padding: '14px 16px',
-                    background: config.isMultiDay ? '#f4f2fc' : '#ffffff',
-                    border: config.isMultiDay ? '2px solid #5645d4' : '1px solid #cbd5e1',
+                    background: config.isMultiDay ? '#fefce8' : '#ffffff',
+                    border: config.isMultiDay ? '2px solid #eab308' : '1px solid #cbd5e1',
                     borderRadius: 8,
                     cursor: 'pointer',
                     textAlign: 'left',
@@ -300,8 +300,8 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                           width: 32,
                           height: 32,
                           borderRadius: 8,
-                          background: config.isMultiDay ? '#5645d4' : '#f1f5f9',
-                          color: config.isMultiDay ? '#ffffff' : '#64748b',
+                          background: config.isMultiDay ? '#facc15' : '#f1f5f9',
+                          color: config.isMultiDay ? '#0f172a' : '#64748b',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -311,22 +311,22 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                         <CalendarDays size={18} />
                       </div>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: config.isMultiDay ? '#391c57' : '#334155' }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: config.isMultiDay ? '#78350f' : '#334155' }}>
                           Multi-Day Workshop / Training
                         </div>
                         <div style={{ fontSize: 11, color: '#64748b' }}>Daily signatures combined in 1 row</div>
                       </div>
                     </div>
-                    {config.isMultiDay && <Check size={18} style={{ color: '#5645d4', fontWeight: 800 }} />}
+                    {config.isMultiDay && <Check size={18} style={{ color: '#b45309', fontWeight: 800 }} />}
                   </div>
                 </button>
               </div>
 
               {/* If Multi-Day Active, Show Session Days & Reminders Config */}
               {config.isMultiDay && (
-                <div style={{ background: '#ffffff', border: '1px solid #bfdbfe', borderRadius: 8, padding: 14 }}>
+                <div style={{ background: '#ffffff', border: '1px solid #fde047', borderRadius: 8, padding: 14 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#1e3a8a' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#78350f' }}>
                       Session Dates ({config.sessionDates?.length || 0} Days):
                     </div>
                     {/* Quick Preset Buttons */}
@@ -337,7 +337,7 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                       <button type="button" onClick={() => handleApplyPresetDays(3)} className="btn btn-secondary" style={{ fontSize: 11, padding: '3px 8px' }}>
                         + 3 Days
                       </button>
-                      <button type="button" onClick={() => handleApplyPresetDays(5)} className="btn btn-secondary" style={{ fontSize: 11, padding: '3px 8px', background: '#e0e7ff', color: '#3730a3' }}>
+                      <button type="button" onClick={() => handleApplyPresetDays(5)} className="btn btn-secondary" style={{ fontSize: 11, padding: '3px 8px', background: '#fef9c3', color: '#854d0e', border: '1px solid #facc15' }}>
                         + 5 Days (Mon - Fri)
                       </button>
                     </div>
@@ -385,16 +385,16 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                           display: 'flex',
                           alignItems: 'center',
                           gap: 6,
-                          background: '#f4f2fc',
-                          border: '1px solid #93c5fd',
+                          background: '#fef9c3',
+                          border: '1px solid #facc15',
                           borderRadius: 6,
                           padding: '4px 8px',
                           fontSize: 12,
                           fontWeight: 600,
-                          color: '#1e40af',
+                          color: '#854d0e',
                         }}
                       >
-                        <span style={{ fontSize: 10, background: '#5645d4', color: '#fff', borderRadius: 4, padding: '1px 4px' }}>
+                        <span style={{ fontSize: 10, background: '#b45309', color: '#fff', borderRadius: 4, padding: '1px 4px' }}>
                           Day {idx + 1}
                         </span>
                         <span>{dateStr}</span>
@@ -441,7 +441,7 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                         style={{ cursor: 'pointer' }}
                       />
                       <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Mail size={14} style={{ color: '#5645d4' }} />
+                        <Mail size={14} className="text-[#B45309]" />
                         Send Daily Sign-In Email Reminders to Participants via Resend
                       </div>
                     </div>
@@ -483,7 +483,7 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
               </div>
 
               {/* Staff Fields sub-group */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#5645d4', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
                 <UserCheck size={13} />
                 Internal Staff Columns
               </div>
@@ -511,8 +511,8 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '10px 14px',
-                    background: config.includeDesignation ? 'rgba(86,69,212,0.05)' : '#f8fafc',
-                    border: config.includeDesignation ? '1.5px solid #5645d4' : '1px solid #e2e8f0',
+                    background: config.includeDesignation ? 'rgba(249,214,22,0.08)' : '#f8fafc',
+                    border: config.includeDesignation ? '1.5px solid #eab308' : '1px solid #e2e8f0',
                     borderRadius: 8,
                     cursor: 'pointer',
                     textAlign: 'left',
@@ -520,13 +520,13 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: config.includeDesignation ? '#391c57' : '#64748b' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: config.includeDesignation ? '#78350f' : '#64748b' }}>
                       Designation / Role
                     </div>
                     <div style={{ fontSize: 10.5, color: '#64748b' }}>Job title / position (e.g. Engineer)</div>
                   </div>
-                  <div style={{ width: 36, height: 20, background: config.includeDesignation ? '#5645d4' : '#cbd5e1', borderRadius: 10, position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
-                    <div style={{ width: 16, height: 16, background: '#ffffff', borderRadius: '50%', position: 'absolute', top: 2, left: config.includeDesignation ? 18 : 2, transition: 'left .2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
+                  <div style={{ width: 36, height: 20, background: config.includeDesignation ? '#facc15' : '#cbd5e1', borderRadius: 10, position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
+                    <div style={{ width: 16, height: 16, background: '#111827', borderRadius: '50%', position: 'absolute', top: 2, left: config.includeDesignation ? 18 : 2, transition: 'left .2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
                   </div>
                 </button>
 
@@ -541,8 +541,8 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '10px 14px',
-                    background: config.includeDepartment ? 'rgba(86,69,212,0.05)' : '#f8fafc',
-                    border: config.includeDepartment ? '1.5px solid #5645d4' : '1px solid #e2e8f0',
+                    background: config.includeDepartment ? 'rgba(249,214,22,0.08)' : '#f8fafc',
+                    border: config.includeDepartment ? '1.5px solid #eab308' : '1px solid #e2e8f0',
                     borderRadius: 8,
                     cursor: 'pointer',
                     textAlign: 'left',
@@ -550,7 +550,7 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: config.includeDepartment ? '#391c57' : '#64748b' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: config.includeDepartment ? '#78350f' : '#64748b' }}>
                       Department Field
                     </div>
                     <div style={{ fontSize: 10.5, color: '#64748b' }}>
@@ -559,8 +559,8 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                         : 'Deactivated — clean for Single Dept'}
                     </div>
                   </div>
-                  <div style={{ width: 36, height: 20, background: config.includeDepartment ? '#5645d4' : '#cbd5e1', borderRadius: 10, position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
-                    <div style={{ width: 16, height: 16, background: '#ffffff', borderRadius: '50%', position: 'absolute', top: 2, left: config.includeDepartment ? 18 : 2, transition: 'left .2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
+                  <div style={{ width: 36, height: 20, background: config.includeDepartment ? '#facc15' : '#cbd5e1', borderRadius: 10, position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
+                    <div style={{ width: 16, height: 16, background: '#111827', borderRadius: '50%', position: 'absolute', top: 2, left: config.includeDepartment ? 18 : 2, transition: 'left .2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
                   </div>
                 </button>
               </div>
@@ -578,8 +578,8 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                   justifyContent: 'space-between',
                   padding: '12px 16px',
                   marginBottom: 12,
-                  background: config.allowVisitors ? '#f4f2fc' : '#fafaf9',
-                  border: config.allowVisitors ? '2px solid #5645d4' : '1.5px solid #e2e8f0',
+                  background: config.allowVisitors ? '#fefce8' : '#fafaf9',
+                  border: config.allowVisitors ? '2px solid #eab308' : '1.5px solid #e2e8f0',
                   borderRadius: 8,
                   cursor: 'pointer',
                   textAlign: 'left',
@@ -592,8 +592,8 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                       width: 32,
                       height: 32,
                       borderRadius: 8,
-                      background: config.allowVisitors ? '#5645d4' : '#e2e8f0',
-                      color: config.allowVisitors ? '#ffffff' : '#64748b',
+                      background: config.allowVisitors ? '#facc15' : '#e2e8f0',
+                      color: config.allowVisitors ? '#0f172a' : '#64748b',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -603,7 +603,7 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                     <Users size={18} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: config.allowVisitors ? '#391c57' : '#334155' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: config.allowVisitors ? '#78350f' : '#334155' }}>
                       Allow External Visitors / Partners to Sign In
                     </div>
                     <div style={{ fontSize: 11, color: '#64748b' }}>
@@ -613,8 +613,8 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                     </div>
                   </div>
                 </div>
-                <div style={{ width: 40, height: 22, background: config.allowVisitors ? '#5645d4' : '#cbd5e1', borderRadius: 11, position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
-                  <div style={{ width: 18, height: 18, background: '#ffffff', borderRadius: '50%', position: 'absolute', top: 2, left: config.allowVisitors ? 20 : 2, transition: 'left .2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
+                <div style={{ width: 40, height: 22, background: config.allowVisitors ? '#facc15' : '#cbd5e1', borderRadius: 11, position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
+                  <div style={{ width: 18, height: 18, background: '#111827', borderRadius: '50%', position: 'absolute', top: 2, left: config.allowVisitors ? 20 : 2, transition: 'left .2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
                 </div>
               </button>
 
@@ -626,7 +626,7 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                   transition: 'opacity .15s',
                 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#5645d4', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
                   <Users size={13} />
                   External Visitor Columns
                 </div>
@@ -643,8 +643,8 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '10px 14px',
-                      background: config.includeOrganization ? 'rgba(86,69,212,0.05)' : '#f8fafc',
-                      border: config.includeOrganization ? '1.5px solid #5645d4' : '1px solid #e2e8f0',
+                      background: config.includeOrganization ? 'rgba(249,214,22,0.08)' : '#f8fafc',
+                      border: config.includeOrganization ? '1.5px solid #eab308' : '1px solid #e2e8f0',
                       borderRadius: 8,
                       cursor: 'pointer',
                       textAlign: 'left',
@@ -652,13 +652,13 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: config.includeOrganization ? '#391c57' : '#64748b' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: config.includeOrganization ? '#78350f' : '#64748b' }}>
                         Organization / Company
                       </div>
                       <div style={{ fontSize: 10.5, color: '#64748b' }}>Company / Entity name</div>
                     </div>
-                    <div style={{ width: 36, height: 20, background: config.includeOrganization ? '#5645d4' : '#cbd5e1', borderRadius: 10, position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
-                      <div style={{ width: 16, height: 16, background: '#ffffff', borderRadius: '50%', position: 'absolute', top: 2, left: config.includeOrganization ? 18 : 2, transition: 'left .2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
+                    <div style={{ width: 36, height: 20, background: config.includeOrganization ? '#facc15' : '#cbd5e1', borderRadius: 10, position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
+                      <div style={{ width: 16, height: 16, background: '#111827', borderRadius: '50%', position: 'absolute', top: 2, left: config.includeOrganization ? 18 : 2, transition: 'left .2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
                     </div>
                   </button>
 
@@ -673,8 +673,8 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '10px 14px',
-                      background: config.includePosition ? 'rgba(86,69,212,0.05)' : '#f8fafc',
-                      border: config.includePosition ? '1.5px solid #5645d4' : '1px solid #e2e8f0',
+                      background: config.includePosition ? 'rgba(249,214,22,0.08)' : '#f8fafc',
+                      border: config.includePosition ? '1.5px solid #eab308' : '1px solid #e2e8f0',
                       borderRadius: 8,
                       cursor: 'pointer',
                       textAlign: 'left',
@@ -682,13 +682,13 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: config.includePosition ? '#391c57' : '#64748b' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: config.includePosition ? '#78350f' : '#64748b' }}>
                         Position / Title
                       </div>
                       <div style={{ fontSize: 10.5, color: '#64748b' }}>Role in external organization</div>
                     </div>
-                    <div style={{ width: 36, height: 20, background: config.includePosition ? '#5645d4' : '#cbd5e1', borderRadius: 10, position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
-                      <div style={{ width: 16, height: 16, background: '#ffffff', borderRadius: '50%', position: 'absolute', top: 2, left: config.includePosition ? 18 : 2, transition: 'left .2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
+                    <div style={{ width: 36, height: 20, background: config.includePosition ? '#facc15' : '#cbd5e1', borderRadius: 10, position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
+                      <div style={{ width: 16, height: 16, background: '#111827', borderRadius: '50%', position: 'absolute', top: 2, left: config.includePosition ? 18 : 2, transition: 'left .2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
                     </div>
                   </button>
 
@@ -703,8 +703,8 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '10px 14px',
-                      background: config.includePurpose ? 'rgba(86,69,212,0.05)' : '#f8fafc',
-                      border: config.includePurpose ? '1.5px solid #5645d4' : '1px solid #e2e8f0',
+                      background: config.includePurpose ? 'rgba(249,214,22,0.08)' : '#f8fafc',
+                      border: config.includePurpose ? '1.5px solid #eab308' : '1px solid #e2e8f0',
                       borderRadius: 8,
                       cursor: 'pointer',
                       textAlign: 'left',
@@ -712,13 +712,13 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: config.includePurpose ? '#391c57' : '#64748b' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: config.includePurpose ? '#78350f' : '#64748b' }}>
                         Purpose of Attendance
                       </div>
                       <div style={{ fontSize: 10.5, color: '#64748b' }}>Consultant, Guest, Trainer, etc.</div>
                     </div>
-                    <div style={{ width: 36, height: 20, background: config.includePurpose ? '#5645d4' : '#cbd5e1', borderRadius: 10, position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
-                      <div style={{ width: 16, height: 16, background: '#ffffff', borderRadius: '50%', position: 'absolute', top: 2, left: config.includePurpose ? 18 : 2, transition: 'left .2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
+                    <div style={{ width: 36, height: 20, background: config.includePurpose ? '#facc15' : '#cbd5e1', borderRadius: 10, position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
+                      <div style={{ width: 16, height: 16, background: '#111827', borderRadius: '50%', position: 'absolute', top: 2, left: config.includePurpose ? 18 : 2, transition: 'left .2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
                     </div>
                   </button>
 
@@ -778,7 +778,7 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
             {/* Register Column Header Preview */}
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 14 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#1e293b', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <FileSpreadsheet size={15} style={{ color: '#5645d4' }} />
+                <FileSpreadsheet size={15} className="text-[#B45309]" />
                 Resulting Attendance Register Table Columns (Print / Word):
               </div>
 
@@ -869,7 +869,7 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
             <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Eye size={15} style={{ color: '#5645d4' }} />
+                  <Eye size={15} className="text-[#B45309]" />
                   Participant Sign-in Form Preview (What Attendees Will See):
                 </div>
 

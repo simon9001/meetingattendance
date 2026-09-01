@@ -125,9 +125,9 @@ export const AdminDashboardPage: React.FC = () => {
           <div className="panel-body">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {([
-                { key: 'open', label: 'Open (Accepting Sign-ins)', value: meetingsByStatus.open, color: '#1aae39' },
-                { key: 'not_started', label: 'Awaiting Activation', value: meetingsByStatus.not_started, color: '#dd5b00' },
-                { key: 'closed', label: 'Closed', value: meetingsByStatus.closed, color: '#5645d4' },
+                { key: 'open', label: 'Open (Accepting Sign-ins)', value: meetingsByStatus.open, color: '#16a34a' },
+                { key: 'not_started', label: 'Awaiting Activation', value: meetingsByStatus.not_started, color: '#d97706' },
+                { key: 'closed', label: 'Closed', value: meetingsByStatus.closed, color: '#475569' },
               ] as const).map(row => (
                 <div key={row.key}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>

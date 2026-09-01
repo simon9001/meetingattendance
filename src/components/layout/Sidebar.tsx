@@ -53,12 +53,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           text-sm rounded-xl font-medium
           transition-all duration-200 cursor-pointer text-left
           ${active
-            ? 'bg-[#5645d4] text-white shadow-sm font-semibold'
-            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-[#5645d4] dark:hover:text-white'
+            ? 'bg-[#F9D616] text-[#0B0D11] shadow-sm font-bold shadow-[#F9D616]/20'
+            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium'
           }
         `}
       >
-        <span className={`flex-shrink-0 ${active ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`}>
+        <span className={`flex-shrink-0 ${active ? 'text-[#0B0D11]' : 'text-slate-400'}`}>
           {icon}
         </span>
         <span className="truncate">{label}</span>
@@ -70,28 +70,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
     admin: {
       title: 'Admin Panel',
       subtitle: 'System & Security',
-      icon: <ShieldCheck size={18} className="text-indigo-600 dark:text-indigo-400" />,
+      icon: <ShieldCheck size={18} className="text-[#B45309]" />,
     },
     hr: {
       title: 'HR Portal',
       subtitle: 'Reports & Analytics',
-      icon: <Briefcase size={18} className="text-indigo-600 dark:text-indigo-400" />,
+      icon: <Briefcase size={18} className="text-[#B45309]" />,
     },
     organizer: {
       title: 'Organizer Portal',
       subtitle: 'Meetings & Registers',
-      icon: <UserCheck size={18} className="text-indigo-600 dark:text-indigo-400" />,
+      icon: <UserCheck size={18} className="text-[#B45309]" />,
     },
   };
 
   const currentPanel = ROLE_PANEL_INFO[currentUser.role] || {
     title: 'Dashboard',
     subtitle: 'KeNHA KMTAMS',
-    icon: <LayoutDashboard size={18} className="text-indigo-600 dark:text-indigo-400" />,
+    icon: <LayoutDashboard size={18} className="text-[#B45309]" />,
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+    <div className="flex flex-col h-full w-full bg-white border-r border-slate-200">
 
       {/* ── Brand / Portal Header (Clickable to return Home) ── */}
       <button
@@ -102,16 +102,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           closeDrawer();
         }}
         title="Go to Home Dashboard"
-        className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-800 text-left w-full hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all cursor-pointer group select-none"
+        className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 text-left w-full hover:bg-slate-50 transition-all cursor-pointer group select-none"
       >
-        <div className="flex-shrink-0 p-1 bg-white rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs group-hover:scale-105 group-hover:shadow-sm transition-transform">
+        <div className="flex-shrink-0 p-1 bg-white rounded-lg border border-slate-200 shadow-2xs group-hover:scale-105 group-hover:shadow-sm transition-transform">
           <KeNHALogo height={28} width="auto" />
         </div>
         <div className="flex flex-col leading-tight min-w-0 flex-1">
-          <span className="text-[14px] font-extrabold text-slate-900 dark:text-white tracking-tight truncate group-hover:text-[#5645d4] transition-colors">
+          <span className="text-[14px] font-extrabold text-slate-900 tracking-tight truncate group-hover:text-[#B45309] transition-colors">
             {currentPanel.title}
           </span>
-          <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium truncate">
+          <span className="text-[11px] text-slate-500 font-medium truncate">
             {currentPanel.subtitle}
           </span>
         </div>
@@ -123,7 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Admin Navigation */}
         {currentUser.role === 'admin' && (
           <>
-            <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
               System Management
             </div>
             <NavItem tab="dashboard"   icon={<LayoutDashboard size={18} />} label="Overview Dashboard" />
@@ -138,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* HR Navigation */}
         {currentUser.role === 'hr' && (
           <>
-            <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
               Attendance Records
             </div>
             <NavItem tab="meetings"     icon={<Calendar size={18} />}       label="All Meetings" />
@@ -150,7 +150,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Organizer Navigation */}
         {currentUser.role === 'organizer' && (
           <>
-            <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
               My Sessions
             </div>
             <NavItem tab="meetings"       icon={<Calendar size={18} />}     label="My Meetings" />
@@ -165,18 +165,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <button
         type="button"
         onClick={() => { setActiveDashboardTab('profile'); closeDrawer(); }}
-        className={`border-t border-slate-100 dark:border-slate-800 p-3.5 m-2 rounded-xl flex items-center gap-3 text-left transition-colors cursor-pointer ${
+        className={`border-t border-slate-100 p-3.5 m-2 rounded-xl flex items-center gap-3 text-left transition-colors cursor-pointer ${
           activeDashboardTab === 'profile'
-            ? 'bg-[#5645d4]/10 ring-1 ring-[#5645d4]/30'
-            : 'bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800'
+            ? 'bg-[#F9D616]/20 ring-1 ring-[#F9D616]/50'
+            : 'bg-slate-50 hover:bg-slate-100'
         }`}
       >
-        <div className="bg-indigo-600 text-white rounded-lg w-8 h-8 flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-2xs">
+        <div className="bg-[#111827] text-[#F9D616] border border-[#F9D616]/40 rounded-lg w-8 h-8 flex items-center justify-center font-extrabold text-xs flex-shrink-0 shadow-2xs">
           {currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase()}
         </div>
         <div className="flex flex-col min-w-0 flex-1">
-          <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">{currentUser.name}</span>
-          <span className="text-[10.5px] text-slate-400 dark:text-slate-400 truncate">
+          <span className="text-xs font-bold text-slate-800 truncate">{currentUser.name}</span>
+          <span className="text-[10.5px] text-slate-500 truncate">
             {currentUser.email}
           </span>
         </div>

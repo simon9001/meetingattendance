@@ -153,7 +153,7 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
         <div
           style={{
             padding: '20px 24px',
-            background: 'linear-gradient(135deg, #3730a3 0%, #5645d4 100%)',
+            background: 'linear-gradient(135deg, #0B0D11 0%, #1E293B 100%)',
             color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
@@ -166,20 +166,21 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
                 width: '42px',
                 height: '42px',
                 borderRadius: '10px',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                backgroundColor: 'rgba(249, 214, 22, 0.15)',
+                border: '1px solid rgba(249, 214, 22, 0.3)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 backdropFilter: 'blur(4px)',
               }}
             >
-              <Mail size={22} color="#ffffff" />
+              <Mail size={22} color="#F9D616" />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#ffffff' }}>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#ffffff' }}>
                 Invite Attendees to Sign Attendance
               </h3>
-              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#e0e7ff' }}>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#94A3B8' }}>
                 Send digital invitation emails with PIN &amp; 1-click sign-in link via Resend
               </p>
             </div>
@@ -187,7 +188,7 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
           <button
             onClick={onClose}
             style={{
-              background: 'rgba(255, 255, 255, 0.15)',
+              background: 'rgba(255, 255, 255, 0.1)',
               border: 'none',
               borderRadius: '8px',
               width: '32px',
@@ -297,9 +298,9 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
                         borderRadius: '8px',
                         fontSize: '12.5px',
                         fontWeight: 600,
-                        border: selectedDay === d ? '2px solid #5645d4' : '1px solid var(--border-color)',
-                        background: selectedDay === d ? 'rgba(86, 69, 212, 0.15)' : 'var(--bg-card)',
-                        color: selectedDay === d ? '#818cf8' : 'var(--text-main)',
+                        border: selectedDay === d ? '2px solid #eab308' : '1px solid var(--border-color)',
+                        background: selectedDay === d ? '#fef9c3' : 'var(--bg-card)',
+                        color: selectedDay === d ? '#854d0e' : 'var(--text-main)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -307,7 +308,7 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
                       }}
                     >
                       <span>Day {idx + 1}</span>
-                      <span style={{ fontSize: '11px', color: selectedDay === d ? '#818cf8' : 'var(--text-muted)' }}>
+                      <span style={{ fontSize: '11px', color: selectedDay === d ? '#854d0e' : 'var(--text-muted)' }}>
                         ({d})
                       </span>
                     </button>
@@ -329,7 +330,7 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#818cf8',
+                      color: '#b45309',
                       fontSize: '11.5px',
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -377,19 +378,19 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
                   <span
                     key={email}
                     style={{
-                      background: 'rgba(86, 69, 212, 0.15)',
-                      color: '#818cf8',
-                      border: '1px solid rgba(86, 69, 212, 0.3)',
+                      background: '#fef9c3',
+                      color: '#854d0e',
+                      border: '1px solid #fde047',
                       borderRadius: '6px',
                       padding: '3px 8px',
                       fontSize: '12px',
-                      fontWeight: 500,
+                      fontWeight: 600,
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '5px',
                     }}
                   >
-                    <Mail size={12} color="#818cf8" />
+                    <Mail size={12} color="#854d0e" />
                     {email}
                     <button
                       type="button"
@@ -399,7 +400,7 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
                         border: 'none',
                         padding: 0,
                         cursor: 'pointer',
-                        color: '#818cf8',
+                        color: '#854d0e',
                         display: 'flex',
                         alignItems: 'center',
                       }}
@@ -460,14 +461,14 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
                   color: 'var(--text-main)',
                 }}
               >
-                <Sparkles size={14} color="#818cf8" />
+                <Sparkles size={14} color="#b45309" />
                 Invitation Email Preview (Sent via Resend)
               </div>
 
               <div style={{ padding: '16px 20px', fontSize: '12.5px', color: 'var(--text-main)', lineHeight: 1.6 }}>
                 <p style={{ margin: '0 0 10px 0' }}>
                   <strong>Subject:</strong>{' '}
-                  <span style={{ color: '#818cf8' }}>
+                  <span style={{ color: '#b45309', fontWeight: 600 }}>
                     Attendance Invitation: {meeting.title} {isMultiDay ? `— ${selectedDay}` : ''}
                   </span>
                 </p>
@@ -477,7 +478,7 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
                     background: 'var(--bg-secondary)',
                     borderRadius: '8px',
                     padding: '12px 16px',
-                    borderLeft: '4px solid #5645d4',
+                    borderLeft: '4px solid #f9d616',
                     color: 'var(--text-main)',
                   }}
                 >
@@ -486,7 +487,7 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
                   <div><strong>Venue:</strong> {meeting.venue || 'Virtual Meeting'}</div>
                   <div style={{ marginTop: '6px' }}>
                     <strong>Meeting PIN:</strong>{' '}
-                    <span style={{ background: 'rgba(86, 69, 212, 0.2)', color: '#818cf8', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                    <span style={{ background: '#fef9c3', color: '#854d0e', padding: '2px 8px', borderRadius: '4px', fontWeight: 800, border: '1px solid #fde047' }}>
                       {meetingPin}
                     </span>
                   </div>
@@ -496,8 +497,8 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
                   <span
                     style={{
                       display: 'inline-block',
-                      background: '#5645d4',
-                      color: '#ffffff',
+                      background: '#111827',
+                      color: '#f9d616',
                       fontWeight: 700,
                       padding: '8px 20px',
                       borderRadius: '6px',
@@ -526,11 +527,9 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
                 className="btn btn-primary"
                 disabled={isSending}
                 style={{
-                  background: 'linear-gradient(135deg, #4338ca, #5645d4)',
-                  borderColor: '#4338ca',
                   padding: '9px 22px',
                   fontSize: '13px',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',

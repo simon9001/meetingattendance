@@ -186,13 +186,13 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ currentUser, setActi
           paddingRight: query ? '38px' : '52px',
           borderRadius: '12px',
           backgroundColor: '#f1f5f9',
-          border: isOpen && hasQuery ? '1.5px solid #5645d4' : '1px solid #e2e8f0',
+          border: isOpen && hasQuery ? '1.5px solid #111827' : '1px solid #e2e8f0',
           fontSize: '13px',
           fontWeight: 500,
           color: '#0f172a',
           outline: 'none',
           transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-          boxShadow: isOpen && hasQuery ? '0 0 0 3px rgba(86, 69, 212, 0.12)' : 'none',
+          boxShadow: isOpen && hasQuery ? '0 0 0 3px rgba(249, 214, 22, 0.25)' : 'none',
         }}
         onMouseEnter={(e) => {
           if (!isOpen || !hasQuery) e.currentTarget.style.borderColor = '#cbd5e1';

@@ -113,7 +113,7 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#5645d4', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
             {icon}
             {label} Specific Columns &amp; Fields ({visibleFields.length})
           </div>
@@ -155,9 +155,9 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
                   fontSize: 11.5,
                   padding: '4px 10px',
                   background: alreadyExists ? '#f1f5f9' : '#ffffff',
-                  color: alreadyExists ? '#94a3b8' : '#391c57',
+                  color: alreadyExists ? '#94a3b8' : '#1e293b',
                   border: '1px solid',
-                  borderColor: alreadyExists ? '#e2e8f0' : '#bfdbfe',
+                  borderColor: alreadyExists ? '#e2e8f0' : '#facc15',
                   borderRadius: 6,
                   cursor: alreadyExists ? 'default' : 'pointer',
                   display: 'flex',
@@ -166,7 +166,7 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
                   boxShadow: alreadyExists ? 'none' : '0 1px 2px rgba(0,0,0,0.04)',
                 }}
               >
-                {alreadyExists ? <Check size={12} style={{ color: '#16a34a' }} /> : <Plus size={12} style={{ color: '#5645d4' }} />}
+                {alreadyExists ? <Check size={12} style={{ color: '#16a34a' }} /> : <Plus size={12} style={{ color: '#b45309' }} />}
                 <span>{preset.label}</span>
                 {alreadyExists && <span style={{ fontSize: 10, color: '#16a34a', fontWeight: 600 }}>(Added)</span>}
               </button>
@@ -181,15 +181,15 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
           onSubmit={handleAddField}
           style={{
             background: '#ffffff',
-            border: '2px solid #5645d4',
+            border: '2px solid #eab308',
             borderRadius: 10,
             padding: 16,
             marginBottom: 14,
-            boxShadow: '0 4px 16px rgba(86,69,212,0.1)',
+            boxShadow: '0 4px 16px rgba(234,179,8,0.1)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#391c57', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#78350f', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Plus size={16} /> Add Custom Field for {label}
             </span>
             <button
@@ -305,7 +305,7 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
       {/* List of fields visible to this audience */}
       {visibleFields.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '18px 16px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', color: '#64748b' }}>
-          <FileSpreadsheet size={24} style={{ margin: '0 auto 6px', opacity: 0.5, color: '#5645d4' }} />
+          <FileSpreadsheet size={24} style={{ margin: '0 auto 6px', opacity: 0.5, color: '#b45309' }} />
           <div style={{ fontSize: 12.5, fontWeight: 600, color: '#334155' }}>No custom {label.toLowerCase()} columns added yet</div>
           <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Click a preset button above or click &ldquo;Add Custom Field&rdquo; to capture extra information.</div>
         </div>
@@ -332,7 +332,7 @@ export const CustomFieldsPanel: React.FC<CustomFieldsPanelProps> = ({
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     {cf.label}
                     {cf.appliesTo === 'all' ? (
-                      <span style={{ fontSize: 10, fontWeight: 700, background: '#e6e0f5', color: '#391c57', padding: '1px 6px', borderRadius: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, background: '#fef9c3', color: '#854d0e', padding: '1px 6px', borderRadius: 4 }}>
                         Shared (Staff + Visitors)
                       </span>
                     ) : (

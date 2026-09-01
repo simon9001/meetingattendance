@@ -397,7 +397,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     }
     if (notif.type === 'meeting_arrived') {
       return (
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: '#e0e7ff', color: '#4338ca', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: '#fef9c3', color: '#854d0e', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Calendar size={18} />
         </div>
       );
@@ -418,11 +418,11 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         className="btn btn-sm btn-ghost rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-3 flex items-center gap-2 text-slate-700 relative select-none cursor-pointer transition-all shadow-2xs"
         title="System Alerts & Notifications"
       >
-        <Bell size={16} className={unreadCount > 0 ? 'text-indigo-600 animate-bounce' : 'text-slate-600'} />
+        <Bell size={16} className={unreadCount > 0 ? 'text-amber-500 animate-bounce' : 'text-slate-600'} />
         <span className="hidden xl:inline text-xs font-semibold">Alerts</span>
 
         {unreadCount > 0 ? (
-          <span className="badge badge-xs font-bold px-1.5 py-1 text-[9px] bg-indigo-600 text-white border-none shadow-2xs">
+          <span className="badge badge-xs font-extrabold px-1.5 py-1 text-[9px] bg-[#0B0D11] text-[#F9D616] border-none shadow-2xs">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         ) : (
@@ -470,12 +470,13 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
               {unreadCount > 0 && (
                 <span
                   style={{
-                    background: '#5645d4',
-                    color: '#ffffff',
+                    background: '#fef9c3',
+                    color: '#854d0e',
                     fontSize: '10.5px',
                     fontWeight: 700,
                     padding: '2px 7px',
                     borderRadius: '12px',
+                    border: '1px solid #fde047',
                   }}
                 >
                   {unreadCount} new
@@ -509,7 +510,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#5645d4',
+                    color: '#b45309',
                     fontSize: '11.5px',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -547,7 +548,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                 padding: '4px 10px',
                 borderRadius: '8px',
                 border: 'none',
-                background: activeFilter === 'all' ? '#5645d4' : '#f1f5f9',
+                background: activeFilter === 'all' ? '#111827' : '#f1f5f9',
                 color: activeFilter === 'all' ? '#ffffff' : '#64748b',
                 cursor: 'pointer',
                 transition: 'all 0.15s',
@@ -565,7 +566,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                 padding: '4px 10px',
                 borderRadius: '8px',
                 border: 'none',
-                background: activeFilter === 'unread' ? '#5645d4' : '#f1f5f9',
+                background: activeFilter === 'unread' ? '#111827' : '#f1f5f9',
                 color: activeFilter === 'unread' ? '#ffffff' : '#64748b',
                 cursor: 'pointer',
                 transition: 'all 0.15s',
@@ -583,7 +584,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                 padding: '4px 10px',
                 borderRadius: '8px',
                 border: 'none',
-                background: activeFilter === 'meetings' ? '#5645d4' : '#f1f5f9',
+                background: activeFilter === 'meetings' ? '#111827' : '#f1f5f9',
                 color: activeFilter === 'meetings' ? '#ffffff' : '#64748b',
                 cursor: 'pointer',
                 transition: 'all 0.15s',
@@ -634,13 +635,13 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                     gap: '12px',
                     alignItems: 'flex-start',
                     borderBottom: '1px solid #f8fafc',
-                    background: n.isRead ? '#ffffff' : '#f8faff',
+                    background: n.isRead ? '#ffffff' : '#fffbeb',
                     cursor: 'pointer',
                     transition: 'background 0.15s',
                     position: 'relative',
                   }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = n.isRead ? '#ffffff' : '#f8faff')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = n.isRead ? '#ffffff' : '#fffbeb')}
                 >
                   {/* Unread Accent Dot */}
                   {!n.isRead && (
@@ -652,7 +653,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                         width: '5px',
                         height: '5px',
                         borderRadius: '50%',
-                        backgroundColor: '#5645d4',
+                        backgroundColor: '#b45309',
                       }}
                     />
                   )}
@@ -688,7 +689,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                           style={{
                             fontSize: '11px',
                             fontWeight: 700,
-                            color: n.severity === 'critical' ? '#dc2626' : '#5645d4',
+                            color: n.severity === 'critical' ? '#dc2626' : '#b45309',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '2px',

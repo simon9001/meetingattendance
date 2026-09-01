@@ -149,7 +149,7 @@ export const AdminDepartmentsPage: React.FC<AdminDepartmentsPageProps> = ({ show
       <div className="dashboard-panel" style={{ marginBottom: 24 }}>
         <div className="panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
           <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Building2 size={18} style={{ color: '#5645d4' }} />
+            <Building2 size={18} className="text-[#B45309]" />
             Register Departments
           </h3>
           <div style={{ display: 'flex', gap: 6 }}>
@@ -161,7 +161,7 @@ export const AdminDepartmentsPage: React.FC<AdminDepartmentsPageProps> = ({ show
                 fontWeight: 700,
                 padding: '4px 10px',
                 borderRadius: 6,
-                background: addMode === 'single' ? '#5645d4' : '#f1f5f9',
+                background: addMode === 'single' ? '#111827' : '#f1f5f9',
                 color: addMode === 'single' ? '#ffffff' : '#475569',
                 border: 'none',
                 cursor: 'pointer',
@@ -180,7 +180,7 @@ export const AdminDepartmentsPage: React.FC<AdminDepartmentsPageProps> = ({ show
                 fontWeight: 700,
                 padding: '4px 10px',
                 borderRadius: 6,
-                background: addMode === 'bulk' ? '#5645d4' : '#f1f5f9',
+                background: addMode === 'bulk' ? '#111827' : '#f1f5f9',
                 color: addMode === 'bulk' ? '#ffffff' : '#475569',
                 border: 'none',
                 cursor: 'pointer',
@@ -316,7 +316,7 @@ export const AdminDepartmentsPage: React.FC<AdminDepartmentsPageProps> = ({ show
                   <div>
                     <span style={{ fontWeight: 700, color: '#0f172a', fontSize: 13 }}>{dept.name}</span>
                     {dept.department_code && (
-                      <span style={{ fontSize: 10.5, color: '#5645d4', background: '#f4f2fc', border: '1px solid #c7d2fe', padding: '1px 6px', borderRadius: 4, marginLeft: 8, fontFamily: 'monospace', fontWeight: 600 }}>
+                      <span style={{ fontSize: 10.5, color: '#854d0e', background: '#fef9c3', border: '1px solid #fde047', padding: '1px 6px', borderRadius: 4, marginLeft: 8, fontFamily: 'monospace', fontWeight: 600 }}>
                         {dept.department_code}
                       </span>
                     )}

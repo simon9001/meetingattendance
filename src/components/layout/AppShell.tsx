@@ -52,9 +52,9 @@ export const AppShell: React.FC<AppShellProps> = ({
               type="button"
               onClick={handleGoHome}
               title="Go to Home Dashboard"
-              className="btn btn-ghost btn-sm gap-2 text-slate-700 hover:text-[#5645d4] hover:bg-indigo-50/70 font-semibold px-2.5 rounded-lg transition-all cursor-pointer"
+              className="btn btn-ghost btn-sm gap-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-semibold px-2.5 rounded-lg transition-all cursor-pointer"
             >
-              <Home size={18} className="text-[#5645d4]" />
+              <Home size={18} className="text-[#B45309]" />
               <span className="hidden sm:inline font-bold text-xs">Home</span>
             </button>
           </div>
@@ -78,17 +78,17 @@ export const AppShell: React.FC<AppShellProps> = ({
 
             {/* User Profile Dropdown */}
             <div className="dropdown dropdown-end">
-              <button type="button" tabIndex={0} className="btn btn-ghost flex items-center">
-                <span className="text-dark font-medium">Hey, {currentUser.name.split(' ')[0]}</span>
-                <ChevronDown className="text-[#5645d4]" />
+              <button type="button" tabIndex={0} className="btn btn-ghost flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100">
+                <span className="text-slate-800 font-semibold text-xs">Hey, {currentUser.name.split(' ')[0]}</span>
+                <ChevronDown className="text-slate-500" size={16} />
               </button>
 
               <ul
                 tabIndex={0}
-                className="dropdown-content menu bg-neutral-100 rounded-box z-1 mt-3 w-56 p-2 shadow-lg border border-slate-200"
+                className="dropdown-content menu bg-white rounded-xl z-50 mt-3 w-56 p-2 shadow-xl border border-slate-200 text-xs"
               >
                 <li
-                  className="menu-title px-3 py-2 border-b border-slate-200 cursor-pointer"
+                  className="menu-title px-3 py-2 border-b border-slate-100 cursor-pointer"
                   onClick={() => {
                     onOpenProfile?.();
                     (document.activeElement as HTMLElement | null)?.blur();
@@ -104,9 +104,9 @@ export const AppShell: React.FC<AppShellProps> = ({
                       handleGoHome();
                       (document.activeElement as HTMLElement | null)?.blur();
                     }}
-                    className="flex items-center text-slate-700 hover:text-[#5645d4] cursor-pointer"
+                    className="flex items-center text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-lg cursor-pointer"
                   >
-                    <Home className="mr-3 text-[#5645d4]" size={16} />
+                    <Home className="mr-3 text-[#B45309]" size={16} />
                     Home Dashboard
                   </button>
                 </li>
@@ -117,19 +117,19 @@ export const AppShell: React.FC<AppShellProps> = ({
                       onOpenProfile?.();
                       (document.activeElement as HTMLElement | null)?.blur();
                     }}
-                    className="flex items-center text-[#5645d4] hover:text-[#4534b3] cursor-pointer"
+                    className="flex items-center text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-lg cursor-pointer"
                   >
-                    <UserCircle className="mr-3" />
+                    <UserCircle className="mr-3 text-slate-500" size={16} />
                     My Profile
                   </button>
                 </li>
-                <li>
+                <li className="border-t border-slate-100 mt-1 pt-1">
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="flex items-center text-[#5645d4] hover:text-[#4534b3] cursor-pointer"
+                    className="flex items-center text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer font-medium"
                   >
-                    <LogOut className="mr-3" />
+                    <LogOut className="mr-3" size={16} />
                     Logout
                   </button>
                 </li>

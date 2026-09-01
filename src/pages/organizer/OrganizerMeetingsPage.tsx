@@ -382,7 +382,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                 type="button"
                 onClick={() => setInviteModalTarget(selectedMeeting)}
                 className="btn btn-primary"
-                style={{ background: '#5645d4', borderColor: '#4338ca', display: 'flex', alignItems: 'center', gap: 6 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
               >
                 <Mail size={16} /> Invite Attendees (Email)
               </button>
@@ -773,21 +773,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
             if (onCreateMeeting) onCreateMeeting();
             else navigate('/create-meeting');
           }}
-          style={{
-            background: '#5645d4',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '10px',
-            padding: '10px 20px',
-            fontSize: '13.5px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 2px 6px rgba(86, 69, 212, 0.25)',
-            transition: 'all 0.2s',
-          }}
+          className="btn btn-primary"
         >
           <Plus size={18} /> Create Meeting
         </button>
@@ -1262,7 +1248,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                             type="button"
                             onClick={() => navigate(`/meeting/${m.meeting_id}/live`)}
                             style={{
-                              background: '#5645d4',
+                              background: '#111827',
                               color: '#ffffff',
                               border: 'none',
                               borderRadius: '8px',
@@ -1588,7 +1574,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                     height: '32px',
                     borderRadius: '8px',
                     border: isActive ? 'none' : '1px solid var(--border-color)',
-                    background: isActive ? '#5645d4' : 'var(--bg-card)',
+                    background: isActive ? '#111827' : 'var(--bg-card)',
                     color: isActive ? '#ffffff' : 'var(--text-main)',
                     fontWeight: isActive ? 700 : 500,
                     fontSize: '12.5px',
@@ -1614,7 +1600,8 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                 borderRadius: '8px',
                 border: '1px solid var(--border-color)',
                 background: 'var(--bg-card)',
-                color: currentPage >= totalPages ? 'var(--text-dim)' : 'var(--text-main)',
+                color: currentPage >= totalPages ? 'var(--text-muted)' : 'var(--text-main)',
+                opacity: currentPage >= totalPages ? 0.4 : 1,
                 cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -1745,9 +1732,10 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                     fontSize: 12,
                     padding: '8px 4px',
                     textAlign: 'center',
-                    backgroundColor: extendModal.minutes === mins ? '#5645d4' : 'var(--bg-app)',
-                    color: extendModal.minutes === mins ? '#ffffff' : 'var(--text-main)',
-                    borderColor: 'var(--border-color)',
+                    backgroundColor: extendModal.minutes === mins ? '#f9d616' : 'var(--bg-app)',
+                    color: extendModal.minutes === mins ? '#0b0d11' : 'var(--text-main)',
+                    borderColor: extendModal.minutes === mins ? '#e5ac00' : 'var(--border-color)',
+                    fontWeight: extendModal.minutes === mins ? 700 : 500,
                   }}
                 >
                   +{mins >= 60 ? `${mins / 60} hr${mins / 60 > 1 ? 's' : ''}` : `${mins} mins`}

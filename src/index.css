@@ -1,79 +1,85 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 @plugin "daisyui";
 
 @plugin "daisyui/theme" {
   name: "light";
   default: true;
-  --color-primary: #5645d4;
-  --color-primary-content: #ffffff;
+  --color-primary: #F9D616;
+  --color-primary-content: #0B0D11;
   --radius-field: 0.5rem;
   --radius-box: 0.75rem;
 }
 
 @theme {
-  /* Notion-inspired purple brand scale, anchored to the real spec values
-     at 100 / 200 / 500 / 600 / 700 / 800 / 900 */
-  --color-brand-50: #f4f2fc;
-  --color-brand-100: #e6e0f5;
-  --color-brand-200: #d6b6f6;
-  --color-brand-300: #b9a0ef;
-  --color-brand-400: #9b7ceb;
-  --color-brand-500: #7b3ff2;
-  --color-brand-600: #5645d4;
-  --color-brand-700: #4534b3;
-  --color-brand-800: #3a2a99;
-  --color-brand-900: #391c57;
-  --color-brand-950: #241238;
+  /* KeNHA Official Gold / Yellow Highway Scale */
+  --color-brand-50: #fefce8;
+  --color-brand-100: #fef9c3;
+  --color-brand-200: #fef08a;
+  --color-brand-300: #fde047;
+  --color-brand-400: #facc15;
+  --color-brand-500: #f9d616;
+  --color-brand-600: #e5ac00;
+  --color-brand-700: #b45309;
+  --color-brand-800: #92400e;
+  --color-brand-900: #78350f;
+  --color-brand-950: #451a03;
+
+  /* KeNHA Asphalt Onyx Black Scale */
+  --color-onyx-50: #f8fafc;
+  --color-onyx-100: #f1f5f9;
+  --color-onyx-200: #e2e8f0;
+  --color-onyx-300: #cbd5e1;
+  --color-onyx-400: #94a3b8;
+  --color-onyx-500: #64748b;
+  --color-onyx-600: #475569;
+  --color-onyx-700: #334155;
+  --color-onyx-800: #1e293b;
+  --color-onyx-900: #0f172a;
+  --color-onyx-950: #0b0d11;
 }
 
 :root {
-  /* Colors - Clean Modern Light Theme */
-  --azure-blue: #0075de;
-  --azure-blue-hover: #005bab;
-  --azure-blue-light: rgba(0, 117, 222, 0.12);
-  --azure-header-bg: #ffffff;
-  --azure-sidebar-bg: #ffffff;
-  --azure-sidebar-hover: #f1f5f9;
-  --azure-border: #e2e8f0;
+  /* KeNHA Official Highway Palette */
+  --kenha-yellow: #F9D616;
+  --kenha-yellow-hover: #E5AC00;
+  --kenha-yellow-light: rgba(249, 214, 22, 0.14);
+  --kenha-yellow-glow: rgba(249, 214, 22, 0.35);
 
-  --kenha-yellow: #5645d4;
-  --kenha-yellow-hover: #4534b3;
-  --kenha-yellow-light: rgba(86, 69, 212, 0.1);
-  --kenha-black: #0f172a;
-  --kenha-slate: #334155;
-  --kenha-dark-slate: #0f172a;
-  --kenha-silver: #94a3b8;
-  --kenha-light-grey: #f8fafc;
-  --kenha-border-light: #e2e8f0;
-  --kenha-border-dark: #e2e8f0;
-  --kenha-text-light: #0f172a;
-  --kenha-text-muted-light: #64748b;
-  --kenha-text-dark: #0f172a;
-  --kenha-text-muted-dark: #64748b;
+  --kenha-black: #0B0D11;
+  --kenha-slate: #1E293B;
+  --kenha-dark-slate: #0F172A;
+  --kenha-silver: #64748B;
+  --kenha-light-grey: #F8FAFC;
+  --kenha-border-light: #E2E8F0;
+  --kenha-border-dark: #334155;
+  --kenha-text-light: #0F172A;
+  --kenha-text-muted-light: #64748B;
+  --kenha-text-dark: #0F172A;
+  --kenha-text-muted-dark: #64748B;
 
-  /* Notion Sans (Inter-based) UI variables */
-  --font-sans: 'Inter', 'Notion Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, sans-serif;
-  --shadow-fluent: 0 4px 16px rgba(15, 15, 15, 0.06), 0 1px 3px rgba(15, 15, 15, 0.03);
-  --shadow-fluent-lg: 0 10px 32px rgba(15, 15, 15, 0.1), 0 2px 8px rgba(15, 15, 15, 0.05);
-  --shadow-azure: 0 4px 20px rgba(0, 117, 222, 0.18);
-  --shadow-gold: 0 4px 16px rgba(86, 69, 212, 0.3);
+  /* Minimalist UI Variables */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Helvetica, sans-serif;
+  --shadow-fluent: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-fluent-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --shadow-gold: 0 4px 14px rgba(249, 214, 22, 0.3);
 
-  /* Theme mapping (Pure Light Theme) */
-  --bg-app: #f8fafc;
-  --bg-card: #ffffff;
-  --bg-card-hover: #f8fafc;
-  --bg-secondary: #f8fafc;
-  --bg-input: #ffffff;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --text-dim: #94a3b8;
-  --border-color: #e2e8f0;
-  --border-sidebar: #e2e8f0;
-  --glass-bg: rgba(255, 255, 255, 0.95);
-  --glass-border: rgba(226, 232, 240, 0.9);
-  --accent-color: #5645d4;
-  --accent-text: #ffffff;
+  /* Pure Light Theme Minimalist Surfaces */
+  --bg-app: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F8FAFC;
+  --bg-secondary: #F1F5F9;
+  --bg-input: #FFFFFF;
+  --bg-sidebar: #0B0D11;
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+  --text-dim: #94A3B8;
+  --border-color: #E2E8F0;
+  --border-sidebar: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --glass-border: rgba(226, 232, 240, 0.8);
+  --accent-color: #F9D616;
+  --accent-text: #0B0D11;
 }
 
 /* Theme utility classes */
@@ -119,7 +125,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Buttons System — High Visibility & Professional Aesthetic */
+/* Buttons System — High Visibility & Professional Minimalist Aesthetic */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -140,22 +146,23 @@ body {
 
 .btn-primary {
   background-color: var(--kenha-yellow);
-  color: #FFFFFF;
-  border-color: var(--kenha-yellow);
-  box-shadow: 0 2px 8px rgba(86, 69, 212, 0.35);
+  color: #0B0D11;
+  border-color: #E5AC00;
+  box-shadow: 0 2px 8px rgba(249, 214, 22, 0.35);
   font-weight: 700;
 }
 
 .btn-primary:hover:not(:disabled) {
   background-color: var(--kenha-yellow-hover);
-  border-color: var(--kenha-yellow-hover);
+  border-color: #D97706;
+  color: #0B0D11;
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(86, 69, 212, 0.45);
+  box-shadow: 0 4px 14px rgba(249, 214, 22, 0.45);
 }
 
 .btn-primary:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(86, 69, 212, 0.2);
+  box-shadow: 0 1px 3px rgba(249, 214, 22, 0.2);
 }
 
 .btn-primary:disabled {
@@ -165,6 +172,21 @@ body {
   cursor: not-allowed;
   opacity: 0.65;
   box-shadow: none;
+}
+
+.btn-dark {
+  background-color: #0F172A;
+  color: #FFFFFF;
+  border-color: #0B0D11;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.btn-dark:hover:not(:disabled) {
+  background-color: #1E293B;
+  border-color: #1E293B;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
 }
 
 .btn-secondary {
@@ -579,7 +601,7 @@ body {
 }
 
 .form-input:focus {
-  border-bottom-color: #5645d4;
+  border-bottom-color: var(--kenha-yellow);
   border-bottom-width: 2px;
   padding-bottom: 9px;
 }
@@ -620,12 +642,14 @@ body {
 
 .forgot-password-link {
   font-size: 13px;
-  color: #0075de;
+  color: #0F172A;
+  font-weight: 500;
   text-decoration: none;
   cursor: pointer;
 }
 
 .forgot-password-link:hover {
+  color: #B45309;
   text-decoration: underline;
 }
 
@@ -643,7 +667,7 @@ body {
   width: 14px;
   height: 14px;
   cursor: pointer;
-  accent-color: #5645d4;
+  accent-color: #F9D616;
 }
 
 .login-submit-row {
@@ -888,8 +912,9 @@ body {
 }
 
 .badge-virtual {
-  background-color: #e6e0f5;
-  color: #391c57;
+  background-color: #f8fafc;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
 }
 
 /* Search and Filters */
@@ -930,8 +955,8 @@ body {
 }
 
 .search-input:focus {
-  border-color: #5645d4;
-  box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.2);
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(249, 214, 22, 0.35);
   background-color: var(--bg-card);
 }
 
@@ -951,8 +976,8 @@ body {
 }
 
 .filter-select:focus {
-  border-color: #5645d4;
-  box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.2);
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(249, 214, 22, 0.35);
 }
 
 /* Form Controls & Inputs General Standards */
@@ -967,7 +992,7 @@ textarea,
 .input-bordered,
 .select-bordered,
 .textarea-bordered {
-  border-radius: 10px !important;
+  border-radius: 8px !important;
   border-color: var(--border-color) !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
@@ -983,8 +1008,8 @@ textarea:focus,
 .input-bordered:focus,
 .select-bordered:focus,
 .textarea-bordered:focus {
-  border-color: #5645d4 !important;
-  box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.2) !important;
+  border-color: #111827 !important;
+  box-shadow: 0 0 0 3px rgba(249, 214, 22, 0.35) !important;
   outline: none !important;
 }
 

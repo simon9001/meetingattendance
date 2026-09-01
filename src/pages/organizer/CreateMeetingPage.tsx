@@ -333,7 +333,7 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
               step={1}
               title="Basic Details"
               helperText="Provide the session title and purpose for participant sign-in and printed registers."
-              icon={<Info size={15} style={{ color: '#5645d4' }} />}
+              icon={<Info size={15} className="text-[#B45309]" />}
               isCompleted={isStep1Complete}
             >
               <div className="form-group">
@@ -368,11 +368,12 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
                       style={{
                         fontSize: 11,
                         padding: '2px 8px',
-                        background: title === s ? '#f4f2fc' : '#f8fafc',
-                        color: title === s ? '#391c57' : '#475569',
-                        border: title === s ? '1px solid #5645d4' : '1px solid #e2e8f0',
+                        background: title === s ? '#fef9c3' : '#f8fafc',
+                        color: title === s ? '#854d0e' : '#475569',
+                        border: title === s ? '1px solid #facc15' : '1px solid #e2e8f0',
                         borderRadius: 4,
                         cursor: 'pointer',
+                        fontWeight: title === s ? 700 : 500,
                       }}
                     >
                       + {s}
@@ -392,7 +393,7 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#5645d4',
+                      color: '#b45309',
                       fontSize: 11.5,
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -423,7 +424,7 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
               step={2}
               title="Schedule &amp; Location"
               helperText="Specify meeting format, date, start/end times, and hosting department scope."
-              icon={<MapPin size={15} style={{ color: '#5645d4' }} />}
+              icon={<MapPin size={15} className="text-[#B45309]" />}
               isCompleted={isStep2Complete}
             >
               {/* Meeting Type Selection */}
@@ -438,8 +439,8 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
                     onClick={() => setType('physical')}
                     style={{
                       padding: '10px 12px',
-                      background: type === 'physical' ? '#f4f2fc' : '#ffffff',
-                      border: type === 'physical' ? '2px solid #5645d4' : '1px solid #cbd5e1',
+                      background: type === 'physical' ? '#fefce8' : '#ffffff',
+                      border: type === 'physical' ? '2px solid #eab308' : '1px solid #cbd5e1',
                       borderRadius: 8,
                       cursor: 'pointer',
                       textAlign: 'left',
@@ -451,15 +452,15 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Building2 size={16} style={{ color: type === 'physical' ? '#5645d4' : '#64748b' }} />
+                      <Building2 size={16} style={{ color: type === 'physical' ? '#b45309' : '#64748b' }} />
                       <div>
-                        <div style={{ fontSize: 12.5, fontWeight: 700, color: type === 'physical' ? '#391c57' : '#334155' }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: type === 'physical' ? '#78350f' : '#334155' }}>
                           Physical Meeting
                         </div>
                         <div style={{ fontSize: 10.5, color: '#64748b' }}>In-person venue</div>
                       </div>
                     </div>
-                    {type === 'physical' && <Check size={14} style={{ color: '#5645d4' }} />}
+                    {type === 'physical' && <Check size={14} style={{ color: '#b45309' }} />}
                   </button>
 
                   {/* Virtual */}
@@ -468,8 +469,8 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
                     onClick={() => setType('virtual')}
                     style={{
                       padding: '10px 12px',
-                      background: type === 'virtual' ? '#f4f2fc' : '#ffffff',
-                      border: type === 'virtual' ? '2px solid #5645d4' : '1px solid #cbd5e1',
+                      background: type === 'virtual' ? '#fefce8' : '#ffffff',
+                      border: type === 'virtual' ? '2px solid #eab308' : '1px solid #cbd5e1',
                       borderRadius: 8,
                       cursor: 'pointer',
                       textAlign: 'left',
@@ -481,15 +482,15 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Video size={16} style={{ color: type === 'virtual' ? '#5645d4' : '#64748b' }} />
+                      <Video size={16} style={{ color: type === 'virtual' ? '#b45309' : '#64748b' }} />
                       <div>
-                        <div style={{ fontSize: 12.5, fontWeight: 700, color: type === 'virtual' ? '#391c57' : '#334155' }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: type === 'virtual' ? '#78350f' : '#334155' }}>
                           Virtual Meeting
                         </div>
                         <div style={{ fontSize: 10.5, color: '#64748b' }}>Teams / Zoom link</div>
                       </div>
                     </div>
-                    {type === 'virtual' && <Check size={14} style={{ color: '#5645d4' }} />}
+                    {type === 'virtual' && <Check size={14} style={{ color: '#b45309' }} />}
                   </button>
 
                   {/* Hybrid */}
@@ -498,8 +499,8 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
                     onClick={() => setType('hybrid')}
                     style={{
                       padding: '10px 12px',
-                      background: type === 'hybrid' ? '#f4f2fc' : '#ffffff',
-                      border: type === 'hybrid' ? '2px solid #5645d4' : '1px solid #cbd5e1',
+                      background: type === 'hybrid' ? '#fefce8' : '#ffffff',
+                      border: type === 'hybrid' ? '2px solid #eab308' : '1px solid #cbd5e1',
                       borderRadius: 8,
                       cursor: 'pointer',
                       textAlign: 'left',
@@ -511,15 +512,15 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Laptop size={16} style={{ color: type === 'hybrid' ? '#5645d4' : '#64748b' }} />
+                      <Laptop size={16} style={{ color: type === 'hybrid' ? '#b45309' : '#64748b' }} />
                       <div>
-                        <div style={{ fontSize: 12.5, fontWeight: 700, color: type === 'hybrid' ? '#391c57' : '#334155' }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: type === 'hybrid' ? '#78350f' : '#334155' }}>
                           Hybrid Meeting
                         </div>
                         <div style={{ fontSize: 10.5, color: '#64748b' }}>Venue &amp; online link</div>
                       </div>
                     </div>
-                    {type === 'hybrid' && <Check size={14} style={{ color: '#5645d4' }} />}
+                    {type === 'hybrid' && <Check size={14} style={{ color: '#b45309' }} />}
                   </button>
                 </div>
               </div>
@@ -583,7 +584,7 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
                         Date *
                       </label>
                       {formattedMeetingDate && (
-                        <span style={{ fontSize: 11, color: '#5645d4', fontWeight: 600 }}>
+                        <span style={{ fontSize: 11, color: '#b45309', fontWeight: 600 }}>
                           {formattedMeetingDate}
                         </span>
                       )}
@@ -680,7 +681,7 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
               step={3}
               title="Attendance Window &amp; Access PIN"
               helperText="Set active signing hours and optional 6-digit access security PIN."
-              icon={<ShieldCheck size={15} style={{ color: '#5645d4' }} />}
+              icon={<ShieldCheck size={15} className="text-[#B45309]" />}
               isCompleted={isStep3Complete}
               badge={
                 <button
@@ -689,9 +690,9 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
                   style={{
                     fontSize: 11,
                     padding: '3px 8px',
-                    background: '#f4f2fc',
-                    color: '#5645d4',
-                    border: '1px solid #bfdbfe',
+                    background: '#fef9c3',
+                    color: '#854d0e',
+                    border: '1px solid #fde047',
                     borderRadius: 4,
                     cursor: 'pointer',
                     display: 'flex',
@@ -765,9 +766,9 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
                       style={{
                         fontSize: 11,
                         padding: '2px 8px',
-                        background: '#f4f2fc',
-                        color: '#5645d4',
-                        border: '1px solid #c7d2fe',
+                        background: '#fef9c3',
+                        color: '#854d0e',
+                        border: '1px solid #fde047',
                         borderRadius: 4,
                         cursor: 'pointer',
                         display: 'flex',
@@ -831,8 +832,8 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
                       width: 28,
                       height: 28,
                       borderRadius: '50%',
-                      background: '#f4f2fc',
-                      color: '#5645d4',
+                      background: '#fef9c3',
+                      color: '#854d0e',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -846,7 +847,7 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
                     Attendance Form &amp; Register Columns
                   </span>
                 </div>
-                <span style={{ fontSize: 11, color: '#5645d4', fontWeight: 600, background: '#f4f2fc', padding: '2px 8px', borderRadius: 12 }}>
+                <span style={{ fontSize: 11, color: '#854d0e', fontWeight: 600, background: '#fef9c3', padding: '2px 8px', borderRadius: 12 }}>
                   Customizable Columns &amp; Multi-day
                 </span>
               </div>
@@ -869,7 +870,7 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
               }}
             >
               <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0f172a', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <FileText size={14} style={{ color: '#5645d4' }} />
+                <FileText size={14} className="text-[#B45309]" />
                 Meeting Register Summary:
               </div>
 
