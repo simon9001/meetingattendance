@@ -333,7 +333,7 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
               step={1}
               title="Basic Details"
               helperText="Provide the session title and purpose for participant sign-in and printed registers."
-              icon={<Info size={15} className="text-[#B45309]" />}
+              icon={<Info size={15} className="text-brand-700" />}
               isCompleted={isStep1Complete}
             >
               <div className="form-group">
@@ -424,7 +424,7 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
               step={2}
               title="Schedule &amp; Location"
               helperText="Specify meeting format, date, start/end times, and hosting department scope."
-              icon={<MapPin size={15} className="text-[#B45309]" />}
+              icon={<MapPin size={15} className="text-brand-700" />}
               isCompleted={isStep2Complete}
             >
               {/* Meeting Type Selection */}
@@ -681,7 +681,7 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
               step={3}
               title="Attendance Window &amp; Access PIN"
               helperText="Set active signing hours and optional 6-digit access security PIN."
-              icon={<ShieldCheck size={15} className="text-[#B45309]" />}
+              icon={<ShieldCheck size={15} className="text-brand-700" />}
               isCompleted={isStep3Complete}
               badge={
                 <button
@@ -870,7 +870,7 @@ export const CreateMeetingPage: React.FC<CreateMeetingPageProps> = ({
               }}
             >
               <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0f172a', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <FileText size={14} className="text-[#B45309]" />
+                <FileText size={14} className="text-brand-700" />
                 Meeting Register Summary:
               </div>
 

@@ -6,6 +6,7 @@ import {
   Grid, Activity, Award, UserCheck, Users, Trash2
 } from 'lucide-react';
 import { PageSpinner, InlineSpinner } from '../../components/shared/Feedback';
+import { Modal } from '../../components/shared/Modal';
 import { GenerateDocumentModal } from '../../components/documents/GenerateDocumentModal';
 import { PrintEditorModal } from '../../components/documents/PrintEditorModal';
 import { EditMeetingModal } from '../../components/meetings/EditMeetingModal';
@@ -1836,32 +1837,13 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
 
       {/* DELETE CONFIRMATION MODAL */}
       {deleteConfirmModal.isOpen && deleteConfirmModal.meeting && (
-        <div className="modal-overlay" style={{ zIndex: 99999 }}>
-          <div className="modal-content" style={{ maxWidth: 440, borderRadius: 14 }}>
-            <div className="modal-header" style={{ borderBottom: '1px solid #fee2e2', background: '#fff5f5' }}>
-              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8, color: '#b91c1c', fontSize: 16 }}>
-                <Trash2 size={18} /> Confirm Delete Meeting
-              </h3>
-              <button
-                type="button"
-                onClick={() => setDeleteConfirmModal({ isOpen: false, meeting: null })}
-                className="modal-close-btn"
-                disabled={isDeleting}
-              >
-                &times;
-              </button>
-            </div>
-            <div className="modal-body" style={{ padding: '20px' }}>
-              <p style={{ fontSize: 13.5, color: '#334155', margin: '0 0 12px 0', lineHeight: 1.5 }}>
-                Are you sure you want to delete <strong>"{deleteConfirmModal.meeting.title}"</strong>?
-              </p>
-              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
-                <p style={{ margin: 0, fontSize: 12, color: '#991b1b', lineHeight: 1.45 }}>
-                  ⚠️ <strong>Warning:</strong> This will permanently delete the meeting along with all recorded staff and visitor attendance logs, signatures, and associated reports. This action cannot be undone.
-                </p>
-              </div>
-            </div>
-            <div className="modal-footer" style={{ borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 20px' }}>
+        <Modal
+          open
+          onClose={() => setDeleteConfirmModal({ isOpen: false, meeting: null })}
+          title="Confirm Delete Meeting"
+          maxWidth={440}
+          footer={
+            <>
               <button
                 type="button"
                 onClick={() => setDeleteConfirmModal({ isOpen: false, meeting: null })}
@@ -1879,9 +1861,18 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
               >
                 {isDeleting ? (<><InlineSpinner /> Deleting...</>) : (<><Trash2 size={15} /> Yes, Delete Meeting</>)}
               </button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        >
+              <p style={{ fontSize: 13.5, color: '#334155', margin: '0 0 12px 0', lineHeight: 1.5 }}>
+                Are you sure you want to delete <strong>"{deleteConfirmModal.meeting.title}"</strong>?
+              </p>
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
+                <p style={{ margin: 0, fontSize: 12, color: '#991b1b', lineHeight: 1.45 }}>
+                  ⚠️ <strong>Warning:</strong> This will permanently delete the meeting along with all recorded staff and visitor attendance logs, signatures, and associated reports. This action cannot be undone.
+                </p>
+              </div>
+        </Modal>
       )}
     </div>
   );

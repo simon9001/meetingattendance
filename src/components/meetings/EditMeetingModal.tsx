@@ -161,7 +161,7 @@ export const EditMeetingModal: React.FC<EditMeetingModalProps> = ({ meeting, isO
               step={1}
               title="Basic Info"
               helperText="What is this session about, and what should it be called?"
-              icon={<Info size={16} className="text-[#B45309]" />}
+              icon={<Info size={16} className="text-brand-700" />}
             >
               <div className="form-group">
                 <label htmlFor="e-m-title">Meeting Title</label>
@@ -192,7 +192,7 @@ export const EditMeetingModal: React.FC<EditMeetingModalProps> = ({ meeting, isO
               step={2}
               title="Schedule & Venue"
               helperText="Where and when the meeting itself takes place."
-              icon={<MapPin size={16} className="text-[#B45309]" />}
+              icon={<MapPin size={16} className="text-brand-700" />}
             >
               <div className="meeting-form-grid">
                 <div className="form-group">
@@ -269,7 +269,7 @@ export const EditMeetingModal: React.FC<EditMeetingModalProps> = ({ meeting, isO
               step={3}
               title="Attendance Window & Security"
               helperText="Controls when the sign-in link becomes active. The PIN itself can't be changed here."
-              icon={<ShieldCheck size={16} className="text-[#B45309]" />}
+              icon={<ShieldCheck size={16} className="text-brand-700" />}
             >
               <div className="meeting-form-grid" style={{ marginBottom: 0 }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
@@ -287,7 +287,7 @@ export const EditMeetingModal: React.FC<EditMeetingModalProps> = ({ meeting, isO
               step={4}
               title="Attendance Form & Dynamic Fields"
               helperText="Configure which fields appear on the sign-in form and attendance register (designation, department, custom fields, multi-day schedule)."
-              icon={<Sliders size={16} className="text-[#B45309]" />}
+              icon={<Sliders size={16} className="text-brand-700" />}
             >
               <FormFieldsCustomizer config={formConfig} onChange={setFormConfig} />
             </FormSection>

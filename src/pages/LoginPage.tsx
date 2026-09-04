@@ -7,6 +7,7 @@ import { useDispatch } from 'react-redux';
 import { apiSlice } from '../features/apis/apiSlice';
 import { setCredentials, mapProfileToUser } from '../features/slice/authSlice';
 import { AlertError, AlertWarning, AlertInfo, InlineSpinner } from '../components/shared/Feedback';
+import { FormField } from '../components/shared/FormField';
 
 interface LoginPageProps {
   loginEmail: string;
@@ -29,6 +30,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [warningMsg, setWarningMsg] = useState<string | null>(null);
+  // Per-field messages render beside the field they belong to, rather than only
+  // as a floating banner that never says which input is at fault.
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+
+  const clearMessages = () => {
+    setWarningMsg(null);
+    setErrorMsg(null);
+    setFieldErrors({});
+  };
 
   const [loginApi] = useLoginMutation();
   const dispatch = useDispatch();
@@ -57,18 +67,27 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setErrorMsg(null);
     setWarningMsg(null);
 
-    if (!loginEmail || !loginPassword) {
-      setWarningMsg('Please fill in all required fields.');
-      return false;
-    }
-
-    // Basic email format check
+    const next: { email?: string; password?: string } = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(loginEmail)) {
-      setWarningMsg('Warning: Invalid email address!');
-      return false;
+
+    if (!loginEmail) {
+      next.email = 'Enter your official email address.';
+    } else if (!emailRegex.test(loginEmail)) {
+      next.email = 'Enter a valid email address, e.g. name@kenha.co.ke';
+    }
+    if (!loginPassword) {
+      next.password = 'Enter your password.';
     }
 
+    setFieldErrors(next);
+
+    // Move focus to the first field at fault so keyboard and screen reader users
+    // are taken to the problem instead of having to hunt for it.
+    const firstInvalid = next.email ? 'l-email' : next.password ? 'l-pass' : null;
+    if (firstInvalid) {
+      document.getElementById(firstInvalid)?.focus();
+      return false;
+    }
     return true;
   };
 
@@ -141,49 +160,65 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
 
           <form onSubmit={handleLoginSubmit} noValidate>
-            <div className="form-group underline">
-              <label htmlFor="l-email" className="form-label">Official Email Address</label>
-              <input
-                id="l-email" name="email" type="email" autoComplete="email"
-                inputMode="email" spellCheck={false} autoCapitalize="none"
-                placeholder="e.g. name@kenha.co.ke"
-                value={loginEmail}
-                onChange={e => {
-                  setLoginEmail(e.target.value);
-                  if (warningMsg || errorMsg) { setWarningMsg(null); setErrorMsg(null); }
-                }}
-                required
-                className="form-input"
-              />
-            </div>
+            <FormField
+              id="l-email"
+              label="Official Email Address"
+              className="underline"
+              required
+              error={fieldErrors.email}
+            >
+              {(field) => (
+                <input
+                  {...field}
+                  name="email" type="email" autoComplete="email"
+                  inputMode="email" spellCheck={false} autoCapitalize="none"
+                  placeholder="e.g. name@kenha.co.ke"
+                  value={loginEmail}
+                  onChange={e => {
+                    setLoginEmail(e.target.value);
+                    clearMessages();
+                  }}
+                  className="form-input"
+                />
+              )}
+            </FormField>
 
-            <div className="form-group underline login-password-wrapper">
-              <label htmlFor="l-pass" className="form-label">Password</label>
-              <input
-                id="l-pass" name="password" type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password" spellCheck={false}
-                placeholder="Enter your password"
-                value={loginPassword}
-                onChange={e => {
-                  setLoginPassword(e.target.value);
-                  if (warningMsg || errorMsg) { setWarningMsg(null); setErrorMsg(null); }
-                }}
-                required
-                className="form-input"
-                style={{ paddingRight: 28 }}
-              />
-              <button
-                type="button"
-                className="login-password-toggle"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                aria-pressed={showPassword}
-                onClick={() => setShowPassword(v => !v)}
-              >
-                {showPassword
-                  ? <EyeOff size={16} aria-hidden="true" />
-                  : <Eye size={16} aria-hidden="true" />}
-              </button>
-            </div>
+            <FormField
+              id="l-pass"
+              label="Password"
+              className="underline login-password-wrapper"
+              required
+              error={fieldErrors.password}
+            >
+              {(field) => (
+                <>
+                  <input
+                    {...field}
+                    name="password" type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password" spellCheck={false}
+                    placeholder="Enter your password"
+                    value={loginPassword}
+                    onChange={e => {
+                      setLoginPassword(e.target.value);
+                      clearMessages();
+                    }}
+                    className="form-input"
+                    style={{ paddingRight: 28 }}
+                  />
+                  <button
+                    type="button"
+                    className="login-password-toggle"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword(v => !v)}
+                  >
+                    {showPassword
+                      ? <EyeOff size={16} aria-hidden="true" />
+                      : <Eye size={16} aria-hidden="true" />}
+                  </button>
+                </>
+              )}
+            </FormField>
 
             <div className="login-actions">
               <a

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Trash2, Edit3 } from 'lucide-react';
+import { UserPlus, Edit3 } from 'lucide-react';
+import { Modal } from '../../components/shared/Modal';
 import { PageSpinner } from '../../components/shared/Feedback';
 import type { User } from '../../data/mockData';
 import {
@@ -262,14 +263,20 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ showToast }) => 
       </div>
 
       {showAddUserModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: 450 }}>
-            <div className="modal-header">
-              <h3>Create User Account</h3>
-              <button onClick={() => setShowAddUserModal(false)} className="modal-close-btn"><Trash2 size={16} /></button>
-            </div>
-            <form onSubmit={handleCreateUserSubmit}>
-              <div className="modal-body">
+        <Modal
+          open
+          onClose={() => setShowAddUserModal(false)}
+          title="Create User Account"
+          maxWidth={450}
+          onSubmit={handleCreateUserSubmit}
+          closeOnBackdrop={false}
+          footer={
+            <>
+                <button type="button" onClick={() => setShowAddUserModal(false)} className="btn btn-secondary">Cancel</button>
+                <button type="submit" className="btn btn-primary">Create Account</button>
+            </>
+          }
+        >
                 <div className="form-group">
                   <label htmlFor="n-name">Full Name</label>
                   <input
@@ -346,25 +353,24 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ showToast }) => 
                     Force password change on first sign-in
                   </label>
                 </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" onClick={() => setShowAddUserModal(false)} className="btn btn-secondary">Cancel</button>
-                <button type="submit" className="btn btn-primary">Create Account</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {editingUser && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: 450 }}>
-            <div className="modal-header">
-              <h3>Edit User Account</h3>
-              <button onClick={() => setEditingUser(null)} className="modal-close-btn"><Trash2 size={16} /></button>
-            </div>
-            <form onSubmit={handleEditUserSubmit}>
-              <div className="modal-body">
+        <Modal
+          open
+          onClose={() => setEditingUser(null)}
+          title="Edit User Account"
+          maxWidth={450}
+          onSubmit={handleEditUserSubmit}
+          closeOnBackdrop={false}
+          footer={
+            <>
+                <button type="button" onClick={() => setEditingUser(null)} className="btn btn-secondary">Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Changes</button>
+            </>
+          }
+        >
                 <div className="form-group">
                   <label htmlFor="e-email">Official KeNHA Email</label>
                   <input
@@ -418,14 +424,7 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ showToast }) => 
                     ))}
                   </select>
                 </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" onClick={() => setEditingUser(null)} className="btn btn-secondary">Cancel</button>
-                <button type="submit" className="btn btn-primary">Save Changes</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
     </div>

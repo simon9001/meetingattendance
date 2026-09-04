@@ -422,7 +422,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         <span className="hidden xl:inline text-xs font-semibold">Alerts</span>
 
         {unreadCount > 0 ? (
-          <span className="badge badge-xs font-extrabold px-1.5 py-1 text-[9px] bg-[#0B0D11] text-[#F9D616] border-none shadow-2xs">
+          <span className="badge badge-xs font-extrabold px-1.5 py-1 text-[9px] bg-onyx-950 text-brand-500 border-none shadow-2xs">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         ) : (

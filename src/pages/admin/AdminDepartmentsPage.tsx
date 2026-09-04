@@ -149,7 +149,7 @@ export const AdminDepartmentsPage: React.FC<AdminDepartmentsPageProps> = ({ show
       <div className="dashboard-panel" style={{ marginBottom: 24 }}>
         <div className="panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
           <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Building2 size={18} className="text-[#B45309]" />
+            <Building2 size={18} className="text-brand-700" />
             Register Departments
           </h3>
           <div style={{ display: 'flex', gap: 6 }}>

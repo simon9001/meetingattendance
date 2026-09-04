@@ -179,7 +179,7 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
         <div>
           <label style={{ fontWeight: 700, color: '#0f172a', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Building2 size={16} className="text-[#B45309]" />
+            <Building2 size={16} className="text-brand-700" />
             Hosting Department / Directorate Scope *
           </label>
           <span style={{ fontSize: 11.5, color: '#64748b' }}>
@@ -516,7 +516,7 @@ export const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Plus size={16} className="text-[#B45309]" />
+                <Plus size={16} className="text-brand-700" />
                 Create New Department
               </h3>
               <button

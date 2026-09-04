@@ -61,7 +61,7 @@ export const AdminSecurityPage: React.FC<AdminSecurityPageProps> = ({ dbTick, sh
               onClick={() => setForceHttps(h => !h)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
             >
-              {forceHttps ? <ToggleRight size={36} color="#F9D616" /> : <ToggleLeft size={36} color="#6B7280" />}
+              {forceHttps ? <ToggleRight size={36} className="text-brand-500" /> : <ToggleLeft size={36} color="#6B7280" />}
             </button>
             <div>
               <span style={{ fontSize: 13, fontWeight: 600, display: 'block', color: 'var(--text-main)' }}>Require Secure HTTPS Encryption</span>

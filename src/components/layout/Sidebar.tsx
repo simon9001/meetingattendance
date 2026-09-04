@@ -53,12 +53,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           text-sm rounded-xl font-medium
           transition-all duration-200 cursor-pointer text-left
           ${active
-            ? 'bg-[#F9D616] text-[#0B0D11] shadow-sm font-bold shadow-[#F9D616]/20'
+            ? 'bg-brand-500 text-onyx-950 shadow-sm font-bold shadow-brand-500/20'
             : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium'
           }
         `}
       >
-        <span className={`flex-shrink-0 ${active ? 'text-[#0B0D11]' : 'text-slate-400'}`}>
+        <span className={`flex-shrink-0 ${active ? 'text-onyx-950' : 'text-slate-400'}`}>
           {icon}
         </span>
         <span className="truncate">{label}</span>
@@ -70,24 +70,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
     admin: {
       title: 'Admin Panel',
       subtitle: 'System & Security',
-      icon: <ShieldCheck size={18} className="text-[#B45309]" />,
+      icon: <ShieldCheck size={18} className="text-brand-700" />,
     },
     hr: {
       title: 'HR Portal',
       subtitle: 'Reports & Analytics',
-      icon: <Briefcase size={18} className="text-[#B45309]" />,
+      icon: <Briefcase size={18} className="text-brand-700" />,
     },
     organizer: {
       title: 'Organizer Portal',
       subtitle: 'Meetings & Registers',
-      icon: <UserCheck size={18} className="text-[#B45309]" />,
+      icon: <UserCheck size={18} className="text-brand-700" />,
     },
   };
 
   const currentPanel = ROLE_PANEL_INFO[currentUser.role] || {
     title: 'Dashboard',
     subtitle: 'KeNHA KMTAMS',
-    icon: <LayoutDashboard size={18} className="text-[#B45309]" />,
+    icon: <LayoutDashboard size={18} className="text-brand-700" />,
   };
 
   return (
@@ -108,7 +108,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <KeNHALogo height={28} width="auto" />
         </div>
         <div className="flex flex-col leading-tight min-w-0 flex-1">
-          <span className="text-[14px] font-extrabold text-slate-900 tracking-tight truncate group-hover:text-[#B45309] transition-colors">
+          <span className="text-[14px] font-extrabold text-slate-900 tracking-tight truncate group-hover:text-brand-700 transition-colors">
             {currentPanel.title}
           </span>
           <span className="text-[11px] text-slate-500 font-medium truncate">
@@ -167,11 +167,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         onClick={() => { setActiveDashboardTab('profile'); closeDrawer(); }}
         className={`border-t border-slate-100 p-3.5 m-2 rounded-xl flex items-center gap-3 text-left transition-colors cursor-pointer ${
           activeDashboardTab === 'profile'
-            ? 'bg-[#F9D616]/20 ring-1 ring-[#F9D616]/50'
+            ? 'bg-brand-500/20 ring-1 ring-brand-500/50'
             : 'bg-slate-50 hover:bg-slate-100'
         }`}
       >
-        <div className="bg-[#111827] text-[#F9D616] border border-[#F9D616]/40 rounded-lg w-8 h-8 flex items-center justify-center font-extrabold text-xs flex-shrink-0 shadow-2xs">
+        <div className="bg-onyx-900 text-brand-500 border border-brand-500/40 rounded-lg w-8 h-8 flex items-center justify-center font-extrabold text-xs flex-shrink-0 shadow-2xs">
           {currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase()}
         </div>
         <div className="flex flex-col min-w-0 flex-1">

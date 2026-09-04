@@ -54,7 +54,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               title="Go to Home Dashboard"
               className="btn btn-ghost btn-sm gap-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-semibold px-2.5 rounded-lg transition-all cursor-pointer"
             >
-              <Home size={18} className="text-[#B45309]" />
+              <Home size={18} className="text-brand-700" />
               <span className="hidden sm:inline font-bold text-xs">Home</span>
             </button>
           </div>
@@ -106,7 +106,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                     }}
                     className="flex items-center text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-lg cursor-pointer"
                   >
-                    <Home className="mr-3 text-[#B45309]" size={16} />
+                    <Home className="mr-3 text-brand-700" size={16} />
                     Home Dashboard
                   </button>
                 </li>

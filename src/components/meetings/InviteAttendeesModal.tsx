@@ -147,7 +147,7 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
         <div
           style={{
             padding: '20px 24px',
-            background: 'linear-gradient(135deg, #0B0D11 0%, #1E293B 100%)',
+            background: 'linear-gradient(135deg, var(--kenha-black) 0%, var(--kenha-slate) 100%)',
             color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
@@ -168,7 +168,7 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
                 backdropFilter: 'blur(4px)',
               }}
             >
-              <Mail size={22} color="#F9D616" />
+              <Mail size={22} className="text-brand-500" />
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#ffffff' }}>

@@ -166,7 +166,7 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color, #e2e8f0)', paddingBottom: 12, marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Sliders size={18} className="text-[#B45309]" />
+            <Sliders size={18} className="text-brand-700" />
             <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
               Meeting Schedule &amp; Attendance Form Customizer
             </h4>
@@ -229,7 +229,7 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
             {/* SECTION 0: SINGLE DAY vs MULTI-DAY SESSION MODE */}
             <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CalendarDays size={16} className="text-[#B45309]" />
+                <CalendarDays size={16} className="text-brand-700" />
                 1. Meeting Schedule Mode (Single-Day vs. Multi-Day)
               </div>
               <p style={{ margin: '0 0 12px', fontSize: 11.5, color: '#64748b' }}>
@@ -441,7 +441,7 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                         style={{ cursor: 'pointer' }}
                       />
                       <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Mail size={14} className="text-[#B45309]" />
+                        <Mail size={14} className="text-brand-700" />
                         Send Daily Sign-In Email Reminders to Participants via Resend
                       </div>
                     </div>
@@ -778,7 +778,7 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
             {/* Register Column Header Preview */}
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 14 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#1e293b', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <FileSpreadsheet size={15} className="text-[#B45309]" />
+                <FileSpreadsheet size={15} className="text-brand-700" />
                 Resulting Attendance Register Table Columns (Print / Word):
               </div>
 
@@ -869,7 +869,7 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
             <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Eye size={15} className="text-[#B45309]" />
+                  <Eye size={15} className="text-brand-700" />
                   Participant Sign-in Form Preview (What Attendees Will See):
                 </div>
 
