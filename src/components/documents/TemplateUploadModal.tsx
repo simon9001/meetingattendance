@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, FileText, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Modal } from '../shared/Modal';
 import { useUploadTemplateMutation } from '../../features/apis/documentsApi';
 import { AlertError, InlineSpinner } from '../shared/Feedback';
 
@@ -85,17 +86,14 @@ export const TemplateUploadModal: React.FC<TemplateUploadModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <dialog className="modal modal-open">
-      <div className="modal-box w-11/12 max-w-2xl bg-base-100 shadow-xl rounded-2xl relative">
-        <button
-          onClick={resetAndClose}
-          className="btn btn-sm btn-circle btn-ghost absolute right-4 top-4"
-        >
-          <X size={18} />
-        </button>
-
-        <h3 className="text-xl font-bold mb-6">Upload Document Template</h3>
-
+    <Modal
+      open
+      onClose={resetAndClose}
+      title="Upload Document Template"
+      maxWidth={672}
+      // An in-progress upload should not be discarded by a stray backdrop click.
+      closeOnBackdrop={!isLoading}
+    >
         {analysisResult ? (
           <div className="flex flex-col items-center justify-center p-6 space-y-4">
             <div className="w-16 h-16 bg-success/20 text-success rounded-full flex items-center justify-center mb-2">
@@ -229,8 +227,6 @@ export const TemplateUploadModal: React.FC<TemplateUploadModalProps> = ({
             </div>
           </form>
         )}
-      </div>
-      <div className="modal-backdrop bg-neutral/40" onClick={resetAndClose}></div>
-    </dialog>
+    </Modal>
   );
 };

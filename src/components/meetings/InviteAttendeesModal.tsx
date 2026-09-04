@@ -4,6 +4,7 @@ import {
   Copy, Check, Clock, MapPin, KeyRound, Sparkles
 } from 'lucide-react';
 import { InlineSpinner } from '../shared/Feedback';
+import { Modal } from '../shared/Modal';
 import { useSendMeetingRemindersMutation } from '../../features/apis/apiSlice';
 import { parseMeetingFormConfig, formatAttendanceDate } from '../../types/formConfig';
 
@@ -132,23 +133,16 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
   };
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 9999, padding: '20px' }}>
-      <div
-        className="modal-content"
-        style={{
-          maxWidth: '780px',
-          width: '100%',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          borderRadius: '16px',
-          overflow: 'hidden',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.25)',
-          border: '1px solid var(--border-color)',
-          background: 'var(--bg-card)',
-          color: 'var(--text-main)',
-        }}
-      >
+    <Modal
+      open
+      onClose={onClose}
+      title="Invite Attendees"
+      maxWidth={780}
+      // The panel renders its own gradient header and close control.
+      hideHeader
+      bodyClassName="is-flush"
+      closeOnBackdrop={false}
+    >
         {/* Modal Header */}
         <div
           style={{
@@ -549,7 +543,6 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
             </div>
           </form>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };

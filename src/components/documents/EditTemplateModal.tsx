@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { X, Edit3, Upload, FileText, CheckCircle2, Save } from 'lucide-react';
+import { Modal } from '../shared/Modal';
 import {
   useUpdateTemplateMutation,
   useUploadTemplateVersionMutation,
@@ -122,8 +123,14 @@ export const EditTemplateModal: React.FC<EditTemplateModalProps> = ({
   };
 
   return (
-    <dialog className="modal modal-open">
-      <div className="modal-box w-11/12 max-w-2xl bg-base-100 shadow-2xl rounded-2xl p-7 relative border border-base-200/80">
+    <Modal
+      open
+      onClose={onClose}
+      title={`Edit Template — ${template.name}`}
+      maxWidth={672}
+      // The panel supplies its own icon header and close button.
+      hideHeader
+    >
         <button
           onClick={onClose}
           type="button"
@@ -320,8 +327,6 @@ export const EditTemplateModal: React.FC<EditTemplateModalProps> = ({
             </div>
           </form>
         )}
-      </div>
-      <div className="modal-backdrop bg-neutral/40 backdrop-blur-xs" onClick={onClose}></div>
-    </dialog>
+    </Modal>
   );
 };

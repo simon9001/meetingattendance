@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, FileText, Download, CheckCircle2, FileType, FileCode, Hash, Sparkles, Users, UserCheck, UserPlus } from 'lucide-react';
+import { Modal } from '../shared/Modal';
 import {
   Document, Packer, Paragraph, Table, TableRow, TableCell,
   TextRun, ImageRun, AlignmentType, WidthType, VerticalAlign,
@@ -481,8 +482,14 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
   const templates = templatesRes?.data || [];
 
   return (
-    <dialog className="modal modal-open">
-      <div className="modal-box w-11/12 max-w-lg bg-base-100 shadow-2xl rounded-2xl p-7 relative border border-base-200/80">
+    <Modal
+      open
+      onClose={resetAndClose}
+      title="Generate Official Document"
+      maxWidth={512}
+      // The panel supplies its own icon header and close button.
+      hideHeader
+    >
         
         {/* Close Button */}
         <button
@@ -741,9 +748,7 @@ export const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({
             </div>
           </form>
         )}
-      </div>
-      <div className="modal-backdrop bg-neutral/40 backdrop-blur-xs" onClick={resetAndClose}></div>
-    </dialog>
+    </Modal>
   );
 };
 

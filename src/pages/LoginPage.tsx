@@ -115,13 +115,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
   return (
     <div className="login-screen">
-      {/* Top-Right Floating Alerts Container */}
-      {(warningMsg || errorMsg) && (
-        <div className="fixed top-6 right-6 z-50 flex flex-col gap-2 max-w-sm">
-          {warningMsg && <AlertWarning message={warningMsg} />}
-          {errorMsg && <AlertError message={errorMsg} />}
-        </div>
-      )}
+      {/* Top-Right Floating Alerts Container — announced to screen readers */}
+      <div
+        className="fixed top-6 right-6 z-50 flex flex-col gap-2 max-w-sm"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {warningMsg && <AlertWarning message={warningMsg} />}
+        {errorMsg && <AlertError message={errorMsg} />}
+      </div>
 
       <div className="login-center">
         <div className="login-card">
@@ -139,10 +142,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
           <form onSubmit={handleLoginSubmit} noValidate>
             <div className="form-group underline">
+              <label htmlFor="l-email" className="form-label">Official Email Address</label>
               <input
-                id="l-email" type="email" autoComplete="email"
-                placeholder="Email address"
-                value={loginEmail} 
+                id="l-email" name="email" type="email" autoComplete="email"
+                inputMode="email" spellCheck={false} autoCapitalize="none"
+                placeholder="e.g. name@kenha.co.ke"
+                value={loginEmail}
                 onChange={e => {
                   setLoginEmail(e.target.value);
                   if (warningMsg || errorMsg) { setWarningMsg(null); setErrorMsg(null); }
@@ -153,10 +158,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
 
             <div className="form-group underline login-password-wrapper">
+              <label htmlFor="l-pass" className="form-label">Password</label>
               <input
-                id="l-pass" type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password" placeholder="Password"
-                value={loginPassword} 
+                id="l-pass" name="password" type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password" spellCheck={false}
+                placeholder="Enter your password"
+                value={loginPassword}
                 onChange={e => {
                   setLoginPassword(e.target.value);
                   if (warningMsg || errorMsg) { setWarningMsg(null); setErrorMsg(null); }
@@ -166,24 +173,33 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 style={{ paddingRight: 28 }}
               />
               <button
-                type="button" tabIndex={-1}
+                type="button"
                 className="login-password-toggle"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
                 onClick={() => setShowPassword(v => !v)}
               >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showPassword
+                  ? <EyeOff size={16} aria-hidden="true" />
+                  : <Eye size={16} aria-hidden="true" />}
               </button>
             </div>
 
             <div className="login-actions">
-              <button
-                type="button"
-                className="forgot-password-link bg-transparent border-0 p-0 text-left cursor-pointer"
-                onClick={() => navigate('/reset-password')}
+              <a
+                href="/reset-password"
+                className="forgot-password-link"
+                onClick={(e) => {
+                  // Let the browser handle modified clicks (new tab / new window)
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                  e.preventDefault();
+                  navigate('/reset-password');
+                }}
               >
                 Forgot password?
-              </button>
-              <label className="login-keep-signed-in">
-                <input id="l-keep" type="checkbox" />
+              </a>
+              <label className="login-keep-signed-in" htmlFor="l-keep">
+                <input id="l-keep" name="keep-signed-in" type="checkbox" />
                 Keep me signed in
               </label>
             </div>

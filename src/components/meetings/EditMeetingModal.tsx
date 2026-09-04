@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Info, MapPin, ShieldCheck, Sliders, X } from 'lucide-react';
+import { Info, MapPin, ShieldCheck, Sliders } from 'lucide-react';
 import { useUpdateMeetingMutation, useGetDepartmentsQuery } from '../../features/apis/apiSlice';
 import { InlineSpinner } from '../shared/Feedback';
+import { Modal } from '../shared/Modal';
 import { FormSection } from './FormSection';
 import { DepartmentPicker } from './DepartmentPicker';
 import { FormFieldsCustomizer } from './FormFieldsCustomizer';
@@ -138,14 +139,24 @@ export const EditMeetingModal: React.FC<EditMeetingModalProps> = ({ meeting, isO
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: 720 }}>
-        <div className="modal-header">
-          <h3>Edit Meeting — {meeting.title}</h3>
-          <button onClick={onClose} className="modal-close-btn"><X size={18} /></button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body">
+    <Modal
+      open
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      title={`Edit Meeting — ${meeting.title}`}
+      maxWidth={720}
+      // A long edit form: a stray backdrop click must not discard the changes.
+      closeOnBackdrop={false}
+      footer={
+        <>
+          <button type="button" onClick={onClose} className="btn btn-secondary" disabled={isSaving}>Cancel</button>
+          <button type="submit" className="btn btn-primary" disabled={isSaving}>
+            {isSaving ? (<><InlineSpinner /> Saving…</>) : 'Save Changes'}
+          </button>
+        </>
+      }
+    >
+      <>
             <FormSection
               step={1}
               title="Basic Info"
@@ -280,16 +291,7 @@ export const EditMeetingModal: React.FC<EditMeetingModalProps> = ({ meeting, isO
             >
               <FormFieldsCustomizer config={formConfig} onChange={setFormConfig} />
             </FormSection>
-          </div>
-
-          <div className="modal-footer">
-            <button type="button" onClick={onClose} className="btn btn-secondary" disabled={isSaving}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={isSaving}>
-              {isSaving ? (<><InlineSpinner /> Saving...</>) : 'Save Changes'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 };

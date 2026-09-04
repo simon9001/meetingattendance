@@ -137,10 +137,15 @@ body {
   border-radius: 8px;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   text-decoration: none;
   gap: 8px;
   user-select: none;
+  touch-action: manipulation;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
@@ -578,8 +583,28 @@ body {
   box-sizing: border-box;
 }
 
+/* NOTE: this variant name collides with Tailwind's `underline` utility, which
+   paints a text-decoration line across every descendant. A descendant cannot
+   cancel a propagated decoration, so it has to be cleared here on the wrapper.
+   The "underline" here refers to the field's bottom border, not to text. */
 .form-group.underline {
   margin-bottom: 20px;
+  text-decoration: none;
+}
+
+/* Visible field label for the minimal underline form style */
+.form-label {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.form-group:focus-within .form-label {
+  color: var(--text-main);
 }
 
 .form-input {
@@ -1925,4 +1950,223 @@ textarea:focus,
   .login-header h1 {
     font-size: 22px;
   }
+}
+
+/* ==========================================================================
+   Accessibility — keyboard focus
+   Buttons, links and nav items previously had no focus indicator at all.
+   Inputs keep their existing :focus ring (they should show focus on click);
+   everything else uses :focus-visible so the ring only appears for keyboard.
+   The ring is deliberately two-tone: an onyx core that reads on light and
+   gold surfaces, plus a gold halo that reads on the dark sidebar/onyx buttons.
+   ========================================================================== */
+a[href]:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible,
+[role="menuitem"]:focus-visible,
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible,
+[tabindex]:not([tabindex^="-"]):focus-visible {
+  outline: 2px solid var(--kenha-black);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--kenha-yellow-glow);
+  border-radius: 8px;
+}
+
+/* Elements that already define their own radius keep it under the ring */
+.btn:focus-visible,
+.login-password-toggle:focus-visible {
+  border-radius: 8px;
+}
+
+/* On the dark sidebar the onyx core disappears — lead with gold there */
+.sidebar a[href]:focus-visible,
+.sidebar button:focus-visible,
+[data-theme='dark'] a[href]:focus-visible,
+[data-theme='dark'] button:focus-visible {
+  outline-color: var(--kenha-yellow);
+  box-shadow: 0 0 0 5px rgba(11, 13, 17, 0.55);
+}
+
+/* Skip link — lets keyboard users jump past the sidebar to page content */
+.skip-to-content {
+  position: absolute;
+  left: 12px;
+  top: -100px;
+  z-index: 200;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background-color: var(--kenha-black);
+  color: var(--kenha-yellow);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+
+.skip-to-content:focus {
+  top: 12px;
+}
+
+/* Screen-reader-only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Number columns must not jitter as values change */
+.tabular-nums,
+td.num,
+.card-stat-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   Accessibility — reduced motion
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .btn:hover:not(:disabled),
+  .btn-primary:hover:not(:disabled),
+  .btn-dark:hover:not(:disabled),
+  .btn-secondary:hover:not(:disabled),
+  .btn-danger:hover:not(:disabled),
+  .btn-success:hover:not(:disabled) {
+    transform: none;
+  }
+}
+/* ==========================================================================
+   Shared <Modal> — native <dialog> in the top layer
+   The browser supplies focus trapping, Escape and inert background; these
+   rules only restore the visual treatment the old .modal-overlay divs had.
+   ========================================================================== */
+.app-modal {
+  /* UA styles give <dialog> a border, padding and auto margins — clear them
+     so the element itself acts purely as the full-viewport backdrop layer. */
+  max-width: 100vw;
+  max-height: 100dvh;
+  width: 100%;
+  height: 100%;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.app-modal::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.app-modal:not([open]) {
+  display: none;
+}
+
+/* Centres the panel and gives the backdrop a click target around it */
+.app-modal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.app-modal-content {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-fluent-lg);
+  width: 100%;
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.app-modal-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .app-modal[open] .app-modal-content {
+    animation: app-modal-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes app-modal-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* ==========================================================================
+   Shared <FormField>
+   ========================================================================== */
+.form-label-required {
+  color: #DC2626;
+  font-weight: 700;
+}
+
+.form-error {
+  margin-top: 4px;
+  font-size: 12.5px;
+  font-weight: 500;
+  /* red-600 rather than red-500: 4.5:1 on white, so it clears AA for small text */
+  color: #DC2626;
+}
+
+.form-hint {
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+/* Invalid controls get a visible treatment, not just an ARIA flag */
+.form-input[aria-invalid='true'],
+input[aria-invalid='true'],
+select[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-color: #DC2626 !important;
+}
+
+.form-input[aria-invalid='true']:focus,
+input[aria-invalid='true']:focus,
+select[aria-invalid='true']:focus,
+textarea[aria-invalid='true']:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25) !important;
+}
+
+/* Form modals: the <form> spans body and footer, so it must own the flex
+   column that lets the body scroll and the footer stay pinned. */
+.app-modal-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Body opt-out for panels that supply their own padding and chrome */
+.modal-body.is-flush {
+  padding: 0;
 }

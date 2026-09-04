@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { X, Copy, Check, ExternalLink, Printer } from 'lucide-react';
+import { Copy, Check, ExternalLink, Printer } from 'lucide-react';
+import { Modal } from './shared/Modal';
 
 interface QRCodeModalProps {
   meetingId: string;
@@ -221,16 +222,35 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content qr-modal">
-        <div className="modal-header">
-          <h3>Attendance Registration Details</h3>
-          <button onClick={onClose} className="modal-close-btn" aria-label="Close modal">
-            <X size={20} />
+    <Modal
+      open
+      onClose={onClose}
+      title="Attendance Registration Details"
+      maxWidth={500}
+      bodyClassName="qr-modal-body"
+      footerClassName="qr-modal-footer"
+      footer={
+        <>
+          <button 
+            type="button" 
+            onClick={handlePrint}
+            className="btn btn-secondary print-qr-btn"
+          >
+            <Printer size={16} className="btn-icon" />
+            Print QR Poster
           </button>
-        </div>
-
-        <div className="modal-body qr-modal-body">
+          <a 
+            href={attendanceUrl} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="btn btn-primary test-link-btn"
+          >
+            <ExternalLink size={16} className="btn-icon" />
+            Open Attendance Form
+          </a>
+        </>
+      }
+    >
           <div className="meeting-info-header">
             <span className="info-badge">Meeting Details</span>
             <h4>{meetingTitle}</h4>
@@ -279,28 +299,6 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
               </button>
             </div>
           </div>
-        </div>
-
-        <div className="modal-footer qr-modal-footer">
-          <button 
-            type="button" 
-            onClick={handlePrint}
-            className="btn btn-secondary print-qr-btn"
-          >
-            <Printer size={16} className="btn-icon" />
-            Print QR Poster
-          </button>
-          <a 
-            href={attendanceUrl} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="btn btn-primary test-link-btn"
-          >
-            <ExternalLink size={16} className="btn-icon" />
-            Open Attendance Form
-          </a>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
