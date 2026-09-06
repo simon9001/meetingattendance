@@ -23,17 +23,34 @@ const ROWS_PER_PAGE = 15;
 
 // The canvas padding on screen doubles as the @page margin when printing, so
 // what the organiser sees is what comes out of the printer.
-const PAGE_MARGIN_MAP: Record<MarginSize, Record<Orientation, { css: string; vertical: number }>> = {
-  normal: { landscape: { css: '12mm 18mm', vertical: 12 }, portrait: { css: '18mm 22mm', vertical: 18 } },
-  narrow: { landscape: { css: '8mm 10mm', vertical: 8 }, portrait: { css: '10mm 12mm', vertical: 10 } },
-  wide: { landscape: { css: '18mm 24mm', vertical: 18 }, portrait: { css: '25mm 30mm', vertical: 25 } },
+const PAGE_MARGIN_MAP: Record<MarginSize, Record<Orientation, { css: string; vertical: number; horizontal: number }>> = {
+  normal: {
+    landscape: { css: '12mm 18mm', vertical: 12, horizontal: 18 },
+    portrait: { css: '18mm 22mm', vertical: 18, horizontal: 22 },
+  },
+  narrow: {
+    landscape: { css: '8mm 10mm', vertical: 8, horizontal: 10 },
+    portrait: { css: '10mm 12mm', vertical: 10, horizontal: 12 },
+  },
+  wide: {
+    landscape: { css: '18mm 24mm', vertical: 18, horizontal: 24 },
+    portrait: { css: '25mm 30mm', vertical: 25, horizontal: 30 },
+  },
 };
+
+// kenha_header_banner.png is 881x117 and kenha_footer_banner.png 1005x94. The
+// letterhead must be sized from these, never squeezed into a fixed height — that
+// is what made the printed header look stretched.
+const HEADER_BANNER_ASPECT = 881 / 117;
+const FOOTER_BANNER_ASPECT = 1005 / 94;
 
 // Vertical budget of the fixed furniture on each page, in millimetres. Whatever
 // is left over is divided evenly between the 15 body rows.
 const PAGE_CHROME_MM = {
-  header: 23,
-  title: 15,
+  // Everything in the header except the banner: the KeNHA/DG/F01 reference line
+  // plus the surrounding margins.
+  headerText: 9.2,
+  title: 17,
   theadSingle: 8,
   theadMulti: 11,
   footer: 26,
@@ -46,20 +63,28 @@ type MarginSize = 'normal' | 'narrow' | 'wide';
 const getPageMetrics = (orientation: Orientation, marginSize: MarginSize) => {
   const margin = PAGE_MARGIN_MAP[marginSize][orientation];
   const sheetHeight = orientation === 'landscape' ? 210 : 297; // A4
+  const sheetWidth = orientation === 'landscape' ? 297 : 210;
   // 2mm of slack so a full-height page never spills onto a blank extra sheet.
   const contentHeightMm = sheetHeight - margin.vertical * 2 - 2;
-  return { margin: margin.css, contentHeightMm };
+  const contentWidthMm = sheetWidth - margin.horizontal * 2;
+  // The banner spans the full text column, so its height is dictated by that.
+  const bannerHeightMm = contentWidthMm / HEADER_BANNER_ASPECT;
+  return { margin: margin.css, contentHeightMm, contentWidthMm, bannerHeightMm };
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 // Height of one body row (and the signature inside it) for a given page box.
-const getRowMetrics = (contentHeightMm: number, isMultiDay: boolean) => {
+const getRowMetrics = (
+  page: { contentHeightMm: number; bannerHeightMm: number },
+  isMultiDay: boolean,
+) => {
   const theadMm = isMultiDay ? PAGE_CHROME_MM.theadMulti : PAGE_CHROME_MM.theadSingle;
-  const bodyMm = contentHeightMm - PAGE_CHROME_MM.header - PAGE_CHROME_MM.title
+  const headerMm = page.bannerHeightMm + PAGE_CHROME_MM.headerText;
+  const bodyMm = page.contentHeightMm - headerMm - PAGE_CHROME_MM.title
     - theadMm - PAGE_CHROME_MM.footer - PAGE_CHROME_MM.tableGap;
-  const rowMm = clamp(bodyMm / ROWS_PER_PAGE, 5.5, 13);
-  return { rowMm, sigMm: clamp(rowMm - 1.6, 3.5, 9) };
+  const rowMm = clamp(bodyMm / ROWS_PER_PAGE, 4.8, 13);
+  return { rowMm, sigMm: clamp(rowMm - 1.6, 3.2, 9) };
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -413,7 +438,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
 
     // Whatever height the fixed furniture leaves over is shared by the 15 rows,
     // so a sheet is properly filled in landscape and in portrait alike.
-    const { rowMm, sigMm } = getRowMetrics(pageMetrics.contentHeightMm, isMultiDay);
+    const { rowMm, sigMm } = getRowMetrics(pageMetrics, isMultiDay);
     const rowHeight = `${rowMm.toFixed(2)}mm`;
     const sigHeight = `${sigMm.toFixed(2)}mm`;
 
@@ -504,9 +529,10 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
       KeNHA/DG/F01
     </div>
 
-    <!-- Full-Width Stretched KeNHA Header Banner Image -->
-    <div style="width:100%; margin-bottom:2px; overflow:hidden;">
-      <img src="/kenha_header_banner.png" alt="Kenya National Highways Authority Header" style="width:100%; height:auto; max-height:58px; object-fit:fill; display:block;" />
+    <!-- Full-Width KeNHA Letterhead. Height follows the image's own aspect
+         ratio; a fixed max-height here is what squashed it in landscape. -->
+    <div style="width:100%; margin-bottom:2px;">
+      <img src="/kenha_header_banner.png" alt="Kenya National Highways Authority Header" style="width:100%; height:${pageMetrics.bannerHeightMm.toFixed(2)}mm; object-fit:contain; display:block;" />
     </div>
   </header>`;
 
@@ -571,7 +597,7 @@ ${headerHtml}
   <!-- ==================== BODY CONTENT ==================== -->
   <main style="flex:1 1 auto; min-height:0; display:block;">
     <!-- Title Section -->
-    <div style="text-align:center; margin:6px 0 8px;">
+    <div style="text-align:center; margin:4mm 0 3mm;">
       <div contenteditable="true" style="font-size:14px; font-weight:800; text-transform:uppercase; color:#000; line-height:1.25; letter-spacing:0.2px;">
         ${meeting?.title || 'MEETING &amp; TRAINING ATTENDANCE REGISTER'}
       </div>
@@ -659,12 +685,18 @@ ${buildFooter(pageIndex + 1)}
     const wrappers = canvas.querySelectorAll<HTMLElement>('.kenha-page-wrapper');
     if (wrappers.length === 0) return;
 
-    const { rowMm, sigMm } = getRowMetrics(pageMetrics.contentHeightMm, getAttendanceDates().length > 1);
+    const { rowMm, sigMm } = getRowMetrics(pageMetrics, getAttendanceDates().length > 1);
     const rowHeight = `${rowMm.toFixed(2)}mm`;
     const sigHeight = `${sigMm.toFixed(2)}mm`;
 
+    const bannerHeight = `${pageMetrics.bannerHeightMm.toFixed(2)}mm`;
+
     for (const wrapper of wrappers) {
       wrapper.style.minHeight = `${pageMetrics.contentHeightMm}mm`;
+      // The letterhead spans the text column, so its height moves with the width.
+      wrapper.querySelectorAll<HTMLImageElement>('header img').forEach(img => {
+        img.style.height = bannerHeight;
+      });
       wrapper.querySelectorAll<HTMLElement>('main table tbody tr').forEach(tr => {
         tr.style.height = rowHeight;
       });
@@ -1081,9 +1113,8 @@ ${buildFooter(pageIndex + 1)}
           }
           header img {
             width: 100%;
-            height: auto;
-            max-height: 58px;
-            object-fit: fill;
+            height: ${pageMetrics.bannerHeightMm.toFixed(2)}mm;
+            object-fit: contain;
             display: block;
           }
           main {
@@ -1521,7 +1552,7 @@ ${buildFooter(pageIndex + 1)}
                     children: [
                       new ImageRun({
                         data: bannerUint8,
-                        transformation: { width: orientation === 'landscape' ? 780 : 540, height: 60 },
+                        transformation: (() => { const w = orientation === 'landscape' ? 780 : 540; return { width: w, height: Math.round(w / HEADER_BANNER_ASPECT) }; })(),
                         type: 'png',
                       } as any),
                     ],
@@ -1540,7 +1571,7 @@ ${buildFooter(pageIndex + 1)}
                     children: [
                       new ImageRun({
                         data: footerUint8,
-                        transformation: { width: orientation === 'landscape' ? 780 : 540, height: 45 },
+                        transformation: (() => { const w = orientation === 'landscape' ? 780 : 540; return { width: w, height: Math.round(w / FOOTER_BANNER_ASPECT) }; })(),
                         type: 'png',
                       } as any),
                     ],
