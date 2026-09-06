@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect, useState } from 'react';
+import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   X, Printer, Bold, Italic, Underline, Strikethrough,
   AlignLeft, AlignCenter, AlignRight, AlignJustify, Type, FileDown,
@@ -15,6 +15,52 @@ import { saveAs } from 'file-saver';
 // @ts-ignore — mammoth ships browser remaps via package.json browser field
 import mammoth from 'mammoth';
 import { parseMeetingFormConfig, getDynamicRegisterColumns, aggregateMultiDayAttendees, formatAttendanceDate, resolveDepartmentDisplay } from '../../types/formConfig';
+
+// ─── Page geometry ────────────────────────────────────────────────────────────
+// Every printed sheet carries exactly this many attendees, so a register is the
+// same shape whether it holds 3 people or 300.
+const ROWS_PER_PAGE = 15;
+
+// The canvas padding on screen doubles as the @page margin when printing, so
+// what the organiser sees is what comes out of the printer.
+const PAGE_MARGIN_MAP: Record<MarginSize, Record<Orientation, { css: string; vertical: number }>> = {
+  normal: { landscape: { css: '12mm 18mm', vertical: 12 }, portrait: { css: '18mm 22mm', vertical: 18 } },
+  narrow: { landscape: { css: '8mm 10mm', vertical: 8 }, portrait: { css: '10mm 12mm', vertical: 10 } },
+  wide: { landscape: { css: '18mm 24mm', vertical: 18 }, portrait: { css: '25mm 30mm', vertical: 25 } },
+};
+
+// Vertical budget of the fixed furniture on each page, in millimetres. Whatever
+// is left over is divided evenly between the 15 body rows.
+const PAGE_CHROME_MM = {
+  header: 23,
+  title: 15,
+  theadSingle: 8,
+  theadMulti: 11,
+  footer: 26,
+  tableGap: 2,
+};
+
+type Orientation = 'landscape' | 'portrait';
+type MarginSize = 'normal' | 'narrow' | 'wide';
+
+const getPageMetrics = (orientation: Orientation, marginSize: MarginSize) => {
+  const margin = PAGE_MARGIN_MAP[marginSize][orientation];
+  const sheetHeight = orientation === 'landscape' ? 210 : 297; // A4
+  // 2mm of slack so a full-height page never spills onto a blank extra sheet.
+  const contentHeightMm = sheetHeight - margin.vertical * 2 - 2;
+  return { margin: margin.css, contentHeightMm };
+};
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+// Height of one body row (and the signature inside it) for a given page box.
+const getRowMetrics = (contentHeightMm: number, isMultiDay: boolean) => {
+  const theadMm = isMultiDay ? PAGE_CHROME_MM.theadMulti : PAGE_CHROME_MM.theadSingle;
+  const bodyMm = contentHeightMm - PAGE_CHROME_MM.header - PAGE_CHROME_MM.title
+    - theadMm - PAGE_CHROME_MM.footer - PAGE_CHROME_MM.tableGap;
+  const rowMm = clamp(bodyMm / ROWS_PER_PAGE, 5.5, 13);
+  return { rowMm, sigMm: clamp(rowMm - 1.6, 3.5, 9) };
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface StaffAttendee {
@@ -158,11 +204,14 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
   
   // Word Editor States
   const [activeTab, setActiveTab] = useState<'home' | 'insert' | 'layout' | 'view' | 'picture'>('home');
-  const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('landscape');
+  const [orientation, setOrientation] = useState<Orientation>('landscape');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [showRulers, setShowRulers] = useState<boolean>(true);
   const [showGuides, setShowGuides] = useState<boolean>(true);
-  const [marginSize, setMarginSize] = useState<'normal' | 'narrow' | 'wide'>('normal');
+  const [marginSize, setMarginSize] = useState<MarginSize>('normal');
+
+  // Printable page box for the current orientation + margin choice.
+  const pageMetrics = useMemo(() => getPageMetrics(orientation, marginSize), [orientation, marginSize]);
 
   // ── Image Selection & Word-Style Resizing State ──
   const [selectedImg, setSelectedImg] = useState<HTMLImageElement | null>(null);
@@ -180,7 +229,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
       @media print {
         @page {
           size: A4 ${orientation};
-          margin: 8mm 10mm;
+          margin: ${pageMetrics.margin};
         }
         html, body {
           background: #ffffff !important;
@@ -231,9 +280,47 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
         #print-editor-ruler-top,
         #print-editor-ruler-left,
         .no-print,
+        .kenha-page-sep,
         .word-guide-tag,
         .word-guide-line {
           display: none !important;
+        }
+        /* Each wrapper is exactly one sheet, so the footer lands on the same
+           baseline on every page instead of drifting with the table. */
+        .kenha-page-wrapper {
+          height: ${pageMetrics.contentHeightMm}mm !important;
+          min-height: ${pageMetrics.contentHeightMm}mm !important;
+          max-height: ${pageMetrics.contentHeightMm}mm !important;
+          width: 100% !important;
+          overflow: hidden !important;
+          display: flex !important;
+          flex-direction: column !important;
+          justify-content: flex-start !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+          break-after: page !important;
+          page-break-after: always !important;
+        }
+        .kenha-page-wrapper:last-of-type {
+          break-after: auto !important;
+          page-break-after: auto !important;
+        }
+        .kenha-page-wrapper > header,
+        .kenha-page-wrapper > footer {
+          flex: 0 0 auto !important;
+          width: 100% !important;
+        }
+        .kenha-page-wrapper > main {
+          flex: 1 1 auto !important;
+          min-height: 0 !important;
+          overflow: hidden !important;
+        }
+        .kenha-page-wrapper > footer {
+          margin-top: auto !important;
         }
         table {
           width: 100% !important;
@@ -262,7 +349,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
         printStyleRef.current = null;
       }
     };
-  }, [isOpen, orientation]);
+  }, [isOpen, orientation, pageMetrics]);
 
   // ── Attendee Scope State (all / staff / visitors) ──
   const [attendeeFilter, setAttendeeFilter] = useState<'all' | 'staff' | 'visitors'>('all');
@@ -298,6 +385,8 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
   }, [meeting, staff, visitors, attendeeFilter]);
 
   // ── Build default KeNHA Attendance Register (Matching official KeNHA/DG/F01 document) ──
+  // The register is emitted as whole sheets: one .kenha-page-wrapper per page,
+  // each carrying its own header, table of ROWS_PER_PAGE attendees and footer.
   const buildDefaultContent = useCallback((): string => {
     const dates = getAttendanceDates();
     const isMultiDay = dates.length > 1;
@@ -306,7 +395,9 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
 
     const allAttendeesRaw = attendeeFilter === 'staff' ? staff : attendeeFilter === 'visitors' ? visitors : [...staff, ...visitors];
     const allAttendees = isMultiDay ? aggregateMultiDayAttendees(allAttendeesRaw, dates) : allAttendeesRaw;
-    const totalRowsNeeded = Math.max(12, allAttendees.length);
+
+    // Always fill whole sheets — trailing blanks double as walk-in lines.
+    const pageCount = Math.max(1, Math.ceil(allAttendees.length / ROWS_PER_PAGE));
 
     // Deterministic column widths so the table always fits the page width
     const totalColWeight = dynamicCols.reduce((sum, c) => sum + c.widthPercent, 0) || 1;
@@ -320,19 +411,25 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
       ? 'VISITORS ATTENDANCE REGISTER'
       : `ATTENDANCE REGISTER ${resolveDepartmentDisplay(meeting, '') ? `– ${resolveDepartmentDisplay(meeting, '').toUpperCase()}` : ''}`;
 
+    // Whatever height the fixed furniture leaves over is shared by the 15 rows,
+    // so a sheet is properly filled in landscape and in portrait alike.
+    const { rowMm, sigMm } = getRowMetrics(pageMetrics.contentHeightMm, isMultiDay);
+    const rowHeight = `${rowMm.toFixed(2)}mm`;
+    const sigHeight = `${sigMm.toFixed(2)}mm`;
+
     // Format single attendee submitted date
     const getAttendeeDateStr = (attendee: any) => {
       if (!attendee?.submitted_at) return dates[0] || '';
       return formatAttendanceDate(attendee.submitted_at) || dates[0] || '';
     };
 
-    // Render table rows
-    const rowsHtml = Array.from({ length: totalRowsNeeded }).map((_, index) => {
+    // Render one body row (blank when there is no attendee at that index)
+    const buildRow = (index: number): string => {
       const attendee = allAttendees[index];
       const rowNum = index + 1;
 
       const sigImg = attendee?.signature_data
-        ? `<img src="${attendee.signature_data}" style="height:18px; max-width:${isMultiDay ? '45px' : '60px'}; object-fit:contain; display:block; margin:0 auto;" />`
+        ? `<img class="kenha-sig" src="${attendee.signature_data}" style="height:${sigHeight}; max-width:${isMultiDay ? '45px' : '60px'}; object-fit:contain; display:block; margin:0 auto;" />`
         : '';
       const signedDateStr = attendee ? getAttendeeDateStr(attendee) : '';
 
@@ -345,7 +442,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
         }).join('');
 
         return `
-          <tr style="height:22px;">
+          <tr style="height:${rowHeight};">
             <td contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; font-weight:600; font-size:10.5px; width:5%;">${rowNum}.</td>
             ${cellsHtml}
             <td contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; font-size:10px; color:#000; width:11%;">${signedDateStr}</td>
@@ -362,25 +459,46 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
       }).join('');
 
       return `
-        <tr style="height:21px;">
+        <tr style="height:${rowHeight};">
           <td contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; font-weight:600; font-size:9.5px; width:5%;">${rowNum}.</td>
           ${cellsHtml}
           ${dates.map(d => {
             const sig = (attendee as any)?.signaturesByDate?.[d] || (dates.length === 1 ? attendee?.signature_data : undefined);
             const sigItem = sig
-              ? `<img src="${sig}" style="height:17px; max-width:38px; object-fit:contain; display:block; margin:0 auto;" />`
+              ? `<img class="kenha-sig" src="${sig}" style="height:${sigHeight}; max-width:38px; object-fit:contain; display:block; margin:0 auto;" />`
               : '';
             return `<td contenteditable="true" style="border:1px solid #000; padding:1px; text-align:center; width:${perDateWidth}%;">${sigItem}</td>`;
           }).join('')}
         </tr>
       `;
-    }).join('');
+    };
 
-    return `
-<div class="kenha-page-wrapper" style="position:relative; font-family:'Times New Roman', Times, serif; font-size:11px; color:#000; background:#fff; min-height:${orientation === 'landscape' ? '180mm' : '265mm'}; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
+    // ── Table head, repeated on every sheet ─────────────────────────────────
+    const theadHtml = !isMultiDay ? `
+      <tr style="background:#ffffff; text-align:left; font-weight:700; color:#000; height:24px;">
+        <th contenteditable="true" style="border:1px solid #000; padding:3px; text-align:center; width:5%; word-wrap:break-word;">S/NO</th>
+        ${dynamicCols.map((col, idx) => `
+          <th contenteditable="true" style="border:1px solid #000; padding:3px 6px; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${col.header}</th>
+        `).join('')}
+        <th contenteditable="true" style="border:1px solid #000; padding:3px; text-align:center; width:11%; word-wrap:break-word;">DATE SIGNED</th>
+        <th contenteditable="true" style="border:1px solid #000; padding:3px; text-align:center; width:11%; word-wrap:break-word;">SIGNATURE</th>
+      </tr>
+    ` : `
+      <tr style="background:#ffffff; text-align:left; font-weight:700; color:#000; height:20px;">
+        <th rowspan="2" contenteditable="true" style="border:1px solid #000; padding:3px; text-align:center; width:5%; word-wrap:break-word;">S/NO</th>
+        ${dynamicCols.map((col, idx) => `
+          <th rowspan="2" contenteditable="true" style="border:1px solid #000; padding:3px 4px; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${col.header}</th>
+        `).join('')}
+        <th colspan="${dates.length}" contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; width:${signatureBlockWidth}%; word-wrap:break-word;">SIGNATURE</th>
+      </tr>
+      <tr style="background:#ffffff; text-align:center; font-weight:700; color:#000; height:18px;">
+        ${dates.map(d => `<th contenteditable="true" style="border:1px solid #000; padding:2px 1px; width:${perDateWidth}%; font-size:8.5px; word-wrap:break-word; white-space:nowrap;">${d}</th>`).join('')}
+      </tr>
+    `;
 
-  <!-- ==================== EDITABLE HEADER REGION (WORD STYLE) ==================== -->
-  <header contenteditable="true" style="margin-bottom:4px; border:1px transparent solid; outline:none; transition:border .2s;" title="Header Region - Click to edit or replace">
+    // ── EDITABLE HEADER REGION (WORD STYLE), repeated on every sheet ────────
+    const headerHtml = `
+  <header contenteditable="true" style="flex:0 0 auto; margin-bottom:4px; border:1px transparent solid; outline:none; transition:border .2s; width:100%;" title="Header Region - Click to edit or replace">
     <!-- Document Reference Code Top Right -->
     <div style="text-align:right; font-size:12px; font-weight:800; color:#000000; font-family:'Times New Roman', Times, serif; margin-bottom:2px; letter-spacing:0.3px;">
       KeNHA/DG/F01
@@ -390,55 +508,11 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     <div style="width:100%; margin-bottom:2px; overflow:hidden;">
       <img src="/kenha_header_banner.png" alt="Kenya National Highways Authority Header" style="width:100%; height:auto; max-height:58px; object-fit:fill; display:block;" />
     </div>
-  </header>
+  </header>`;
 
-  <!-- ==================== BODY CONTENT ==================== -->
-  <main style="flex:1; display:flex; flex-direction:column;">
-    <!-- Title Section -->
-    <div style="text-align:center; margin:6px 0 8px;">
-      <div contenteditable="true" style="font-size:14px; font-weight:800; text-transform:uppercase; color:#000; line-height:1.25; letter-spacing:0.2px;">
-        ${meeting?.title || 'MEETING & TRAINING ATTENDANCE REGISTER'}
-      </div>
-      <div contenteditable="true" style="font-size:12px; font-weight:800; text-transform:uppercase; color:#000; margin-top:2px; letter-spacing:0.3px;">
-        ${registerTitle}
-      </div>
-    </div>
-
-    <!-- Attendance Register Table with Dynamic Configured Columns -->
-    <table id="main-attendance-table" class="main-attendance-table" border="1" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:10.5px; table-layout:fixed; border:1.5px solid #000; margin-bottom:6px; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;">
-      <thead>
-        ${!isMultiDay ? `
-          <tr style="background:#ffffff; text-align:left; font-weight:700; color:#000; height:24px;">
-            <th contenteditable="true" style="border:1px solid #000; padding:3px; text-align:center; width:5%; word-wrap:break-word;">S/NO</th>
-            ${dynamicCols.map((col, idx) => `
-              <th contenteditable="true" style="border:1px solid #000; padding:3px 6px; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${col.header}</th>
-            `).join('')}
-            <th contenteditable="true" style="border:1px solid #000; padding:3px; text-align:center; width:11%; word-wrap:break-word;">DATE SIGNED</th>
-            <th contenteditable="true" style="border:1px solid #000; padding:3px; text-align:center; width:11%; word-wrap:break-word;">SIGNATURE</th>
-          </tr>
-        ` : `
-          <tr style="background:#ffffff; text-align:left; font-weight:700; color:#000; height:20px;">
-            <th rowspan="2" contenteditable="true" style="border:1px solid #000; padding:3px; text-align:center; width:5%; word-wrap:break-word;">S/NO</th>
-            ${dynamicCols.map((col, idx) => `
-              <th rowspan="2" contenteditable="true" style="border:1px solid #000; padding:3px 4px; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${col.header}</th>
-            `).join('')}
-            <th colspan="${dates.length}" contenteditable="true" style="border:1px solid #000; padding:2px; text-align:center; width:${signatureBlockWidth}%; word-wrap:break-word;">SIGNATURE</th>
-          </tr>
-          <tr style="background:#ffffff; text-align:center; font-weight:700; color:#000; height:18px;">
-            ${dates.map(d => {
-              return `<th contenteditable="true" style="border:1px solid #000; padding:2px 1px; width:${perDateWidth}%; font-size:8.5px; word-wrap:break-word; white-space:nowrap;">${d}</th>`;
-            }).join('')}
-          </tr>
-        `}
-      </thead>
-      <tbody>
-        ${rowsHtml}
-      </tbody>
-    </table>
-  </main>
-
-  <!-- ==================== EDITABLE FOOTER REGION (PINNED TO LOWEST PART) ==================== -->
-  <footer contenteditable="true" style="margin-top:auto; padding-top:4px; border:1px transparent solid; outline:none; transition:border .2s; width:100%;" title="Footer Region - Click any text or section to edit directly like in Microsoft Word">
+    // ── EDITABLE FOOTER REGION (PINNED TO THE BOTTOM OF EVERY SHEET) ────────
+    const buildFooter = (pageNo: number) => `
+  <footer contenteditable="true" style="flex:0 0 auto; margin-top:auto; padding-top:4px; border:1px transparent solid; outline:none; transition:border .2s; width:100%;" title="Footer Region - Click any text or section to edit directly like in Microsoft Word">
     <!-- Top Double Accent Line (High Contrast Black + Gold) -->
     <div style="border-top:2px solid #1f2937; width:100%; margin-bottom:1px;"></div>
     <div style="border-top:1.5px solid #EAB308; width:100%; margin-bottom:3px;"></div>
@@ -450,7 +524,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     </div>
 
     <!-- Core Values Segmented Matrix -->
-    <div id="footer-core-values" style="margin:2px auto; display:flex; justify-content:center;">
+    <div class="footer-core-values" style="margin:2px auto; display:flex; justify-content:center;">
       <table class="footer-values-table" style="border-collapse:collapse; font-size:7.5px; text-align:center; color:#1e293b; background:#ffffff; border-top:1px dashed #cbd5e1; border-bottom:1px dashed #cbd5e1;">
         <tbody>
           <tr>
@@ -466,25 +540,68 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
 
     <!-- Social Media Bar (Strictly Single Line, Non-Wrapping) -->
     <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:2px; font-size:6.8px; font-weight:600; color:#1e293b; font-family:Arial, sans-serif; white-space:nowrap; overflow:hidden;">
-      <span style="display:inline-flex; align-items:center; gap:2px;"><strong style="font-weight:900; font-size:7.5px;">𝕏</strong> @KeNHAKenya</span>
+      <span style="display:inline-flex; align-items:center; gap:2px;"><strong style="font-weight:900; font-size:7.5px;">&#120143;</strong> @KeNHAKenya</span>
       <span style="display:inline-flex; align-items:center; gap:2px;"><span style="background:#1877F2; color:#fff; font-size:6.5px; font-weight:900; padding:0 2px; border-radius:2px;">f</span> Kenya National Highways Authority</span>
-      <span style="display:inline-flex; align-items:center; gap:2px;"><span style="color:#FF0000; font-size:7px;">▶</span> Kenya National Highways Authority</span>
+      <span style="display:inline-flex; align-items:center; gap:2px;"><span style="color:#FF0000; font-size:7px;">&#9654;</span> Kenya National Highways Authority</span>
       <span style="display:inline-flex; align-items:center; gap:2px;"><span style="background:#0A66C2; color:#fff; font-size:6.5px; font-weight:900; padding:0 2px; border-radius:2px;">in</span> Kenya National Highways Authority</span>
-      <span style="display:inline-flex; align-items:center; gap:2px;"><span style="background:linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color:#fff; font-size:6.5px; font-weight:900; padding:0 2px; border-radius:2px;">📷</span> kenha_kenya</span>
-      <span style="display:inline-flex; align-items:center; gap:2px;"><strong style="font-weight:900; font-size:7.5px;">🎵</strong> @kenhaofficial</span>
+      <span style="display:inline-flex; align-items:center; gap:2px;"><span style="background:linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color:#fff; font-size:6.5px; font-weight:900; padding:0 2px; border-radius:2px;">&#128247;</span> kenha_kenya</span>
+      <span style="display:inline-flex; align-items:center; gap:2px;"><strong style="font-weight:900; font-size:7.5px;">&#127925;</strong> @kenhaofficial</span>
     </div>
 
-    <!-- Tapered Yellow ISO 9001:2015 Ribbon Badge -->
-    <div style="display:flex; justify-content:center; margin-top:2px;">
+    <!-- Tapered Yellow ISO 9001:2015 Ribbon Badge + Page Number -->
+    <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-top:2px;">
       <div style="background:#FEE75C; color:#000000; padding:1px 24px; font-size:7.5px; font-weight:800; letter-spacing:0.5px; border:1px solid #E6B800; clip-path:polygon(3% 0%, 97% 0%, 100% 50%, 97% 100%, 3% 100%, 0% 50%); display:inline-block;">
         ISO 9001 : 2015 Certified
       </div>
+      <div class="kenha-page-no" style="font-size:7.5px; font-weight:700; color:#1e293b; font-family:Arial, sans-serif; white-space:nowrap;">Page ${pageNo} of ${pageCount}</div>
     </div>
-  </footer>
+  </footer>`;
 
-</div>
-`;
-  }, [meeting, staff, visitors, getAttendanceDates, orientation]);
+    // ── Assemble one wrapper per printed sheet ──────────────────────────────
+    const pagesHtml = Array.from({ length: pageCount }).map((_, pageIndex) => {
+      const firstRow = pageIndex * ROWS_PER_PAGE;
+      const rowsHtml = Array.from({ length: ROWS_PER_PAGE })
+        .map((_, i) => buildRow(firstRow + i))
+        .join('');
+
+      return `
+<div class="kenha-page-wrapper" style="position:relative; font-family:'Times New Roman', Times, serif; font-size:11px; color:#000; background:#fff; min-height:${pageMetrics.contentHeightMm}mm; display:flex; flex-direction:column; justify-content:flex-start; box-sizing:border-box;">
+${headerHtml}
+
+  <!-- ==================== BODY CONTENT ==================== -->
+  <main style="flex:1 1 auto; min-height:0; display:block;">
+    <!-- Title Section -->
+    <div style="text-align:center; margin:6px 0 8px;">
+      <div contenteditable="true" style="font-size:14px; font-weight:800; text-transform:uppercase; color:#000; line-height:1.25; letter-spacing:0.2px;">
+        ${meeting?.title || 'MEETING &amp; TRAINING ATTENDANCE REGISTER'}
+      </div>
+      <div contenteditable="true" style="font-size:12px; font-weight:800; text-transform:uppercase; color:#000; margin-top:2px; letter-spacing:0.3px;">
+        ${registerTitle}${pageIndex > 0 ? ' (CONTINUED)' : ''}
+      </div>
+    </div>
+
+    <!-- Attendance Register Table with Dynamic Configured Columns -->
+    <table class="main-attendance-table"${pageIndex === 0 ? ' id="main-attendance-table"' : ''} border="1" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:10.5px; table-layout:fixed; border:1.5px solid #000; margin-bottom:6px; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;">
+      <thead>
+        ${theadHtml}
+      </thead>
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+    </table>
+  </main>
+${buildFooter(pageIndex + 1)}
+</div>`;
+    });
+
+    // Screen-only marker between sheets; hidden by both print stylesheets.
+    const separator = `
+<div class="kenha-page-sep no-print" contenteditable="false" style="height:26px; display:flex; align-items:center; gap:8px; color:#94a3b8; font-family:Arial, sans-serif; font-size:9px; font-weight:700; letter-spacing:1px; text-transform:uppercase; user-select:none;">
+  <span style="flex:1; border-top:1px dashed #94a3b8;"></span>PAGE BREAK<span style="flex:1; border-top:1px dashed #94a3b8;"></span>
+</div>`;
+
+    return pagesHtml.join(separator);
+  }, [meeting, staff, visitors, getAttendanceDates, attendeeFilter, pageMetrics]);
 
   // ── Inject placeholders into uploaded template ──────────────────────────────────
   const injectMeetingData = useCallback((html: string): string => {
@@ -505,14 +622,57 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     return result;
   }, [meeting]);
 
+  // Held in a ref so a geometry change does not re-trigger a full rebuild.
+  const buildDefaultContentRef = useRef(buildDefaultContent);
+  useEffect(() => {
+    buildDefaultContentRef.current = buildDefaultContent;
+  });
+
+  // A value-based key, because callers build these arrays inline
+  // (`attendanceResponse?.data?.staff || []`), so their identity changes on every
+  // parent render — keying the reload on identity would wipe the canvas constantly.
+  const registerSignature = useMemo(() => JSON.stringify({
+    meeting: meeting?.meeting_id ?? '',
+    filter: attendeeFilter,
+    staff: staff.map(a => `${a.attendance_id}:${a.submitted_at}`),
+    visitors: visitors.map(a => `${a.attendance_id}:${a.submitted_at}`),
+  }), [meeting?.meeting_id, staff, visitors, attendeeFilter]);
+
   // ── Load initial content ──────────────────────────────────────
+  // Keyed on the register's data, not on the page geometry: switching
+  // orientation or margins must not discard edits or an uploaded template.
   useEffect(() => {
     if (!isOpen) return;
     setTemplateMode(false);
     if (canvasRef.current) {
-      canvasRef.current.innerHTML = buildDefaultContent();
+      canvasRef.current.innerHTML = buildDefaultContentRef.current();
     }
-  }, [isOpen, buildDefaultContent]);
+  }, [isOpen, registerSignature]);
+
+  // ── Re-flow the existing sheets when the page geometry changes ─────────────
+  // Only the measurements are re-stamped; the markup (and any edits to it) stays.
+  useEffect(() => {
+    if (!isOpen) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const wrappers = canvas.querySelectorAll<HTMLElement>('.kenha-page-wrapper');
+    if (wrappers.length === 0) return;
+
+    const { rowMm, sigMm } = getRowMetrics(pageMetrics.contentHeightMm, getAttendanceDates().length > 1);
+    const rowHeight = `${rowMm.toFixed(2)}mm`;
+    const sigHeight = `${sigMm.toFixed(2)}mm`;
+
+    for (const wrapper of wrappers) {
+      wrapper.style.minHeight = `${pageMetrics.contentHeightMm}mm`;
+      wrapper.querySelectorAll<HTMLElement>('main table tbody tr').forEach(tr => {
+        tr.style.height = rowHeight;
+      });
+      wrapper.querySelectorAll<HTMLImageElement>('main table tbody tr img.kenha-sig').forEach(img => {
+        img.style.height = sigHeight;
+      });
+    }
+  }, [isOpen, pageMetrics, registerSignature]);
 
   // ── Update overlay position when selectedImg changes or on scroll/resize ──
   const updateOverlayPos = useCallback(() => {
@@ -737,6 +897,52 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     }
   }, []);
 
+  // ── Keep the repeated header / footer identical on every sheet ──────────────
+  // Every page carries its own copy, so an edit to one has to be mirrored to the
+  // rest or the printed register comes out inconsistent page to page.
+  useEffect(() => {
+    if (!isOpen) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let timer: number | undefined;
+
+    const mirror = (region: 'header' | 'footer', source: HTMLElement) => {
+      if (!canvas.contains(source)) return;
+      const copies = Array.from(canvas.querySelectorAll<HTMLElement>(region));
+      if (copies.length < 2) return;
+      for (const copy of copies) {
+        if (copy === source) continue;
+        const pageNo = copy.querySelector('.kenha-page-no')?.textContent;
+        copy.innerHTML = source.innerHTML;
+        const slot = copy.querySelector('.kenha-page-no');
+        if (slot && pageNo) slot.textContent = pageNo;
+      }
+    };
+
+    const regionOf = (node: Node | null): HTMLElement | null => {
+      const el = node instanceof Element ? node : node?.parentElement ?? null;
+      return (el?.closest('header, footer') as HTMLElement | null) ?? null;
+    };
+
+    const handleInput = (e: Event) => {
+      // e.target is the editing host (the canvas), not the edited element, so
+      // the caret is what actually identifies the region being typed into.
+      const source = regionOf(e.target as Node | null)
+        ?? regionOf(window.getSelection()?.anchorNode ?? null);
+      if (!source || !canvas.contains(source)) return;
+      const region = source.tagName.toLowerCase() === 'header' ? 'header' : 'footer';
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => mirror(region, source), 600);
+    };
+
+    canvas.addEventListener('input', handleInput);
+    return () => {
+      window.clearTimeout(timer);
+      canvas.removeEventListener('input', handleInput);
+    };
+  }, [isOpen]);
+
   // ── Handle template upload ──────────────────────────────────────────────────
   const handleTemplateUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -807,7 +1013,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     const hasWrapper = rawContent.includes('kenha-page-wrapper');
     const bodyHtml = hasWrapper
       ? rawContent
-      : `<div class="kenha-page-wrapper" style="position:relative; font-family:'Times New Roman', Times, serif; font-size:11px; color:#000; background:#fff; min-height:${orientation === 'landscape' ? '180mm' : '265mm'}; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">${rawContent}</div>`;
+      : `<div class="kenha-flow-wrapper" style="position:relative; font-family:'Times New Roman', Times, serif; font-size:11px; color:#000; background:#fff; min-height:${pageMetrics.contentHeightMm}mm; box-sizing:border-box;">${rawContent}</div>`;
 
     doc.open();
     doc.write(`
@@ -819,7 +1025,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
         <style>
           @page {
             size: A4 ${orientation};
-            margin: 6mm 8mm;
+            margin: ${pageMetrics.margin};
           }
           * {
             box-sizing: border-box !important;
@@ -833,7 +1039,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
             margin: 0;
             padding: 0;
             width: 100%;
-            height: 100%;
+            height: auto;
             background: #ffffff !important;
             color: #000000 !important;
             font-family: 'Times New Roman', Times, serif;
@@ -842,17 +1048,36 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
           }
           .kenha-page-wrapper {
             width: 100%;
-            min-height: ${orientation === 'landscape' ? '180mm' : '265mm'};
+            height: ${pageMetrics.contentHeightMm}mm !important;
+            min-height: ${pageMetrics.contentHeightMm}mm !important;
+            max-height: ${pageMetrics.contentHeightMm}mm !important;
+            overflow: hidden !important;
             display: flex !important;
             flex-direction: column !important;
-            justify-content: space-between !important;
+            justify-content: flex-start !important;
+            box-sizing: border-box !important;
+            font-family: 'Times New Roman', Times, serif;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            break-after: page;
+            page-break-after: always;
+          }
+          /* No trailing blank sheet after the last page. */
+          .kenha-page-wrapper:last-of-type {
+            break-after: auto;
+            page-break-after: auto;
+          }
+          /* Uploaded templates are not paginated by us — let them flow. */
+          .kenha-flow-wrapper {
+            width: 100%;
+            min-height: ${pageMetrics.contentHeightMm}mm;
             box-sizing: border-box !important;
             font-family: 'Times New Roman', Times, serif;
           }
           header {
             margin-bottom: 4px;
             width: 100%;
-            flex-shrink: 0;
+            flex: 0 0 auto;
           }
           header img {
             width: 100%;
@@ -863,8 +1088,9 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
           }
           main {
             flex: 1 1 auto;
-            display: flex;
-            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+            display: block;
           }
           table, .main-attendance-table, #main-attendance-table {
             width: 100% !important;
@@ -895,14 +1121,14 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
             margin-top: auto !important;
             padding-top: 4px;
             width: 100%;
-            flex-shrink: 0;
+            flex: 0 0 auto;
           }
           img {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
             max-width: 100%;
           }
-          .word-guide-tag, .word-guide-line, .no-print, #image-resize-overlay, #image-toolbar {
+          .word-guide-tag, .word-guide-line, .no-print, .kenha-page-sep, #image-resize-overlay, #image-toolbar {
             display: none !important;
           }
         </style>
@@ -923,7 +1149,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
         console.error('Print frame error:', e);
       }
     }, 250);
-  }, [buildDefaultContent, orientation, meeting]);
+  }, [buildDefaultContent, orientation, pageMetrics, meeting]);
 
   // ── Helper to convert base64 data URL to Uint8Array ──
   const base64ToUint8 = (base64Str?: string): Uint8Array | null => {
@@ -989,8 +1215,18 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     const signatureBlockWidth = isMultiDay ? 35 : 11;
     const perDateWidth = isMultiDay ? Math.max(5, Math.floor(signatureBlockWidth / Math.max(dates.length, 1))) : 0;
 
-    // Target ONLY the main attendance table (avoiding footer core values table)
-    const mainTable = canvas ? (canvas.querySelector('#main-attendance-table') || canvas.querySelector('main table') || canvas.querySelector('table')) : null;
+    // Target ONLY the attendance tables (avoiding the footer core-values table).
+    // The register is paginated, so there is one such table per sheet and the
+    // export has to walk all of them, not just the first.
+    const mainTables: Element[] = canvas
+      ? (() => {
+          const paged = Array.from(canvas.querySelectorAll('main table'));
+          if (paged.length > 0) return paged;
+          const single = canvas.querySelector('#main-attendance-table') || canvas.querySelector('table');
+          return single ? [single] : [];
+        })()
+      : [];
+    const mainTable = mainTables[0] || null;
 
     // 3. Extract Column Headers from live canvas table
     const customHeaders: string[] = [];
@@ -1016,9 +1252,11 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
 
     const liveRows: LiveAttendeeRow[] = [];
 
-    if (mainTable) {
-      const trList = mainTable.querySelectorAll('tbody tr');
-      trList.forEach((tr, index) => {
+    let scannedRows = 0;
+    for (const table of mainTables) {
+      const trList = table.querySelectorAll('tbody tr');
+      trList.forEach((tr) => {
+        const index = scannedRows++;
         const cells = tr.querySelectorAll('td');
         if (cells.length > 0) {
           const sno = cells[0]?.textContent?.trim() || `${index + 1}.`;
@@ -1061,7 +1299,9 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
 
     const allAttendeesRaw = attendeeFilter === 'staff' ? staff : attendeeFilter === 'visitors' ? visitors : [...staff, ...visitors];
     const allAttendeesList = isMultiDay ? aggregateMultiDayAttendees(allAttendeesRaw, dates) : allAttendeesRaw;
-    const totalRowsCount = Math.max(12, Math.max(liveRows.length, allAttendeesList.length));
+    // Same page quantum as the printed register, so both outputs agree.
+    const filledRows = Math.max(liveRows.length, allAttendeesList.length);
+    const totalRowsCount = Math.max(1, Math.ceil(filledRows / ROWS_PER_PAGE)) * ROWS_PER_PAGE;
 
     // Format single attendee submitted date helper
     const getAttendeeDateStr = (attendee: any) => {
@@ -1086,6 +1326,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     if (!isMultiDay) {
       tableHeaderRows = [
         new TableRow({
+          tableHeader: true,
           children: [
             new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: { fill: 'FFFFFF' }, children: [new Paragraph({ children: [new TextRun({ text: 'S/NO', bold: true, color: '000000', size: 20 })], alignment: AlignmentType.CENTER })] }),
             ...dynamicCols.map((col, idx) =>
@@ -1104,6 +1345,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     } else {
       tableHeaderRows = [
         new TableRow({
+          tableHeader: true,
           children: [
             new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, borders: tableBorders, shading: { fill: 'FFFFFF' }, children: [new Paragraph({ children: [new TextRun({ text: 'S/NO', bold: true, color: '000000', size: 18 })], alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
             ...dynamicCols.map((col, idx) =>
@@ -1120,6 +1362,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
           ],
         }),
         new TableRow({
+          tableHeader: true,
           children: dates.map(d => {
             return new TableCell({
               width: { size: perDateWidth, type: WidthType.PERCENTAGE },
@@ -1349,10 +1592,11 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Canvas padding is the same value handed to @page, so the preview is to scale.
   const marginPaddingMap = {
-    normal: orientation === 'landscape' ? '12mm 18mm' : '18mm 22mm',
-    narrow: orientation === 'landscape' ? '8mm 10mm' : '10mm 12mm',
-    wide: orientation === 'landscape' ? '18mm 24mm' : '25mm 30mm',
+    normal: PAGE_MARGIN_MAP.normal[orientation].css,
+    narrow: PAGE_MARGIN_MAP.narrow[orientation].css,
+    wide: PAGE_MARGIN_MAP.wide[orientation].css,
   };
 
   return (

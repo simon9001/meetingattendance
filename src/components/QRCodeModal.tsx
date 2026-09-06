@@ -117,28 +117,6 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
               width: 220px !important;
               height: 220px !important;
             }
-            .pin-section {
-              margin: 8px 0 16px;
-            }
-            .pin-label {
-              font-size: 12.5px;
-              color: #374151;
-              text-transform: uppercase;
-              letter-spacing: 1.5px;
-              margin-bottom: 6px;
-              font-weight: 800;
-            }
-            .pin-box {
-              background: #F3F4F6;
-              border: 2px dashed #4B5563;
-              border-radius: 8px;
-              padding: 10px 28px;
-              display: inline-block;
-              font-size: 32px;
-              font-weight: 800;
-              letter-spacing: 6px;
-              color: #111827;
-            }
             .instructions {
               max-width: 480px;
               margin: 16px auto 0;
@@ -191,17 +169,12 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
               ${svgHtml}
             </div>
             
-            <div class="pin-section">
-              <div class="pin-label">Required Meeting PIN</div>
-              <div class="pin-box">${meetingPin}</div>
-            </div>
-            
             <div class="instructions">
               <div class="instructions-heading">Instructions:</div>
               <ol class="instructions-list">
                 <li>Open your camera or QR code scanner.</li>
                 <li>Point your device at the QR code above.</li>
-                <li>Enter the Meeting PIN when prompted.</li>
+                <li>Enter the Meeting PIN provided by the organizer when prompted.</li>
                 <li>Fill out the digital form and provide your signature.</li>
               </ol>
             </div>
