@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { Search, Eye, Edit3, FileText } from 'lucide-react';
 import { PageSpinner } from '../../components/shared/Feedback';
 import { useGetMeetingsQuery, useGetMeetingAttendanceQuery } from '../../features/apis/apiSlice';
-import { GenerateDocumentModal } from '../../components/documents/GenerateDocumentModal';
+import { useSelector } from 'react-redux';
+import { downloadRegisterPdf } from '../../components/documents/downloadRegister';
+import { BASE_URL } from '../../backendcomnnect/domin';
+import { selectCurrentToken } from '../../features/slice/authSlice';
 import { PrintEditorModal } from '../../components/documents/PrintEditorModal';
 import { resolveDepartmentDisplay } from '../../types/formConfig';
 
@@ -21,8 +24,33 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
-  const [generateDocModal, setGenerateDocModal] = useState<{isOpen: boolean; meetingId: string}>({isOpen: false, meetingId: ''});
   const [printEditorOpen, setPrintEditorOpen] = useState(false);
+
+  // One-click register download — no template, format or scope to choose.
+  const authToken = useSelector(selectCurrentToken);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const handleDownloadRegister = async (m: any) => {
+    if (!m) return;
+    setIsDownloading(true);
+    try {
+      await downloadRegisterPdf(
+        {
+          meeting: m,
+          staff: attendanceResponse?.data?.staff || [],
+          visitors: attendanceResponse?.data?.visitors || [],
+          attendeeFilter: 'all',
+          orientation: 'landscape',
+          marginSize: 'normal',
+        },
+        { token: authToken, apiBaseUrl: BASE_URL },
+      );
+      showToast('Attendance register downloaded.', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Could not download the register.', 'error');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   // Queries
   const { data: meetingsResponse, isLoading: isMeetingsLoading } = useGetMeetingsQuery(undefined, {
@@ -98,8 +126,8 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
               <h2 style={{ fontSize: 20, fontWeight: 700, marginTop: 4 }}>{selectedMeeting.title}</h2>
             </div>
             <div style={{ display: 'flex', gap: 10 }} className="btn-group-no-print">
-              <button type="button" onClick={() => setGenerateDocModal({ isOpen: true, meetingId: selectedMeeting.meeting_id })} className="btn btn-primary">
-                <FileText size={16} /> Generate Document
+              <button type="button" onClick={() => handleDownloadRegister(selectedMeeting)} disabled={isDownloading} className="btn btn-primary">
+                <FileText size={16} /> {isDownloading ? 'Preparing…' : 'Download Register (PDF)'}
               </button>
               <button type="button" onClick={handlePrint} className="btn btn-secondary">
                 <Edit3 size={16} /> Edit &amp; Print
@@ -245,6 +273,7 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
           meeting={selectedMeeting}
           staff={attendanceResponse?.data?.staff || []}
           visitors={attendanceResponse?.data?.visitors || []}
+          showToast={showToast}
         />
       </div>
     );
@@ -332,13 +361,6 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
           )}
         </div>
       </div>
-
-      <GenerateDocumentModal
-        isOpen={generateDocModal.isOpen}
-        onClose={() => setGenerateDocModal({ isOpen: false, meetingId: '' })}
-        meetingId={generateDocModal.meetingId}
-        showToast={showToast}
-      />
     </div>
   );
 };

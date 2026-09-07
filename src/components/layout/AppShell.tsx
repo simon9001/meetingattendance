@@ -3,6 +3,7 @@ import { LogOut, Menu, ChevronDown, UserCircle, Home } from 'lucide-react';
 import type { User } from '../../data/mockData';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationDropdown } from './NotificationDropdown';
+import { LetterheadBanner } from './LetterheadBanner';
 
 interface AppShellProps {
   currentUser: User;
@@ -34,8 +35,14 @@ export const AppShell: React.FC<AppShellProps> = ({
       {/* ── drawer-content ─────────────────────────────────────────── */}
       <div className="drawer-content flex flex-col h-screen overflow-hidden">
 
-        {/* ── STICKY Navbar ───────────────────────────────────────── */}
-        <header className="navbar bg-white shadow-md sticky top-0 z-30 py-4 px-4 sm:px-6 gap-4 flex-shrink-0">
+        {/* ── STICKY masthead + utility bar ────────────────────────── */}
+        <header className="sticky top-0 z-30 flex-shrink-0 bg-white shadow-md">
+
+          {/* Official KeNHA letterhead — compact in app chrome; the address
+              strip is reserved for the printed register and the public pages. */}
+          <LetterheadBanner variant="compact" />
+
+          <div className="navbar bg-white py-2 px-4 sm:px-6 gap-4 border-t border-slate-100">
 
           <div className="navbar-start flex-shrink-0 flex items-center gap-2 w-auto">
             {/* Mobile hamburger */}
@@ -135,6 +142,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                 </li>
               </ul>
             </div>
+          </div>
           </div>
         </header>
 

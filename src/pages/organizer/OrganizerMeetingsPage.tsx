@@ -7,7 +7,10 @@ import {
 } from 'lucide-react';
 import { PageSpinner, InlineSpinner } from '../../components/shared/Feedback';
 import { Modal } from '../../components/shared/Modal';
-import { GenerateDocumentModal } from '../../components/documents/GenerateDocumentModal';
+import { useSelector } from 'react-redux';
+import { downloadRegisterPdf } from '../../components/documents/downloadRegister';
+import { BASE_URL } from '../../backendcomnnect/domin';
+import { selectCurrentToken } from '../../features/slice/authSlice';
 import { PrintEditorModal } from '../../components/documents/PrintEditorModal';
 import { EditMeetingModal } from '../../components/meetings/EditMeetingModal';
 import { InviteAttendeesModal } from '../../components/meetings/InviteAttendeesModal';
@@ -58,11 +61,33 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   // Modals State
-  const [generateDocModal, setGenerateDocModal] = useState<{ isOpen: boolean; meetingId: string }>({
-    isOpen: false,
-    meetingId: '',
-  });
   const [printEditorOpen, setPrintEditorOpen] = useState(false);
+
+  // One-click register download — no template, format or scope to choose.
+  const authToken = useSelector(selectCurrentToken);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const handleDownloadRegister = async (m: any) => {
+    if (!m) return;
+    setIsDownloading(true);
+    try {
+      await downloadRegisterPdf(
+        {
+          meeting: m,
+          staff: attendanceResponse?.data?.staff || [],
+          visitors: attendanceResponse?.data?.visitors || [],
+          attendeeFilter: 'all',
+          orientation: 'landscape',
+          marginSize: 'normal',
+        },
+        { token: authToken, apiBaseUrl: BASE_URL },
+      );
+      showToast('Attendance register downloaded.', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Could not download the register.', 'error');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
   const [editMeetingTarget, setEditMeetingTarget] = useState<any>(null);
   const [inviteModalTarget, setInviteModalTarget] = useState<any>(null);
   const [extendModal, setExtendModal] = useState<{ isOpen: boolean; meeting: any; minutes: number }>({
@@ -399,11 +424,12 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
 
               <button
                 type="button"
-                onClick={() => setGenerateDocModal({ isOpen: true, meetingId: selectedMeeting.meeting_id })}
+                onClick={() => handleDownloadRegister(selectedMeeting)}
+                disabled={isDownloading}
                 className="btn btn-secondary"
                 style={{ display: 'flex', alignItems: 'center', gap: 6, backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', borderColor: 'var(--border-color)' }}
               >
-                <FileText size={16} /> Generate Word Doc
+                <FileText size={16} /> {isDownloading ? 'Preparing…' : 'Download Register (PDF)'}
               </button>
 
               <button
@@ -740,17 +766,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
           meeting={selectedMeeting}
           staff={staffAttendees}
           visitors={visitorAttendees}
-        />
-
-        <GenerateDocumentModal
-          isOpen={generateDocModal.isOpen}
-          onClose={() => setGenerateDocModal({ isOpen: false, meetingId: '' })}
-          meetingId={generateDocModal.meetingId}
-          meeting={selectedMeeting}
-          staff={staffAttendees}
-          visitors={visitorAttendees}
           showToast={showToast}
-          onOpenEditor={() => setPrintEditorOpen(true)}
         />
       </div>
     );
@@ -1402,7 +1418,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setGenerateDocModal({ isOpen: true, meetingId: m.meeting_id });
+                                    handleDownloadRegister(m);
                                     setActiveMenuId(null);
                                   }}
                                   style={{
@@ -1698,16 +1714,6 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
         meeting={editMeetingTarget}
         isOpen={!!editMeetingTarget}
         onClose={() => setEditMeetingTarget(null)}
-        showToast={showToast}
-      />
-
-      <GenerateDocumentModal
-        isOpen={generateDocModal.isOpen}
-        onClose={() => setGenerateDocModal({ isOpen: false, meetingId: '' })}
-        meetingId={generateDocModal.meetingId}
-        meeting={paginatedMeetings.find(m => m.meeting_id === generateDocModal.meetingId) || selectedMeeting}
-        staff={[]}
-        visitors={[]}
         showToast={showToast}
       />
 

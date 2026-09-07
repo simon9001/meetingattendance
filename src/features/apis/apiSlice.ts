@@ -228,6 +228,17 @@ export const apiSlice = createApi({
       providesTags: ['Attendance'],
     }),
 
+    // Correct a filed record from the register preview. Only descriptive fields;
+    // the signature and its timestamp are evidence and are not correctable.
+    correctAttendanceRecord: builder.mutation({
+      query: ({ participantType, attendanceId, ...body }) => ({
+        url: `/attendance/${participantType}/${attendanceId}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['Attendance'],
+    }),
+
     // ─── Reports ──────────────────────────────────────────────────────────
     getReports: builder.query({
       query: () => '/reports',
@@ -319,6 +330,7 @@ export const {
   useValidateMeetingPinMutation,
   useSubmitAttendanceMutation,
   useGetMeetingAttendanceQuery,
+  useCorrectAttendanceRecordMutation,
   // Reports
   useGetReportsQuery,
   useGenerateReportMutation,

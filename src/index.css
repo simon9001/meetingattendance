@@ -2170,3 +2170,104 @@ textarea[aria-invalid='true']:focus {
 .modal-body.is-flush {
   padding: 0;
 }
+
+/* ==========================================================================
+   KeNHA letterhead banner
+   Mirrors the printed register header (registerDocument.ts) so on-screen and
+   printed documents present the same masthead.
+   ========================================================================== */
+.letterhead {
+  width: 100%;
+  background-color: var(--bg-card);
+}
+
+.letterhead-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 3px 16px;
+  background-color: var(--kenha-black);
+  overflow: hidden;
+  box-sizing: border-box;
+  /* Keep the black bar when printed rather than dropping to white */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* The mark is a square asset on a white ground, clipped to the ellipse measured
+   from its own pixels. A fixed frame with overflow:hidden — rather than negative
+   margins — collapses the transparent remainder, so the mark can never bleed
+   outside the bar when the bar sits flush against the top of the viewport. */
+.letterhead-mark-frame {
+  flex: 0 0 auto;
+  width: 68px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.letterhead-mark {
+  flex: 0 0 auto;
+  width: 76px;
+  height: 76px;
+  /* Tailwind preflight sets img{max-width:100%}, which would squeeze the mark to
+     the frame width while its height stayed fixed — object-fit would then
+     letterbox it and the clip ellipse would no longer match the artwork. */
+  max-width: none;
+  object-fit: contain;
+  clip-path: ellipse(45% 26.6% at 49.9% 49.3%);
+}
+
+.letterhead-lockup {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.letterhead-name {
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.15;
+  letter-spacing: 0.2px;
+}
+
+.letterhead-rule {
+  display: block;
+  border-top: 1px solid rgba(255, 255, 255, 0.6);
+  margin: 3px 0 2px;
+}
+
+.letterhead-tagline {
+  color: var(--kenha-yellow);
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1.15;
+}
+
+.letterhead-address {
+  width: 100%;
+  padding: 4px 12px;
+  text-align: center;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--text-main);
+  background-color: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Narrow screens: the authority name has to survive; the tagline and address
+   are the first things to go rather than letting the bar wrap. */
+@media (max-width: 640px) {
+  .letterhead-bar { padding: 2px 10px; gap: 8px; }
+  .letterhead-mark-frame { width: 54px; height: 34px; }
+  .letterhead-mark { width: 60px; height: 60px; max-width: none; }
+  .letterhead-name { font-size: 13px; }
+  .letterhead-tagline,
+  .letterhead-rule { display: none; }
+  .letterhead-address { display: none; }
+}
