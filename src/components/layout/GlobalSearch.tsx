@@ -48,6 +48,8 @@ const FEATURES_BY_ROLE: Record<string, FeatureItem[]> = {
 export const GlobalSearch: React.FC<GlobalSearchProps> = ({ currentUser, setActiveDashboardTab }) => {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  // Phones get a full-width search sheet instead of the cramped inline bar
+  const [sheetOpen, setSheetOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -74,7 +76,8 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ currentUser, setActi
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        inputRef.current?.focus();
+        if (window.matchMedia('(max-width: 639px)').matches) setSheetOpen(true);
+        else inputRef.current?.focus();
         setIsOpen(true);
       }
     };
@@ -135,6 +138,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ currentUser, setActi
   const goToTab = (tab: string) => {
     setActiveDashboardTab(tab);
     setIsOpen(false);
+    setSheetOpen(false);
     setQuery('');
     inputRef.current?.blur();
   };
@@ -151,197 +155,184 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ currentUser, setActi
     }
   };
 
-  return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%', maxWidth: '580px', margin: '0 auto' }}>
-      {/* Search Icon — Centered Vertically */}
-      <div
-        style={{
-          position: 'absolute',
-          left: '12px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          display: 'flex',
-          alignItems: 'center',
-          pointerEvents: 'none',
-          zIndex: 10,
-          color: '#94a3b8',
-        }}
-      >
-        <Search size={16} />
-      </div>
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
-      {/* Input Field with explicit 38px left padding */}
+  const closeSheet = () => {
+    setSheetOpen(false);
+    setIsOpen(false);
+    setQuery('');
+  };
+
+  const renderField = (variant: 'bar' | 'sheet') => (
+    <div className="relative w-full">
+      <Search
+        size={16}
+        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+        aria-hidden="true"
+      />
       <input
-        ref={inputRef}
-        type="text"
+        ref={variant === 'bar' ? inputRef : undefined}
+        autoFocus={variant === 'sheet'}
+        type="search"
+        enterKeyHint="search"
+        aria-label="Search meetings, users and features"
         value={query}
         onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
         onFocus={() => setIsOpen(true)}
-        onKeyDown={handleKeyDown}
-        placeholder="Search meetings, users, features..."
-        style={{
-          width: '100%',
-          height: '38px',
-          paddingLeft: '38px',
-          paddingRight: query ? '38px' : '52px',
-          borderRadius: '12px',
-          backgroundColor: '#f1f5f9',
-          border: isOpen && hasQuery ? '1.5px solid #111827' : '1px solid #e2e8f0',
-          fontSize: '13px',
-          fontWeight: 500,
-          color: '#0f172a',
-          outline: 'none',
-          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-          boxShadow: isOpen && hasQuery ? '0 0 0 3px rgba(249, 214, 22, 0.25)' : 'none',
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' && variant === 'sheet') closeSheet();
+          else handleKeyDown(e);
         }}
-        onMouseEnter={(e) => {
-          if (!isOpen || !hasQuery) e.currentTarget.style.borderColor = '#cbd5e1';
-        }}
-        onMouseLeave={(e) => {
-          if (!isOpen || !hasQuery) e.currentTarget.style.borderColor = '#e2e8f0';
-        }}
+        placeholder={variant === 'sheet' ? 'Search…' : 'Search meetings, users, features…'}
+        className="global-search-input"
+        style={{ paddingRight: query || variant === 'sheet' ? 38 : 64 }}
       />
-
-      {/* Right Action: Clear Button or Cmd+K Badge */}
       {query ? (
         <button
           type="button"
-          onClick={() => { setQuery(''); inputRef.current?.focus(); }}
-          style={{
-            position: 'absolute',
-            right: '10px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            background: 'none',
-            border: 'none',
-            color: '#94a3b8',
-            cursor: 'pointer',
-            padding: '4px',
-            borderRadius: '6px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          onClick={() => setQuery('')}
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/70"
           aria-label="Clear search"
         >
-          <X size={14} />
+          <X size={15} />
         </button>
-      ) : (
-        <div
-          style={{
-            position: 'absolute',
-            right: '10px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            pointerEvents: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '2px',
-            padding: '2px 6px',
-            fontSize: '10px',
-            fontWeight: 700,
-            color: '#64748b',
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '6px',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-          }}
-        >
-          ⌘K
+      ) : variant === 'bar' ? (
+        <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none hidden md:inline-flex items-center rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10.5px] font-semibold text-slate-500 shadow-2xs">
+          {isMac ? '⌘K' : 'Ctrl K'}
+        </kbd>
+      ) : null}
+    </div>
+  );
+
+  const renderResults = (className: string) => (
+    <div className={className}>
+      {totalResults === 0 && (
+        <div className="px-4 py-6 text-center text-sm text-slate-400">
+          No results for "{trimmed}"
         </div>
       )}
 
-      {isOpen && hasQuery && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-[70vh] overflow-y-auto z-50 py-2">
-          {totalResults === 0 && (
-            <div className="px-4 py-6 text-center text-sm text-slate-400">
-              No results for "{trimmed}"
-            </div>
-          )}
+      {featureResults.length > 0 && (
+        <div className="px-2 pb-1">
+          <div className="px-2.5 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Go to</div>
+          {featureResults.map(f => (
+            <button
+              key={f.tab}
+              type="button"
+              onClick={() => goToTab(f.tab)}
+              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 text-left"
+            >
+              <span className="text-slate-400 flex-shrink-0">{f.icon}</span>
+              <span className="truncate">{f.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
-          {featureResults.length > 0 && (
-            <div className="px-2 pb-1">
-              <div className="px-2.5 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Go to</div>
-              {featureResults.map(f => (
-                <button
-                  key={f.tab}
-                  type="button"
-                  onClick={() => goToTab(f.tab)}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 text-left"
-                >
-                  <span className="text-slate-400 flex-shrink-0">{f.icon}</span>
-                  <span className="truncate">{f.label}</span>
-                </button>
-              ))}
-            </div>
-          )}
+      {meetingResults.length > 0 && (
+        <div className="px-2 pb-1 border-t border-slate-100 pt-1">
+          <div className="px-2.5 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Meetings</div>
+          {meetingResults.map((m: any) => (
+            <button
+              key={m.meeting_id}
+              type="button"
+              onClick={() => goToTab('meetings')}
+              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 text-left"
+            >
+              <Calendar size={15} className="text-slate-400 flex-shrink-0" />
+              <span className="flex flex-col min-w-0">
+                <span className="truncate font-medium">{m.title}</span>
+                <span className="text-[11px] text-slate-400 truncate">
+                  {m.meeting_date} · {resolveDepartmentDisplay(m, 'No department')}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
-          {meetingResults.length > 0 && (
-            <div className="px-2 pb-1 border-t border-slate-100 pt-1">
-              <div className="px-2.5 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Meetings</div>
-              {meetingResults.map((m: any) => (
-                <button
-                  key={m.meeting_id}
-                  type="button"
-                  onClick={() => goToTab('meetings')}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 text-left"
-                >
-                  <Calendar size={15} className="text-slate-400 flex-shrink-0" />
-                  <span className="flex flex-col min-w-0">
-                    <span className="truncate font-medium">{m.title}</span>
-                    <span className="text-[11px] text-slate-400 truncate">
-                      {m.meeting_date} · {resolveDepartmentDisplay(m, 'No department')}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+      {userResults.length > 0 && (
+        <div className="px-2 pb-1 border-t border-slate-100 pt-1">
+          <div className="px-2.5 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Users</div>
+          {userResults.map((u: any) => (
+            <button
+              key={u.id || u.user_id}
+              type="button"
+              onClick={() => goToTab('users')}
+              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 text-left"
+            >
+              <UsersIcon size={15} className="text-slate-400 flex-shrink-0" />
+              <span className="flex flex-col min-w-0">
+                <span className="truncate font-medium">{u.full_name}</span>
+                <span className="text-[11px] text-slate-400 truncate">{u.email}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
-          {userResults.length > 0 && (
-            <div className="px-2 pb-1 border-t border-slate-100 pt-1">
-              <div className="px-2.5 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Users</div>
-              {userResults.map((u: any) => (
-                <button
-                  key={u.id || u.user_id}
-                  type="button"
-                  onClick={() => goToTab('users')}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 text-left"
-                >
-                  <UsersIcon size={15} className="text-slate-400 flex-shrink-0" />
-                  <span className="flex flex-col min-w-0">
-                    <span className="truncate font-medium">{u.full_name}</span>
-                    <span className="text-[11px] text-slate-400 truncate">{u.email}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+      {deptResults.length > 0 && (
+        <div className="px-2 pb-1 border-t border-slate-100 pt-1">
+          <div className="px-2.5 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Departments</div>
+          {deptResults.map((d: any) => (
+            <button
+              key={d.department_id}
+              type="button"
+              onClick={() => goToTab('departments')}
+              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 text-left"
+            >
+              <Building2 size={15} className="text-slate-400 flex-shrink-0" />
+              <span className="truncate font-medium">{d.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
-          {deptResults.length > 0 && (
-            <div className="px-2 pb-1 border-t border-slate-100 pt-1">
-              <div className="px-2.5 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Departments</div>
-              {deptResults.map((d: any) => (
-                <button
-                  key={d.department_id}
-                  type="button"
-                  onClick={() => goToTab('departments')}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 text-left"
-                >
-                  <Building2 size={15} className="text-slate-400 flex-shrink-0" />
-                  <span className="truncate font-medium">{d.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {totalResults > 0 && (
-            <div className="px-4 pt-2 mt-1 border-t border-slate-100 flex items-center gap-1.5 text-[10.5px] text-slate-400">
-              <CornerDownLeft size={11} /> to open first result · Esc to close
-            </div>
-          )}
+      {totalResults > 0 && (
+        <div className="px-4 pt-2 mt-1 border-t border-slate-100 flex items-center gap-1.5 text-[10.5px] text-slate-400">
+          <CornerDownLeft size={11} /> to open first result · Esc to close
         </div>
       )}
     </div>
+  );
+
+  return (
+    <>
+      {/* Phones: an icon that opens a full-width search sheet */}
+      <button
+        type="button"
+        className="icon-btn sm:hidden"
+        aria-label="Search"
+        title="Search"
+        onClick={() => { setSheetOpen(true); setIsOpen(true); }}
+      >
+        <Search size={20} />
+      </button>
+
+      {/* Tablet and up: the inline search bar */}
+      <div ref={containerRef} className="relative hidden sm:block w-full max-w-[580px]">
+        {renderField('bar')}
+        {isOpen && hasQuery && renderResults('absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-[70vh] overflow-y-auto z-50 py-2')}
+      </div>
+
+      {sheetOpen && (
+        <>
+          <div className="search-sheet-backdrop sm:hidden" onClick={closeSheet} aria-hidden="true" />
+          <div className="search-sheet sm:hidden" role="dialog" aria-label="Search">
+            <div className="w-full">
+              <div className="flex items-center gap-2">
+                {renderField('sheet')}
+                <button type="button" className="icon-btn" onClick={closeSheet} aria-label="Close search">
+                  <X size={20} />
+                </button>
+              </div>
+              {hasQuery
+                ? renderResults('mt-2 max-h-[70dvh] overflow-y-auto py-1')
+                : <p className="px-1 pt-3 pb-1 text-xs text-slate-500">Type at least 2 letters to search.</p>}
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 };

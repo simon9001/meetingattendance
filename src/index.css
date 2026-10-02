@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@500;600;700&display=swap');
 @import "tailwindcss";
 @plugin "daisyui";
 
@@ -7,11 +7,17 @@
   default: true;
   --color-primary: #F9D616;
   --color-primary-content: #0B0D11;
+  /* A calmer info colour than daisyUI's default bright cyan */
+  --color-info: #1D4ED8;
+  --color-info-content: #FFFFFF;
   --radius-field: 0.5rem;
   --radius-box: 0.75rem;
 }
 
 @theme {
+  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
   /* KeNHA Official Gold / Yellow Highway Scale */
   --color-brand-50: #fefce8;
   --color-brand-100: #fef9c3;
@@ -59,7 +65,7 @@
   --kenha-text-muted-dark: #64748B;
 
   /* Minimalist UI Variables */
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Helvetica, sans-serif;
+  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --shadow-fluent: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
   --shadow-fluent-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
   --shadow-gold: 0 4px 14px rgba(249, 214, 22, 0.3);
@@ -107,22 +113,49 @@
   color: var(--text-dim) !important;
 }
 
-/* Global Reset */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* Global base.
+   Tailwind's preflight already resets margins, padding and box-sizing — inside
+   its base layer, where utility classes can still override it. A reset written
+   here, outside any layer, beats every Tailwind spacing utility (p-6, px-3, gap
+   etc.), which is what was pushing page content flush against the edges. */
+html {
   font-family: var(--font-sans);
-  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
   background-color: var(--bg-app);
   color: var(--text-main);
-  min-height: 100vh;
+  min-height: 100dvh;
   line-height: 1.5;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+/* Headings get tighter tracking and balanced line breaks */
+h1, h2, h3, h4 {
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* Calm, consistent scrollbars on desktop; native on touch devices */
+@media (pointer: fine) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #CBD5E1 transparent;
+  }
+}
+
+/* Lucide icons never get squeezed by their flex parent */
+svg.lucide {
+  flex-shrink: 0;
 }
 
 /* Buttons System — High Visibility & Professional Minimalist Aesthetic */
@@ -256,7 +289,7 @@ body {
 /* App Structure */
 .app-shell {
   display: flex;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -332,7 +365,7 @@ body {
 
 .sidebar-item.active {
   color: #FFFFFF;
-  background-color: rgba(86, 69, 212, 0.16);
+  background-color: rgba(249, 214, 22, 0.12);
   border-left-color: var(--kenha-yellow);
 }
 
@@ -467,7 +500,7 @@ body {
 
 /* Microsoft-account-style Login Layout — logo inside card, underline inputs */
 .login-screen {
-  min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -767,7 +800,7 @@ body {
 .card-stat {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: 14px;
   padding: 24px;
   display: flex;
   align-items: center;
@@ -792,9 +825,10 @@ body {
 }
 
 .stat-icon-wrapper {
-  width: 48px;
-  height: 48px;
-  border-radius: 4px;
+  width: 46px;
+  height: 46px;
+  border-radius: 11px;
+  flex-shrink: 0;
   background-color: var(--kenha-light-grey);
   display: flex;
   align-items: center;
@@ -830,9 +864,9 @@ body {
 .dashboard-panel {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: 14px;
   box-shadow: var(--shadow-fluent);
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .panel-header {
@@ -1213,7 +1247,8 @@ textarea:focus,
   letter-spacing: 6px;
   margin: 4px 0;
   color: var(--text-main);
-  font-family: monospace;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .pin-help-text {
@@ -1247,7 +1282,8 @@ textarea:focus,
   flex: 1;
   padding: 10px 12px;
   font-size: 12.5px;
-  font-family: monospace;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1277,13 +1313,14 @@ textarea:focus,
 
 /* Public Attendance Form Screen */
 .public-screen {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 10% 10%, rgba(86, 69, 212, 0.08) 0%, transparent 35%),
-              var(--bg-app);
-  padding: 20px 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(249, 214, 22, 0.16) 0%, transparent 60%),
+    var(--bg-app);
+  padding: 24px 16px;
 }
 
 .public-card {
@@ -1779,14 +1816,16 @@ textarea:focus,
   }
 
   .grid-stats {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
     margin-bottom: 20px;
   }
 
   .card-stat {
-    padding: 16px 14px;
-    gap: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px;
+    gap: 10px;
   }
 
   .stat-icon-wrapper {
@@ -1935,12 +1974,8 @@ textarea:focus,
     font-size: 18px;
   }
 
-  .grid-stats {
-    grid-template-columns: 1fr;
-  }
-
-  .card-stat {
-    padding: 14px;
+  .stat-label {
+    letter-spacing: 0.3px;
   }
 
   .login-card {
@@ -2270,4 +2305,678 @@ textarea[aria-invalid='true']:focus {
   .letterhead-tagline,
   .letterhead-rule { display: none; }
   .letterhead-address { display: none; }
+}
+
+/* ==========================================================================
+   App header controls
+   Own classes rather than daisyUI's .btn: the custom .btn above sets padding
+   outside any layer, which crushed daisyUI's square icon buttons (the mobile
+   menu icon was rendering 2px wide).
+   ========================================================================== */
+@layer components {
+.icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.icon-btn:hover {
+  background-color: #F1F5F9;
+  color: #0F172A;
+}
+
+.icon-btn:active {
+  transform: scale(0.97);
+}
+
+/* Outlined only from tablet up; on phones every header control is a plain icon */
+@media (min-width: 640px) {
+  .icon-btn.is-outlined {
+    border-color: #E2E8F0;
+    background-color: #F8FAFC;
+  }
+
+  .icon-btn.is-outlined:hover {
+    border-color: #CBD5E1;
+    background-color: #F1F5F9;
+  }
+}
+
+.icon-btn[aria-expanded='true'] {
+  background-color: #F1F5F9;
+  border-color: #CBD5E1;
+  color: #0F172A;
+}
+
+/* Count bubble on the bell */
+.icon-btn-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background: #E2E8F0;
+  color: #475569;
+}
+
+.icon-btn-count.is-alert {
+  background: var(--kenha-black);
+  color: var(--kenha-yellow);
+}
+
+/* On phones the count sits on the bell's corner instead of beside it */
+@media (max-width: 639px) {
+  .icon-btn-count {
+    position: absolute;
+    top: 3px;
+    right: 2px;
+    min-width: 16px;
+    height: 16px;
+    line-height: 16px;
+    font-size: 9.5px;
+    padding: 0 4px;
+    box-shadow: 0 0 0 2px #FFFFFF;
+  }
+  .icon-btn-count:not(.is-alert) {
+    display: none;
+  }
+}
+
+/* Initials avatar used in the header and sidebar */
+.avatar-chip {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--kenha-black);
+  color: var(--kenha-yellow);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+}
+
+/* ── Floating panels (notifications, search results) ──────────────────────
+   Desktop: anchored under their trigger. Phones: a full-width sheet pinned
+   just below the header, so nothing can open off the edge of the screen. */
+.floating-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 420px;
+  max-width: calc(100vw - 24px);
+  max-height: min(560px, calc(100dvh - 140px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.18), 0 4px 12px -4px rgba(15, 23, 42, 0.08);
+  z-index: 60;
+}
+
+@media (max-width: 639px) {
+  .floating-panel {
+    position: fixed;
+    top: var(--panel-top, 104px);
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - var(--panel-top, 104px) - 12px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .floating-panel {
+    animation: floating-panel-in 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes floating-panel-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* Mobile search sheet: replaces the header row while searching */
+.search-sheet {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+  box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.18);
+}
+
+.search-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+/* Header search field */
+.global-search-input {
+  width: 100%;
+  height: 40px;
+  padding-left: 38px;
+  border-radius: 12px;
+  background-color: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  font-size: 16px; /* 16px stops iOS zooming the page on focus */
+  font-weight: 500;
+  color: #0F172A;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+@media (min-width: 640px) {
+  .global-search-input { font-size: 13.5px; }
+}
+
+.global-search-input::placeholder { color: #94A3B8; }
+.global-search-input:hover { border-color: #CBD5E1; }
+
+.global-search-input:focus {
+  background-color: #FFFFFF;
+  border-color: #0F172A;
+  box-shadow: 0 0 0 3px rgba(249, 214, 22, 0.35);
+}
+
+.global-search-input::-webkit-search-cancel-button,
+.global-search-input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* ==========================================================================
+   Page building blocks shared by the dashboard pages
+   ========================================================================== */
+@layer components {
+  .page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px 16px;
+    margin-bottom: 20px;
+  }
+
+  .page-title {
+    font-size: clamp(22px, 2.4vw, 28px);
+    font-weight: 750;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    color: var(--text-main);
+  }
+
+  .page-subtitle {
+    margin-top: 4px;
+    font-size: 13.5px;
+    color: var(--text-muted);
+    max-width: 62ch;
+  }
+
+  /* ── Stat tiles: two across on phones, four on desktop ── */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  @media (min-width: 1024px) {
+    .stat-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+  }
+
+  .stat-tile {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    min-width: 0;
+  }
+
+  .stat-tile-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: #F1F5F9;
+    color: #334155;
+  }
+
+  /* The one accent: a live session is the thing worth noticing */
+  .stat-tile.is-live {
+    border-color: rgba(229, 172, 0, 0.45);
+    background: linear-gradient(180deg, #FFFDF2 0%, #FFFFFF 70%);
+  }
+
+  .stat-tile.is-live .stat-tile-icon {
+    background: var(--kenha-yellow);
+    color: var(--kenha-black);
+  }
+
+  .stat-tile-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .stat-tile-value {
+    margin: 1px 0;
+    font-size: 26px;
+    font-weight: 750;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: var(--text-main);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-tile-hint {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @media (max-width: 639px) {
+    .stat-tile {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 14px;
+    }
+    .stat-tile-icon { width: 36px; height: 36px; border-radius: 10px; }
+    .stat-tile-value { font-size: 22px; }
+  }
+
+  /* ── Filter bar ── */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+  }
+
+  .filter-bar-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 240px;
+    min-width: 0;
+    height: 38px;
+    padding: 0 12px;
+    background: var(--bg-app);
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .filter-bar-search:focus-within {
+    border-color: #0F172A;
+    box-shadow: 0 0 0 3px rgba(249, 214, 22, 0.35);
+    background: #FFFFFF;
+  }
+
+  /* The search input sits inside the bordered wrapper above, so it drops its own frame */
+  .filter-bar-search input {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent;
+    outline: none;
+    width: 100%;
+    font-size: 13.5px;
+  }
+
+  .filter-bar-control {
+    height: 38px;
+  }
+
+  @media (max-width: 639px) {
+    .filter-bar-search { flex-basis: 100%; }
+    .filter-bar-control { flex: 1 1 calc(50% - 5px); min-width: 0; }
+    .filter-bar-control.is-date { flex-basis: 100%; }
+    /* 16px stops iOS zooming into the field on focus */
+    .filter-bar-search input,
+    .filter-bar-control { font-size: 16px !important; }
+  }
+
+  /* ── Row title acting as a link ── */
+  .row-title-btn {
+    display: block;
+    margin-bottom: 6px;
+    padding: 0;
+    border: none;
+    background: none;
+    text-align: left;
+    font-size: 13.5px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--text-main);
+    cursor: pointer;
+  }
+
+  .row-title-btn:hover {
+    color: #92400E;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .row-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .row-actions > button {
+    white-space: nowrap;
+  }
+
+  /* ── Row action menu (fixed to the viewport, so a table can't clip it) ── */
+  .row-menu {
+    position: fixed;
+    z-index: 80;
+    min-width: 210px;
+    max-height: min(420px, calc(100dvh - 24px));
+    overflow-y: auto;
+    padding: 6px;
+    text-align: left;
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.22), 0 4px 10px -4px rgba(15, 23, 42, 0.08);
+  }
+
+  .row-menu-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    font-size: 13px;
+    font-weight: 500;
+    color: #1E293B;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+  }
+
+  .row-menu-item svg { color: #64748B; }
+  .row-menu-item:hover { background: #F1F5F9; }
+  .row-menu-item.is-success,
+  .row-menu-item.is-success svg { color: #047857; }
+  .row-menu-item.is-warning,
+  .row-menu-item.is-warning svg { color: #B45309; }
+  .row-menu-item.is-danger,
+  .row-menu-item.is-danger svg { color: #DC2626; }
+  .row-menu-item.is-danger:hover { background: #FEF2F2; }
+
+  .row-menu-sep {
+    margin: 5px 4px;
+    border: none;
+    border-top: 1px solid #E2E8F0;
+  }
+}
+
+/* ── Meetings table → cards below 1024px ──────────────────────────────────
+   Outside the layer because the cells carry inline padding that only
+   !important can override. */
+@media (max-width: 1023px) {
+  .meetings-table,
+  .meetings-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .meetings-table thead {
+    display: none;
+  }
+
+  .meetings-table tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px 16px;
+    padding: 16px 16px 16px 20px;
+  }
+
+  .meetings-table td {
+    display: block;
+    padding: 0 !important;
+    text-align: left !important;
+    min-width: 0;
+  }
+
+  /* The accent bar spans the whole card, not just the title cell */
+  .meetings-table td.cell-title {
+    position: static !important;
+    grid-column: 1 / -1;
+  }
+
+  .meetings-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 3px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .meetings-table td.cell-actions {
+    grid-column: 1 / -1;
+    padding-top: 4px !important;
+  }
+
+  .meetings-table .row-actions {
+    display: flex;
+    width: 100%;
+  }
+
+  .meetings-table .row-actions > button {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 40px;
+  }
+
+  .meetings-table .row-actions > div {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 639px) {
+  .meetings-table tr {
+    gap: 12px;
+  }
+}
+
+/* ==========================================================================
+   .table-cards — opt-in: a .table-fluent table whose rows become cards on
+   phones. Each <td> carries data-label="<column heading>".
+   ========================================================================== */
+@media (max-width: 767px) {
+  .table-cards,
+  .table-cards tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .table-cards thead {
+    display: none;
+  }
+
+  .table-cards tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px 14px;
+    padding: 14px 4px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .table-cards tr:hover td {
+    background: transparent !important;
+  }
+
+  .table-cards td {
+    display: block;
+    min-width: 0;
+    padding: 0 !important;
+    border: none !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    text-align: left !important;
+    font-size: 13px !important;
+  }
+
+  .table-cards td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  /* The first column (name / title) heads the card */
+  .table-cards td:first-child {
+    grid-column: 1 / -1;
+    font-size: 14.5px !important;
+    font-weight: 700;
+  }
+
+  .table-cards td:first-child::before {
+    display: none;
+  }
+
+  /* Row numbers add nothing on a card */
+  .table-cards td[data-label='No.'] {
+    display: none;
+  }
+
+  .table-cards td[data-label='No.'] + td {
+    grid-column: 1 / -1;
+    font-size: 14.5px !important;
+    font-weight: 700;
+  }
+
+  .table-cards td[data-label='No.'] + td::before {
+    display: none;
+  }
+
+  .table-cards td[data-label='Actions'],
+  .table-cards td[data-label='Details'],
+  .table-cards td[data-label='Digital Signature'] {
+    grid-column: 1 / -1;
+  }
+
+  .table-cards td[data-label='Actions'] > * {
+    display: flex !important;
+    flex-wrap: wrap;
+    justify-content: flex-start !important;
+    gap: 8px;
+  }
+
+  .table-cards td[data-label='Actions'] button {
+    min-height: 38px;
+  }
+}
+
+/* Live attendance board */
+.live-board-header {
+  gap: 12px;
+}
+
+.live-board-body {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+@media (max-width: 639px) {
+  .app-header {
+    padding: 0 12px;
+    height: 58px;
+  }
+  .live-board-header .btn {
+    padding: 8px 12px;
+  }
+  .live-board-body {
+    padding: 14px 12px;
+  }
+}
+
+/* Meeting detail actions: a tidy two-column grid on phones instead of a tall stack */
+@media (max-width: 768px) {
+  .detail-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .detail-actions > button {
+    width: 100%;
+    min-height: 42px;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    font-size: 13px !important;
+  }
+  .detail-actions > button:first-child {
+    grid-column: 1 / -1;
+  }
 }

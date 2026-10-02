@@ -194,7 +194,7 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ showToast }) => 
             <PageSpinner text="Loading users..." />
           ) : (
             <div className="table-responsive">
-              <table className="table-fluent">
+              <table className="table-fluent table-cards">
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -208,18 +208,18 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ showToast }) => 
                 <tbody>
                   {users.map((u: User) => (
                     <tr key={u.id}>
-                      <td><div style={{ fontWeight: 600 }}>{u.name}</div></td>
-                      <td>{u.email}</td>
-                      <td>
+                      <td data-label="Name"><div style={{ fontWeight: 600 }}>{u.name}</div></td>
+                      <td data-label="Official Email">{u.email}</td>
+                      <td data-label="Role">
                         <span className="badge badge-physical" style={{ fontSize: 10 }}>{u.role.toUpperCase()}</span>
                       </td>
-                      <td>{u.department}</td>
-                      <td>
+                      <td data-label="Department">{u.department}</td>
+                      <td data-label="Status">
                         <span className={`badge ${u.status === 'active' ? 'badge-active' : 'badge-closed'}`}>
                           {u.status}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td data-label="Actions" style={{ textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                           <button
                             type="button"

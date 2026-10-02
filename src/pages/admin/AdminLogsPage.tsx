@@ -54,7 +54,7 @@ export const AdminLogsPage: React.FC = () => {
             <PageSpinner text="Loading audit logs..." />
           ) : (
             <div className="table-responsive">
-              <table className="table-fluent" style={{ fontSize: 12.5 }}>
+              <table className="table-fluent table-cards" style={{ fontSize: 12.5 }}>
                 <thead>
                   <tr>
                     <th>Timestamp</th>
@@ -67,18 +67,18 @@ export const AdminLogsPage: React.FC = () => {
                 <tbody>
                   {filteredLogs.map((log: any) => (
                     <tr key={log.id}>
-                      <td style={{ whiteSpace: 'nowrap' }}>{new Date(log.timestamp).toLocaleString()}</td>
-                      <td>
+                      <td data-label="Timestamp" style={{ whiteSpace: 'nowrap' }}>{new Date(log.timestamp).toLocaleString()}</td>
+                      <td data-label="Actor / Email">
                         <div style={{ fontWeight: 600 }}>{log.actorName}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{log.email}</div>
                       </td>
-                      <td>
+                      <td data-label="Action Event">
                         <span className="badge badge-submitted" style={{ fontFamily: 'monospace', fontSize: 10 }}>
                           {log.action.toUpperCase()}
                         </span>
                       </td>
-                      <td>{log.details}</td>
-                      <td style={{ fontFamily: 'monospace' }}>{log.ip}</td>
+                      <td data-label="Details">{log.details}</td>
+                      <td data-label="Client IP" style={{ fontFamily: 'monospace' }}>{log.ip}</td>
                     </tr>
                   ))}
                 </tbody>

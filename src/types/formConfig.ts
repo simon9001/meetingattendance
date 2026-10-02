@@ -27,6 +27,8 @@ export interface MeetingFormConfig {
 
   // Visitor / external participant access
   allowVisitors: boolean; // default: true — when false, only staff may sign in
+  // default: true — when false, a phone/browser that has signed in cannot sign in someone else
+  allowMultipleSignInsPerDevice?: boolean;
 
   // Multi-Day Meeting Schedule Configuration
   isMultiDay?: boolean; // default: false
@@ -47,6 +49,7 @@ export const DEFAULT_MEETING_FORM_CONFIG: MeetingFormConfig = {
   includePurpose: true,
   includeSignature: true,
   allowVisitors: true,
+  allowMultipleSignInsPerDevice: true,
   isMultiDay: false,
   sessionDates: [],
   activeSessionDate: '',
@@ -266,9 +269,12 @@ export function getDynamicRegisterColumns(
     });
   }
 
-  // 5. Custom unique fields matching current scope
+  // 5. Custom unique fields matching current scope. The combined register lists
+  // staff and visitors together, so it carries every field — a staff-only field
+  // is simply blank on a visitor's row.
   (config.customFields || []).forEach(cf => {
     if (
+      attendeeScope === 'all' ||
       cf.appliesTo === 'all' ||
       (attendeeScope === 'staff' && cf.appliesTo === 'staff') ||
       (attendeeScope === 'visitors' && cf.appliesTo === 'visitor')

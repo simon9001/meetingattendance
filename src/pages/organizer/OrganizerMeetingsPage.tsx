@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search, Eye, QrCode, Edit3, FileText, Clock,
   PlayCircle, XCircle, Mail, Calendar, MapPin, Plus,
@@ -59,6 +59,38 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
 
   // Action Menu Dropdown State
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  // The row menu is positioned against the viewport, not the table: inside the
+  // table's horizontal-scroll box an absolutely positioned menu gets clipped.
+  const [menuPos, setMenuPos] = useState<React.CSSProperties>({});
+
+  const toggleRowMenu = (meetingId: string, trigger: HTMLElement) => {
+    if (activeMenuId === meetingId) {
+      setActiveMenuId(null);
+      return;
+    }
+    const r = trigger.getBoundingClientRect();
+    const right = Math.max(12, window.innerWidth - r.right);
+    // Open upwards when the lower part of the screen can't fit the menu.
+    const openUp = window.innerHeight - r.bottom < 340 && r.top > 340;
+    setMenuPos(openUp ? { bottom: window.innerHeight - r.top + 4, right } : { top: r.bottom + 4, right });
+    setActiveMenuId(meetingId);
+  };
+
+  useEffect(() => {
+    if (!activeMenuId) return;
+    const close = () => setActiveMenuId(null);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      document.removeEventListener('click', close);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [activeMenuId]);
 
   // Modals State
   const [printEditorOpen, setPrintEditorOpen] = useState(false);
@@ -287,12 +319,12 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
   };
 
   // Helper for Left Border Color
-  const getRowAccentColor = (type: string, status: string) => {
+  // The bar signals status at a glance (live / upcoming / done); the meeting
+  // type already has its own badge.
+  const getRowAccentColor = (_type: string, status: string) => {
     if (status === 'open') return '#10b981';
-    if (type === 'physical') return '#6366f1';
-    if (type === 'hybrid') return '#0ea5e9';
-    if (type === 'virtual') return '#10b981';
-    return '#f59e0b';
+    if (status === 'not_started') return '#F9D616';
+    return '#CBD5E1';
   };
 
   // Helper for Type Badges
@@ -301,8 +333,8 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
       return (
         <span
           style={{
-            background: 'rgba(124, 58, 237, 0.15)',
-            color: '#8b5cf6',
+            background: '#F1F5F9',
+            color: '#334155',
             fontSize: '10px',
             fontWeight: 700,
             padding: '2px 8px',
@@ -319,8 +351,8 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
       return (
         <span
           style={{
-            background: 'rgba(14, 165, 233, 0.15)',
-            color: '#0ea5e9',
+            background: '#FEF3C7',
+            color: '#92400E',
             fontSize: '10px',
             fontWeight: 700,
             padding: '2px 8px',
@@ -336,8 +368,9 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
     return (
       <span
         style={{
-          background: 'rgba(16, 185, 129, 0.15)',
-          color: '#10b981',
+          background: '#FFFFFF',
+          color: '#334155',
+          boxShadow: 'inset 0 0 0 1px #CBD5E1',
           fontSize: '10px',
           fontWeight: 700,
           padding: '2px 8px',
@@ -412,7 +445,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
               </h2>
             </div>
 
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }} className="btn-group-no-print">
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }} className="btn-group-no-print detail-actions">
               <button
                 type="button"
                 onClick={() => setInviteModalTarget(selectedMeeting)}
@@ -534,7 +567,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
                   Meeting PIN
                 </span>
-                <strong style={{ color: '#818cf8', fontSize: '14px', letterSpacing: '1px' }}>
+                <strong style={{ color: 'var(--text-main)', fontSize: '15px', letterSpacing: '2px', fontFamily: 'var(--font-mono)' }}>
                   {selectedMeeting.meeting_pin || selectedMeeting.pin || '------'}
                 </strong>
               </div>
@@ -572,7 +605,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
             </div>
 
             {isAttendanceLoading ? (
-              <PageSpinner text="Loading attendance records..." />
+              <PageSpinner text="Loading attendance records…" />
             ) : (() => {
               const formConfig = parseMeetingFormConfig(selectedMeeting);
               const isMultiDay = Boolean(formConfig.isMultiDay && formConfig.sessionDates && formConfig.sessionDates.length > 1);
@@ -602,7 +635,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                             {formConfig.includeDesignation && <th style={{ color: 'var(--text-main)' }}>Designation</th>}
                             {formConfig.includeDepartment && <th style={{ color: 'var(--text-main)' }}>Department</th>}
                             {staffCustomCols.map(cf => (
-                              <th key={cf.id} style={{ color: '#818cf8' }}>{cf.label}</th>
+                              <th key={cf.id}>{cf.label}</th>
                             ))}
                             {!isMultiDay ? (
                               <>
@@ -626,7 +659,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                               {formConfig.includeDesignation && <td style={{ color: 'var(--text-main)' }}>{att.designation || 'Staff'}</td>}
                               {formConfig.includeDepartment && <td style={{ color: 'var(--text-main)' }}>{att.departments?.name || att.department || 'Internal'}</td>}
                               {staffCustomCols.map(cf => (
-                                <td key={cf.id} style={{ color: '#818cf8', fontWeight: 500 }}>
+                                <td key={cf.id} style={{ fontWeight: 500 }}>
                                   {att.custom_responses?.[cf.key] || att[cf.key] || '—'}
                                 </td>
                               ))}
@@ -680,7 +713,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                                 {formConfig.includePosition && <th style={{ color: 'var(--text-main)' }}>Position</th>}
                                 {formConfig.includePurpose && <th style={{ color: 'var(--text-main)' }}>Purpose</th>}
                                 {visitorCustomCols.map(cf => (
-                                  <th key={cf.id} style={{ color: '#818cf8' }}>{cf.label}</th>
+                                  <th key={cf.id}>{cf.label}</th>
                                 ))}
                                 {!isMultiDay ? (
                                   <>
@@ -709,7 +742,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                                     </td>
                                   )}
                                   {visitorCustomCols.map(cf => (
-                                    <td key={cf.id} style={{ color: '#818cf8', fontWeight: 500 }}>
+                                    <td key={cf.id} style={{ fontWeight: 500 }}>
                                       {att.custom_responses?.[cf.key] || att[cf.key] || '—'}
                                     </td>
                                   ))}
@@ -778,31 +811,10 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
   return (
     <div style={{ padding: '8px 0 40px 0' }}>
       {/* ── TOP HEADER ── */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '24px',
-          gap: '16px',
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontSize: '26px',
-              fontWeight: 800,
-              color: 'var(--text-main)',
-              margin: 0,
-              letterSpacing: '-0.5px',
-            }}
-          >
-            Meetings
-          </h1>
-          <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', margin: '4px 0 0 0', fontWeight: 500 }}>
-            Manage all meetings and attendance sessions
-          </p>
+      <div className="page-head">
+        <div className="min-w-0">
+          <h1 className="page-title">Meetings</h1>
+          <p className="page-subtitle">Manage all meetings and attendance sessions</p>
         </div>
 
         <button
@@ -818,195 +830,33 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
       </div>
 
       {/* ── 4 STATS CARDS ── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '16px',
-          marginBottom: '20px',
-        }}
-      >
-        {/* Card 1: Total Meetings */}
-        <div
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '14px',
-            padding: '18px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          }}
-        >
-          <div
-            style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(124, 58, 237, 0.15)',
-              color: '#8b5cf6',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Grid size={22} />
-          </div>
-          <div>
-            <div style={{ fontSize: '12.5px', color: 'var(--text-muted)', fontWeight: 600 }}>Total Meetings</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.2, margin: '2px 0' }}>
-              {stats.total}
+      <div className="stat-grid">
+        {[
+          { label: 'Total Meetings', value: stats.total, hint: 'This month', icon: <Grid size={20} />, live: false },
+          { label: 'Upcoming', value: stats.upcoming, hint: 'Next 7 days', icon: <Calendar size={20} />, live: false },
+          { label: 'Ongoing', value: stats.ongoing, hint: 'Accepting sign-ins', icon: <Activity size={20} />, live: stats.ongoing > 0 },
+          { label: 'Completed', value: stats.completed, hint: 'This month', icon: <Award size={20} />, live: false },
+        ].map(card => (
+          <div key={card.label} className={`stat-tile${card.live ? ' is-live' : ''}`}>
+            <div className="stat-tile-icon">{card.icon}</div>
+            <div className="min-w-0">
+              <div className="stat-tile-label">{card.label}</div>
+              <div className="stat-tile-value">{card.value}</div>
+              <div className="stat-tile-hint">{card.hint}</div>
             </div>
-            <div style={{ fontSize: '11.5px', color: 'var(--text-dim)', fontWeight: 500 }}>This month</div>
           </div>
-        </div>
-
-        {/* Card 2: Upcoming Meetings */}
-        <div
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '14px',
-            padding: '18px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          }}
-        >
-          <div
-            style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(99, 102, 241, 0.15)',
-              color: '#818cf8',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Calendar size={22} />
-          </div>
-          <div>
-            <div style={{ fontSize: '12.5px', color: 'var(--text-muted)', fontWeight: 600 }}>Upcoming Meetings</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.2, margin: '2px 0' }}>
-              {stats.upcoming}
-            </div>
-            <div style={{ fontSize: '11.5px', color: 'var(--text-dim)', fontWeight: 500 }}>Next 7 days</div>
-          </div>
-        </div>
-
-        {/* Card 3: Ongoing Meetings */}
-        <div
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '14px',
-            padding: '18px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          }}
-        >
-          <div
-            style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(16, 185, 129, 0.15)',
-              color: '#10b981',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Activity size={22} />
-          </div>
-          <div>
-            <div style={{ fontSize: '12.5px', color: 'var(--text-muted)', fontWeight: 600 }}>Ongoing Meetings</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.2, margin: '2px 0' }}>
-              {stats.ongoing}
-            </div>
-            <div style={{ fontSize: '11.5px', color: 'var(--text-dim)', fontWeight: 500 }}>Right now</div>
-          </div>
-        </div>
-
-        {/* Card 4: Completed */}
-        <div
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '14px',
-            padding: '18px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          }}
-        >
-          <div
-            style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(217, 119, 6, 0.15)',
-              color: '#f59e0b',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Award size={22} />
-          </div>
-          <div>
-            <div style={{ fontSize: '12.5px', color: 'var(--text-muted)', fontWeight: 600 }}>Completed</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.2, margin: '2px 0' }}>
-              {stats.completed}
-            </div>
-            <div style={{ fontSize: '11.5px', color: 'var(--text-dim)', fontWeight: 500 }}>This month</div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* ── SEARCH & FILTER TOOLBAR ── */}
-      <div
-        style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '12px',
-          padding: '10px 14px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          gap: '12px',
-          marginBottom: '16px',
-        }}
-      >
+      <div className="filter-bar">
         {/* Search input */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            flex: 1,
-            minWidth: '220px',
-            background: 'var(--bg-app)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '8px',
-            padding: '6px 12px',
-          }}
-        >
+        <div className="filter-bar-search">
           <Search size={16} color="var(--text-muted)" />
           <input
             type="text"
-            placeholder="Search meetings..."
+            placeholder="Search meetings…"
+            aria-label="Search meetings"
             value={search}
             onChange={e => {
               setSearch(e.target.value);
@@ -1025,6 +875,8 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
 
         {/* Status Filter */}
         <select
+          className="filter-bar-control"
+          aria-label="Filter by status"
           value={statusFilter}
           onChange={e => {
             setStatusFilter(e.target.value);
@@ -1050,6 +902,8 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
 
         {/* Types Filter */}
         <select
+          className="filter-bar-control"
+          aria-label="Filter by meeting type"
           value={typeFilter}
           onChange={e => {
             setTypeFilter(e.target.value);
@@ -1076,6 +930,8 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
         {/* Date Filter Input */}
         <input
           type="date"
+          className="filter-bar-control is-date"
+          aria-label="Filter by meeting date"
           value={dateFilter}
           onChange={e => {
             setDateFilter(e.target.value);
@@ -1137,7 +993,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
       >
         {isMeetingsLoading ? (
           <div style={{ padding: '40px 0' }}>
-            <PageSpinner text="Loading meetings..." />
+            <PageSpinner text="Loading meetings…" />
           </div>
         ) : paginatedMeetings.length === 0 ? (
           <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -1151,7 +1007,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
           </div>
         ) : (
           <div className="table-responsive" style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <table className="meetings-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
                   <th style={{ padding: '14px 16px 14px 20px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
@@ -1192,8 +1048,9 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       {/* Left Accent Bar */}
-                      <td style={{ padding: '16px 16px 16px 20px', position: 'relative' }}>
+                      <td className="cell-title" style={{ padding: '16px 16px 16px 20px', position: 'relative' }}>
                         <div
+                          className="row-accent"
                           style={{
                             position: 'absolute',
                             left: 0,
@@ -1203,23 +1060,18 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                             backgroundColor: accentColor,
                           }}
                         />
-                        <div
+                        <button
+                          type="button"
                           onClick={() => setSelectedMeetingId(m.meeting_id)}
-                          style={{
-                            fontWeight: 700,
-                            fontSize: '13.5px',
-                            color: 'var(--text-main)',
-                            cursor: 'pointer',
-                            marginBottom: '4px',
-                          }}
+                          className="row-title-btn"
                         >
                           {m.title}
-                        </div>
+                        </button>
                         <div>{renderTypeBadge(m.meeting_type)}</div>
                       </td>
 
                       {/* Audience */}
-                      <td style={{ padding: '16px', verticalAlign: 'middle' }}>
+                      <td data-label="Audience" style={{ padding: '16px', verticalAlign: 'middle' }}>
                         <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-main)' }}>
                           {deptDisplay}
                         </div>
@@ -1229,7 +1081,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                       </td>
 
                       {/* Date & Time */}
-                      <td style={{ padding: '16px', verticalAlign: 'middle' }}>
+                      <td data-label="Date & time" style={{ padding: '16px', verticalAlign: 'middle' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 600, color: 'var(--text-main)' }}>
                           <Calendar size={13} color="var(--text-muted)" />
                           {formatAttendanceDate(m.meeting_date)}
@@ -1241,7 +1093,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                       </td>
 
                       {/* Venue */}
-                      <td style={{ padding: '16px', verticalAlign: 'middle' }}>
+                      <td data-label="Venue" style={{ padding: '16px', verticalAlign: 'middle' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 600, color: 'var(--text-main)' }}>
                           <MapPin size={13} color="var(--text-muted)" />
                           {m.venue || (m.meeting_type === 'virtual' ? 'Virtual Meeting' : 'Online')}
@@ -1252,13 +1104,13 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                       </td>
 
                       {/* Status */}
-                      <td style={{ padding: '16px', verticalAlign: 'middle' }}>
+                      <td data-label="Status" className="cell-status" style={{ padding: '16px', verticalAlign: 'middle' }}>
                         {renderStatusBadge(m.attendance_status)}
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: '16px 20px 16px 16px', verticalAlign: 'middle', textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
+                      <td className="cell-actions" style={{ padding: '16px 20px 16px 16px', verticalAlign: 'middle', textAlign: 'right' }}>
+                        <div className="row-actions">
                           {/* View Register Button */}
                           <button
                             type="button"
@@ -1275,7 +1127,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '6px',
-                              transition: 'all 0.15s',
+                              transition: 'background-color 0.15s, border-color 0.15s, color 0.15s',
                             }}
                           >
                             <Eye size={14} color="var(--text-muted)" /> View Register
@@ -1294,7 +1146,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                               fontSize: '12px',
                               fontWeight: 600,
                               cursor: 'pointer',
-                              transition: 'all 0.15s',
+                              transition: 'background-color 0.15s, border-color 0.15s, color 0.15s',
                             }}
                           >
                             Live Board
@@ -1306,40 +1158,22 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                               type="button"
                               onClick={e => {
                                 e.stopPropagation();
-                                setActiveMenuId(activeMenuId === m.meeting_id ? null : m.meeting_id);
+                                toggleRowMenu(m.meeting_id, e.currentTarget);
                               }}
-                              style={{
-                                background: 'transparent',
-                                border: 'none',
-                                borderRadius: '6px',
-                                padding: '6px',
-                                color: 'var(--text-muted)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
+                              className="icon-btn !min-w-9 !h-9 !px-0 text-slate-500"
+                              aria-label={`More actions for ${m.title}`}
+                              aria-haspopup="menu"
+                              aria-expanded={activeMenuId === m.meeting_id}
                             >
-                              <MoreVertical size={16} />
+                              <MoreVertical size={18} />
                             </button>
 
                             {/* Dropdown Menu */}
                             {activeMenuId === m.meeting_id && (
                               <div
-                                style={{
-                                  position: 'absolute',
-                                  right: 0,
-                                  top: '100%',
-                                  marginTop: '4px',
-                                  background: 'var(--bg-card)',
-                                  border: '1px solid var(--border-color)',
-                                  borderRadius: '10px',
-                                  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.15)',
-                                  zIndex: 100,
-                                  minWidth: '190px',
-                                  padding: '6px 0',
-                                  textAlign: 'left',
-                                }}
+                                role="menu"
+                                className="row-menu"
+                                style={menuPos}
                                 onClick={e => e.stopPropagation()}
                               >
                                 <button
@@ -1348,21 +1182,10 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                                     setInviteModalTarget(m);
                                     setActiveMenuId(null);
                                   }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px 14px',
-                                    border: 'none',
-                                    background: 'none',
-                                    fontSize: '12.5px',
-                                    fontWeight: 500,
-                                    color: '#818cf8',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                  }}
+                                  role="menuitem"
+                                  className="row-menu-item"
                                 >
-                                  <Mail size={14} color="#818cf8" /> Invite via Email
+                                  <Mail size={15} /> Invite via Email
                                 </button>
 
                                 <button
@@ -1375,21 +1198,10 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                                     });
                                     setActiveMenuId(null);
                                   }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px 14px',
-                                    border: 'none',
-                                    background: 'none',
-                                    fontSize: '12.5px',
-                                    fontWeight: 500,
-                                    color: 'var(--text-main)',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                  }}
+                                  role="menuitem"
+                                  className="row-menu-item"
                                 >
-                                  <QrCode size={14} color="var(--text-muted)" /> Show QR &amp; PIN
+                                  <QrCode size={15} /> Show QR &amp; PIN
                                 </button>
 
                                 <button
@@ -1398,21 +1210,10 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                                     setEditMeetingTarget(m);
                                     setActiveMenuId(null);
                                   }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px 14px',
-                                    border: 'none',
-                                    background: 'none',
-                                    fontSize: '12.5px',
-                                    fontWeight: 500,
-                                    color: 'var(--text-main)',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                  }}
+                                  role="menuitem"
+                                  className="row-menu-item"
                                 >
-                                  <Edit3 size={14} color="var(--text-muted)" /> Edit Meeting
+                                  <Edit3 size={15} /> Edit Meeting
                                 </button>
 
                                 <button
@@ -1421,24 +1222,13 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                                     handleDownloadRegister(m);
                                     setActiveMenuId(null);
                                   }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px 14px',
-                                    border: 'none',
-                                    background: 'none',
-                                    fontSize: '12.5px',
-                                    fontWeight: 500,
-                                    color: 'var(--text-main)',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                  }}
+                                  role="menuitem"
+                                  className="row-menu-item"
                                 >
-                                  <FileText size={14} color="var(--text-muted)" /> Generate Document
+                                  <FileText size={15} /> Generate Document
                                 </button>
 
-                                <hr style={{ margin: '4px 0', border: 'none', borderTop: '1px solid var(--border-color)' }} />
+                                <hr className="row-menu-sep" />
 
                                 {m.attendance_status === 'not_started' && (
                                   <button
@@ -1447,21 +1237,10 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                                       handleOpenAttendance(m);
                                       setActiveMenuId(null);
                                     }}
-                                    style={{
-                                      width: '100%',
-                                      padding: '8px 14px',
-                                      border: 'none',
-                                      background: 'none',
-                                      fontSize: '12.5px',
-                                      fontWeight: 500,
-                                      color: '#10b981',
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '8px',
-                                    }}
+                                    role="menuitem"
+                                  className="row-menu-item is-success"
                                   >
-                                    <PlayCircle size={14} color="#10b981" /> Open Attendance
+                                    <PlayCircle size={15} /> Open Attendance
                                   </button>
                                 )}
 
@@ -1473,21 +1252,10 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                                         setExtendModal({ isOpen: true, meeting: m, minutes: 30 });
                                         setActiveMenuId(null);
                                       }}
-                                      style={{
-                                        width: '100%',
-                                        padding: '8px 14px',
-                                        border: 'none',
-                                        background: 'none',
-                                        fontSize: '12.5px',
-                                        fontWeight: 500,
-                                        color: '#f59e0b',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                      }}
+                                      role="menuitem"
+                                  className="row-menu-item is-warning"
                                     >
-                                      <Clock size={14} color="#f59e0b" /> Extend (+30m)
+                                      <Clock size={15} /> Extend (+30m)
                                     </button>
                                     <button
                                       type="button"
@@ -1495,21 +1263,10 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                                         handleCloseAttendance(m);
                                         setActiveMenuId(null);
                                       }}
-                                      style={{
-                                        width: '100%',
-                                        padding: '8px 14px',
-                                        border: 'none',
-                                        background: 'none',
-                                        fontSize: '12.5px',
-                                        fontWeight: 500,
-                                        color: '#ef4444',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                      }}
+                                      role="menuitem"
+                                  className="row-menu-item is-danger"
                                     >
-                                      <XCircle size={14} color="#ef4444" /> Close Attendance
+                                      <XCircle size={15} /> Close Attendance
                                     </button>
                                   </>
                                 )}
@@ -1521,25 +1278,14 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                                       setExtendModal({ isOpen: true, meeting: m, minutes: 30 });
                                       setActiveMenuId(null);
                                     }}
-                                    style={{
-                                      width: '100%',
-                                      padding: '8px 14px',
-                                      border: 'none',
-                                      background: 'none',
-                                      fontSize: '12.5px',
-                                      fontWeight: 500,
-                                      color: '#f59e0b',
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '8px',
-                                    }}
+                                    role="menuitem"
+                                  className="row-menu-item is-warning"
                                   >
-                                    <Clock size={14} color="#f59e0b" /> Reopen / Extend
+                                    <Clock size={15} /> Reopen / Extend
                                   </button>
                                 )}
 
-                                <hr style={{ margin: '4px 0', border: 'none', borderTop: '1px solid var(--border-color)' }} />
+                                <hr className="row-menu-sep" />
 
                                 <button
                                   type="button"
@@ -1547,21 +1293,10 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                                     setDeleteConfirmModal({ isOpen: true, meeting: m });
                                     setActiveMenuId(null);
                                   }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px 14px',
-                                    border: 'none',
-                                    background: 'none',
-                                    fontSize: '12.5px',
-                                    fontWeight: 600,
-                                    color: '#dc2626',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                  }}
+                                  role="menuitem"
+                                  className="row-menu-item is-danger"
                                 >
-                                  <Trash2 size={14} color="#dc2626" /> Delete Meeting
+                                  <Trash2 size={15} /> Delete Meeting
                                 </button>
                               </div>
                             )}

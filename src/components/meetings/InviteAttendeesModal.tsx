@@ -235,8 +235,8 @@ export const InviteAttendeesModal: React.FC<InviteAttendeesModalProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div
                 style={{
-                  background: 'rgba(86, 69, 212, 0.15)',
-                  color: '#818cf8',
+                  background: 'var(--kenha-yellow-light)',
+                  color: '#78350F',
                   padding: '6px 12px',
                   borderRadius: '8px',
                   fontSize: '12px',

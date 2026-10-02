@@ -194,7 +194,7 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
                   <p style={{ padding: 12, color: 'var(--text-muted)' }}>No staff registered.</p>
                 ) : (
                   <div className="table-responsive" style={{ marginBottom: 24 }}>
-                    <table className="table-fluent">
+                    <table className="table-fluent table-cards">
                       <thead>
                         <tr>
                           <th>No.</th>
@@ -208,12 +208,12 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
                       <tbody>
                         {staffAttendees.map((att: any, index: number) => (
                           <tr key={att.attendance_id}>
-                            <td>{index + 1}</td>
-                            <td style={{ fontWeight: 600 }}>{att.full_name}</td>
-                            <td>{att.designation}</td>
-                            <td>{att.departments?.name || 'Internal'}</td>
-                            <td>{new Date(att.submitted_at).toLocaleString()}</td>
-                            <td>
+                            <td data-label="No.">{index + 1}</td>
+                            <td data-label="Full Name" style={{ fontWeight: 600 }}>{att.full_name}</td>
+                            <td data-label="Designation">{att.designation}</td>
+                            <td data-label="Department">{att.departments?.name || 'Internal'}</td>
+                            <td data-label="Time Signed">{new Date(att.submitted_at).toLocaleString()}</td>
+                            <td data-label="Digital Signature">
                               <img src={att.signature_data} alt="Signature drawing" className="sig-img" />
                             </td>
                           </tr>
@@ -230,7 +230,7 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
                   <p style={{ padding: 12, color: 'var(--text-muted)' }}>No external visitors registered.</p>
                 ) : (
                   <div className="table-responsive">
-                    <table className="table-fluent">
+                    <table className="table-fluent table-cards">
                       <thead>
                         <tr>
                           <th>No.</th>
@@ -245,15 +245,15 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
                       <tbody>
                         {visitorAttendees.map((att: any, index: number) => (
                           <tr key={att.attendance_id}>
-                            <td>{index + 1}</td>
-                            <td style={{ fontWeight: 600 }}>{att.full_name}</td>
-                            <td>{att.organization}</td>
-                            <td>{att.position_title || 'N/A'}</td>
-                            <td>
+                            <td data-label="No.">{index + 1}</td>
+                            <td data-label="Full Name" style={{ fontWeight: 600 }}>{att.full_name}</td>
+                            <td data-label="Company / Organization">{att.organization}</td>
+                            <td data-label="Position">{att.position_title || 'N/A'}</td>
+                            <td data-label="Purpose">
                               <span className="badge badge-submitted">{att.purpose.toUpperCase()}</span>
                             </td>
-                            <td>{new Date(att.submitted_at).toLocaleString()}</td>
-                            <td>
+                            <td data-label="Time Signed">{new Date(att.submitted_at).toLocaleString()}</td>
+                            <td data-label="Digital Signature">
                               <img src={att.signature_data} alt="Signature drawing" className="sig-img" />
                             </td>
                           </tr>
@@ -309,7 +309,7 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
             <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20 }}>No meetings found.</p>
           ) : (
             <div className="table-responsive">
-              <table className="table-fluent">
+              <table className="table-fluent table-cards">
                 <thead>
                   <tr>
                     <th>Title</th>
@@ -324,26 +324,26 @@ export const HRMeetingsPage: React.FC<HRMeetingsPageProps> = ({ showToast = () =
                 <tbody>
                   {filteredMeetings.map((m: any) => (
                     <tr key={m.meeting_id}>
-                      <td><div style={{ fontWeight: 600 }}>{m.title}</div></td>
-                      <td>
+                      <td data-label="Title"><div style={{ fontWeight: 600 }}>{m.title}</div></td>
+                      <td data-label="Type">
                         <span className={`badge ${m.meeting_type === 'physical' ? 'badge-physical' : m.meeting_type === 'virtual' ? 'badge-virtual' : 'badge-hybrid'}`}>
                           {m.meeting_type}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Venue / Schedule">
                         <div>{m.venue || 'Virtual'}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
                           {m.meeting_date} | {m.start_time}-{m.end_time}
                         </div>
                       </td>
-                      <td>{resolveDepartmentDisplay(m, 'KeNHA Department')}</td>
-                      <td>{m.profiles?.email || 'N/A'}</td>
-                      <td>
+                      <td data-label="Department">{resolveDepartmentDisplay(m, 'KeNHA Department')}</td>
+                      <td data-label="Organizer">{m.profiles?.email || 'N/A'}</td>
+                      <td data-label="Status">
                         <span className={`badge ${m.attendance_status === 'open' ? 'badge-active' : m.attendance_status === 'not_started' ? 'badge-closed' : 'badge-submitted'}`}>
                           {m.attendance_status === 'open' ? 'Open' : m.attendance_status === 'not_started' ? 'Awaiting' : 'Closed'}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td data-label="Actions" style={{ textAlign: 'right' }}>
                         <button
                           type="button"
                           onClick={() => setSelectedMeetingId(m.meeting_id)}

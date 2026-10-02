@@ -25,7 +25,6 @@ interface PublicAttendPageProps {
 export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
   meetingId,
   showToast,
-  navigate,
 }) => {
   // Stages: 'pin' | 'form' | 'success' | 'expired' | 'not_started' | 'duplicate'
   const [stage, setStage] = useState<'pin' | 'form' | 'success' | 'expired' | 'not_started' | 'duplicate'>('pin');
@@ -153,8 +152,12 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
   };
 
   const formConfig = parseMeetingFormConfig(meeting);
+  // When the organizer allows it, one phone can be passed around the room;
+  // otherwise a device that has signed in stays locked to that one sign-in.
+  const sharedDevice = formConfig.allowMultipleSignInsPerDevice !== false;
 
   const handleSignInAnotherUser = () => {
+    if (!sharedDevice) return;
     const todayDateStr = new Date().toISOString().split('T')[0];
     const subKey = formConfig.isMultiDay ? `kmtams_submitted_${meetingId}_${todayDateStr}` : `kmtams_submitted_${meetingId}`;
     localStorage.removeItem(subKey);
@@ -271,7 +274,7 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
     }
 
     if (formConfig.includeSignature !== false && !signatureData) {
-      showToast('Please draw your signature to register', 'error');
+      showToast('Please add your signature to register', 'error');
       return;
     }
 
@@ -344,9 +347,6 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
       <div className="public-screen">
         <div className="public-card" style={{ textAlign: 'center' }}>
           <AlertError message="The meeting attendance register link you followed is invalid or has been deleted." />
-          <button onClick={() => navigate('/login')} className="btn btn-secondary" style={{ width: '100%', marginTop: 16 }}>
-            Go to Portal Sign-In
-          </button>
         </div>
       </div>
     );
@@ -379,19 +379,14 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
             <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '10px 0 20px 0', lineHeight: 1.5 }}>
               The meeting organizer has not yet opened this attendance register (or the scheduled start time has not arrived). Please wait for the organizer to activate attendance.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button
-                type="button"
-                onClick={() => refetchMeeting()}
-                className="btn btn-primary"
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-              >
-                <RefreshCw size={16} /> Check Status Again
-              </button>
-              <button onClick={() => navigate('/login')} className="btn btn-secondary" style={{ width: '100%' }}>
-                Portal Login
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => refetchMeeting()}
+              className="btn btn-primary"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              <RefreshCw size={16} /> Check Status Again
+            </button>
           </div>
         )}
 
@@ -734,9 +729,6 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
             <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '8px 0 24px 0', lineHeight: 1.5 }}>
               This meeting's attendance register is closed. Submissions are no longer accepted for this session. Contact the organizer if you believe this is an error.
             </p>
-            <button onClick={() => navigate('/login')} className="btn btn-secondary" style={{ width: '100%' }}>
-              Portal Login
-            </button>
           </div>
         )}
 
@@ -746,15 +738,19 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
             <ShieldCheck size={48} color="#10B981" style={{ margin: '0 auto 16px auto' }} />
             <h3 style={{ fontSize: 16, fontWeight: 700 }}>Attendance Already Registered</h3>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '8px 0 24px 0', lineHeight: 1.5 }}>
-              Your device has already submitted attendance for this meeting. Duplicate registrations are blocked by system security rules.
+              {sharedDevice
+                ? 'This device has already submitted attendance for this meeting. To sign in someone else, use the button below.'
+                : 'This device has already been used to sign in for this meeting. Each participant must sign in on their own device.'}
             </p>
-            <button
-              onClick={handleSignInAnotherUser}
-              className="btn btn-secondary"
-              style={{ width: '100%' }}
-            >
-              Sign-In Another User
-            </button>
+            {sharedDevice && (
+              <button
+                onClick={handleSignInAnotherUser}
+                className="btn btn-secondary"
+                style={{ width: '100%' }}
+              >
+                Sign-In Another User
+              </button>
+            )}
           </div>
         )}
 
@@ -765,14 +761,17 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
             <h3 style={{ fontSize: 18, fontWeight: 700 }}>Attendance Registered Successfully</h3>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '8px 0 24px 0', lineHeight: 1.5 }}>
               Thank you! Your signature and attendance records have been securely stored in the KeNHA KMTAMS database.
+              {!sharedDevice && ' You may now close this page.'}
             </p>
-            <button
-              onClick={handleSignInAnotherUser}
-              className="btn btn-primary"
-              style={{ width: '100%' }}
-            >
-              Sign-In Another User
-            </button>
+            {sharedDevice && (
+              <button
+                onClick={handleSignInAnotherUser}
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+              >
+                Sign-In Another User
+              </button>
+            )}
           </div>
         )}
       </div>

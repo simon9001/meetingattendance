@@ -238,7 +238,7 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
 
           {/* Brand */}
           <div className="login-card-brand">
-            <KeNHALogo width={38} height={19} />
+            <KeNHALogo height={30} />
             <div>
               <div className="login-card-brand-name">KeNHA</div>
               <div className="login-card-brand-sub">KMTAMS</div>

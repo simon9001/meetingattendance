@@ -48,6 +48,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   });
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [panelTop, setPanelTop] = useState(104);
 
   // Queries — skip all if user is not logged in
   const { data: notifsResponse, refetch: refetchNotifs } = useGetNotificationsQuery(undefined, {
@@ -414,43 +415,32 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
       {/* ── Bell Action Trigger Button ── */}
       <button
         type="button"
-        onClick={() => setIsOpen(prev => !prev)}
-        className="btn btn-sm btn-ghost rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-3 flex items-center gap-2 text-slate-700 relative select-none cursor-pointer transition-all shadow-2xs"
+        onClick={() => {
+          // On phones the panel is a fixed sheet; pin it just under the header.
+          const bottom = dropdownRef.current?.closest('header')?.getBoundingClientRect().bottom;
+          if (bottom) setPanelTop(Math.round(bottom) + 6);
+          setIsOpen(prev => !prev);
+        }}
+        className="icon-btn is-outlined"
+        aria-expanded={isOpen}
+        aria-haspopup="dialog"
+        aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
         title="System Alerts & Notifications"
       >
-        <Bell size={16} className={unreadCount > 0 ? 'text-amber-500 animate-bounce' : 'text-slate-600'} />
-        <span className="hidden xl:inline text-xs font-semibold">Alerts</span>
-
-        {unreadCount > 0 ? (
-          <span className="badge badge-xs font-extrabold px-1.5 py-1 text-[9px] bg-onyx-950 text-brand-500 border-none shadow-2xs">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        ) : (
-          <span className="badge badge-xs font-semibold px-1 py-0.5 text-[9px] bg-slate-200 text-slate-600 border-none">
-            0
-          </span>
-        )}
+        <Bell size={19} className={unreadCount > 0 ? 'text-amber-600' : 'text-slate-600'} />
+        <span className="hidden xl:inline">Alerts</span>
+        <span className={`icon-btn-count${unreadCount > 0 ? ' is-alert' : ''}`}>
+          {unreadCount > 99 ? '99+' : unreadCount}
+        </span>
       </button>
 
       {/* ── Dropdown Modal / Popup ── */}
       {isOpen && (
         <div
-          style={{
-            position: 'absolute',
-            right: 0,
-            top: 'calc(100% + 8px)',
-            width: '420px',
-            maxWidth: '92vw',
-            maxHeight: '560px',
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '16px',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.12), 0 10px 10px -5px rgba(0,0,0,0.04)',
-            zIndex: 99999,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
+          className="floating-panel"
+          role="dialog"
+          aria-label="Notifications and alerts"
+          style={{ '--panel-top': `${panelTop}px` } as React.CSSProperties}
         >
           {/* Header */}
           <div
@@ -551,7 +541,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                 background: activeFilter === 'all' ? '#111827' : '#f1f5f9',
                 color: activeFilter === 'all' ? '#ffffff' : '#64748b',
                 cursor: 'pointer',
-                transition: 'all 0.15s',
+                transition: 'background-color 0.15s, border-color 0.15s, color 0.15s',
               }}
             >
               All ({allNotifications.length})
@@ -569,7 +559,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                 background: activeFilter === 'unread' ? '#111827' : '#f1f5f9',
                 color: activeFilter === 'unread' ? '#ffffff' : '#64748b',
                 cursor: 'pointer',
-                transition: 'all 0.15s',
+                transition: 'background-color 0.15s, border-color 0.15s, color 0.15s',
               }}
             >
               Unread ({unreadCount})
@@ -587,7 +577,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                 background: activeFilter === 'meetings' ? '#111827' : '#f1f5f9',
                 color: activeFilter === 'meetings' ? '#ffffff' : '#64748b',
                 cursor: 'pointer',
-                transition: 'all 0.15s',
+                transition: 'background-color 0.15s, border-color 0.15s, color 0.15s',
               }}
             >
               Meetings
@@ -606,7 +596,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                   background: activeFilter === 'anomalies' ? '#ef4444' : '#fee2e2',
                   color: activeFilter === 'anomalies' ? '#ffffff' : '#b91c1c',
                   cursor: 'pointer',
-                  transition: 'all 0.15s',
+                  transition: 'background-color 0.15s, border-color 0.15s, color 0.15s',
                 }}
               >
                 Anomalies

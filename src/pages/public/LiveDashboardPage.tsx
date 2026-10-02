@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, UserCheck } from 'lucide-react';
+import { Users, UserCheck, ArrowLeft, LogIn } from 'lucide-react';
 import { PageSpinner, InlineSpinner, AlertError } from '../../components/shared/Feedback';
 import { KeNHALogo } from '../../components/KeNHALogo';
 import type { User } from '../../data/mockData';
@@ -112,11 +112,11 @@ export const LiveDashboardPage: React.FC<LiveDashboardPageProps> = ({
   const isOpen = meeting.attendance_status === 'open';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <header className="app-header" style={{ position: 'relative' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <KeNHALogo width={80} height={40} />
-          <h2 style={{ fontSize: 16 }}>Live Attendance Board</h2>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
+      <header className="app-header live-board-header" style={{ position: 'relative' }}>
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <KeNHALogo height={30} />
+          <h2 className="truncate" style={{ fontSize: 16 }}>Live Attendance Board</h2>
           {/* Real-time indicator */}
           <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#10B981', fontWeight: 600 }}>
             <span style={{
@@ -124,23 +124,27 @@ export const LiveDashboardPage: React.FC<LiveDashboardPageProps> = ({
               animation: 'livePulse 2s infinite',
               display: 'inline-block'
             }}></span>
-            LIVE — refreshes every 5s
+            LIVE<span className="hidden md:inline">&nbsp;— refreshes every 5s</span>
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="flex items-center flex-shrink-0">
           {effectiveUser ? (
-            <button type="button" onClick={() => navigate('/dashboard')} className="btn btn-secondary">
-              Back to Portal
+            <button type="button" onClick={() => navigate('/dashboard')} className="btn btn-secondary" aria-label="Back to Portal">
+              <ArrowLeft size={16} />
+              <span className="hidden sm:inline">Back to Portal</span>
+              <span className="sm:hidden">Back</span>
             </button>
           ) : (
-            <button type="button" onClick={() => navigate('/login')} className="btn btn-primary">
-              Portal Sign-In
+            <button type="button" onClick={() => navigate('/login')} className="btn btn-primary" aria-label="Portal Sign-In">
+              <LogIn size={16} />
+              <span className="hidden sm:inline">Portal Sign-In</span>
+              <span className="sm:hidden">Sign in</span>
             </button>
           )}
         </div>
       </header>
 
-      <div style={{ padding: 24, flex: 1 }}>
+      <div className="live-board-body" style={{ flex: 1 }}>
         {/* Meeting header info */}
         <div className="dashboard-panel" style={{ padding: 24, marginBottom: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Sliders, Eye, FileSpreadsheet, X, Check,
   Calendar, CalendarDays, Mail,
-  Users, UserCheck,
+  Users, UserCheck, Smartphone,
 } from 'lucide-react';
 import type { MeetingFormConfig } from '../../types/formConfig';
 import { CustomFieldsPanel } from './CustomFieldsPanel';
@@ -617,6 +617,64 @@ export const FormFieldsCustomizer: React.FC<FormFieldsCustomizerProps> = ({
                   <div style={{ width: 18, height: 18, background: '#111827', borderRadius: '50%', position: 'absolute', top: 2, left: config.allowVisitors ? 20 : 2, transition: 'left .2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
                 </div>
               </button>
+
+              {/* Shared device — one phone passed around vs one person per phone */}
+              {(() => {
+                const sharedDevice = config.allowMultipleSignInsPerDevice !== false;
+                return (
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={sharedDevice}
+                    onClick={() => onChange({ ...config, allowMultipleSignInsPerDevice: !sharedDevice })}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      marginBottom: 12,
+                      background: sharedDevice ? '#fefce8' : '#fafaf9',
+                      border: sharedDevice ? '2px solid #eab308' : '1.5px solid #e2e8f0',
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all .15s',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          background: sharedDevice ? '#facc15' : '#e2e8f0',
+                          color: sharedDevice ? '#0f172a' : '#64748b',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Smartphone size={18} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: sharedDevice ? '#78350f' : '#334155' }}>
+                          Allow Several People to Sign In on One Device
+                        </div>
+                        <div style={{ fontSize: 11, color: '#64748b' }}>
+                          {sharedDevice
+                            ? 'A phone or tablet can be passed around — "Sign-In Another User" is shown after each sign-in.'
+                            : 'One sign-in per device — once a phone has signed in, it cannot sign in anyone else.'}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ width: 40, height: 22, background: sharedDevice ? '#facc15' : '#cbd5e1', borderRadius: 11, position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
+                      <div style={{ width: 18, height: 18, background: '#111827', borderRadius: '50%', position: 'absolute', top: 2, left: sharedDevice ? 20 : 2, transition: 'left .2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
+                    </div>
+                  </button>
+                );
+              })()}
 
               {/* Visitor Fields sub-group — grayed out when visitors are disallowed */}
               <div

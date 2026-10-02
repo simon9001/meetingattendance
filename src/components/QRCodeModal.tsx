@@ -19,6 +19,9 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
   onClose,
 }) => {
   const [copied, setCopied] = useState(false);
+  // Off by default: a PIN printed beside the QR code lets anyone who sees the
+  // poster (or a photo of it) sign in without being in the room.
+  const [includePinOnPoster, setIncludePinOnPoster] = useState(false);
   if (!isOpen) return null;
 
   const attendanceUrl = `${window.location.origin}/attend/${meetingId}`;
@@ -117,6 +120,28 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
               width: 220px !important;
               height: 220px !important;
             }
+            .poster-pin {
+              margin: 0 auto 6px;
+              display: inline-block;
+              border: 2.5px solid #111827;
+              border-radius: 12px;
+              padding: 8px 22px;
+              background: #FEFCE8;
+            }
+            .poster-pin-label {
+              font-size: 12px;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              color: #374151;
+            }
+            .poster-pin-value {
+              font-size: 34px;
+              font-weight: 800;
+              letter-spacing: 8px;
+              color: #000000;
+              font-family: 'Courier New', monospace;
+            }
             .instructions {
               max-width: 480px;
               margin: 16px auto 0;
@@ -168,13 +193,21 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
             <div class="qr-container">
               ${svgHtml}
             </div>
+
+            ${includePinOnPoster ? `
+            <div>
+              <div class="poster-pin">
+                <div class="poster-pin-label">Meeting PIN</div>
+                <div class="poster-pin-value">${meetingPin}</div>
+              </div>
+            </div>` : ''}
             
             <div class="instructions">
               <div class="instructions-heading">Instructions:</div>
               <ol class="instructions-list">
                 <li>Open your camera or QR code scanner.</li>
                 <li>Point your device at the QR code above.</li>
-                <li>Enter the Meeting PIN provided by the organizer when prompted.</li>
+                <li>${includePinOnPoster ? 'Enter the Meeting PIN shown above when prompted.' : 'Enter the Meeting PIN provided by the organizer when prompted.'}</li>
                 <li>Fill out the digital form and provide your signature.</li>
               </ol>
             </div>
@@ -256,6 +289,15 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
             <span className="pin-label">Required Security PIN</span>
             <div className="pin-display">{meetingPin}</div>
             <p className="pin-help-text">Participants must enter this PIN after scanning the QR code.</p>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10, fontSize: 12.5, cursor: 'pointer', userSelect: 'none' }}>
+              <input
+                type="checkbox"
+                checked={includePinOnPoster}
+                onChange={e => setIncludePinOnPoster(e.target.checked)}
+                style={{ width: 16, height: 16, accentColor: '#EAB308', cursor: 'pointer' }}
+              />
+              Include PIN on printed QR poster
+            </label>
           </div>
 
           <div className="link-section">

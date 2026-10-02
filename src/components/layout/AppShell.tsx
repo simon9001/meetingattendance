@@ -42,32 +42,33 @@ export const AppShell: React.FC<AppShellProps> = ({
               strip is reserved for the printed register and the public pages. */}
           <LetterheadBanner variant="compact" />
 
-          <div className="navbar bg-white py-2 px-4 sm:px-6 gap-4 border-t border-slate-100">
+          <div className="flex items-center gap-1.5 sm:gap-3 bg-white h-14 sm:h-16 px-2 sm:px-6 border-t border-slate-100">
 
-          <div className="navbar-start flex-shrink-0 flex items-center gap-2 w-auto">
-            {/* Mobile hamburger */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Mobile / tablet menu */}
             <label
               htmlFor="my-drawer-3"
-              className="btn btn-ghost btn-square lg:hidden"
-              aria-label="Open sidebar"
+              className="icon-btn lg:hidden"
+              aria-label="Open navigation menu"
+              title="Menu"
             >
-              <Menu size={20} />
+              <Menu size={22} />
             </label>
 
-            {/* Home button */}
+            {/* Home — the sidebar brand covers this on phones */}
             <button
               type="button"
               onClick={handleGoHome}
               title="Go to Home Dashboard"
-              className="btn btn-ghost btn-sm gap-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-semibold px-2.5 rounded-lg transition-all cursor-pointer"
+              className="icon-btn hidden sm:inline-flex"
             >
               <Home size={18} className="text-brand-700" />
-              <span className="hidden sm:inline font-bold text-xs">Home</span>
+              <span className="hidden md:inline">Home</span>
             </button>
           </div>
 
-          {/* Search bar */}
-          <div className="navbar-center flex-1 mx-2 sm:mx-6">
+          {/* Search: full bar from tablet up, an icon that opens a sheet on phones */}
+          <div className="flex-1 min-w-0 flex justify-start sm:justify-center">
             <GlobalSearch
               currentUser={currentUser}
               setActiveDashboardTab={setActiveDashboardTab ?? (() => {})}
@@ -75,7 +76,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           </div>
 
           {/* Right actions */}
-          <div className="navbar-end flex items-center gap-1 flex-shrink-0 w-auto">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
 
             {/* Interactive Live Notifications & Anomaly Center */}
             <NotificationDropdown
@@ -85,22 +86,26 @@ export const AppShell: React.FC<AppShellProps> = ({
 
             {/* User Profile Dropdown */}
             <div className="dropdown dropdown-end">
-              <button type="button" tabIndex={0} className="btn btn-ghost flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100">
-                <span className="text-slate-800 font-semibold text-xs">Hey, {currentUser.name.split(' ')[0]}</span>
-                <ChevronDown className="text-slate-500" size={16} />
+              <button
+                type="button"
+                tabIndex={0}
+                className="icon-btn !px-1.5 sm:!px-2.5"
+                aria-label={`Account menu for ${currentUser.name}`}
+                aria-haspopup="menu"
+              >
+                <span className="avatar-chip">
+                  {currentUser.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                </span>
+                <span className="hidden md:inline text-slate-800">Hey, {currentUser.name.split(' ')[0]}</span>
+                <ChevronDown className="hidden sm:block text-slate-500" size={16} />
               </button>
 
               <ul
                 tabIndex={0}
-                className="dropdown-content menu bg-white rounded-xl z-50 mt-3 w-56 p-2 shadow-xl border border-slate-200 text-xs"
+                role="menu"
+                className="dropdown-content menu bg-white rounded-xl z-50 mt-2 w-64 max-w-[calc(100vw-24px)] p-2 shadow-xl border border-slate-200 text-sm"
               >
-                <li
-                  className="menu-title px-3 py-2 border-b border-slate-100 cursor-pointer"
-                  onClick={() => {
-                    onOpenProfile?.();
-                    (document.activeElement as HTMLElement | null)?.blur();
-                  }}
-                >
+                <li className="menu-title px-3 py-2 border-b border-slate-100">
                   <div className="text-xs font-bold text-slate-900">{currentUser.name}</div>
                   <div className="text-[11px] text-slate-500 font-normal truncate">{currentUser.email}</div>
                 </li>
@@ -113,7 +118,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                     }}
                     className="flex items-center text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-lg cursor-pointer"
                   >
-                    <Home className="mr-3 text-brand-700" size={16} />
+                    <Home className="mr-3 text-brand-700" size={16} aria-hidden="true" />
                     Home Dashboard
                   </button>
                 </li>
@@ -126,7 +131,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                     }}
                     className="flex items-center text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-lg cursor-pointer"
                   >
-                    <UserCircle className="mr-3 text-slate-500" size={16} />
+                    <UserCircle className="mr-3 text-slate-500" size={16} aria-hidden="true" />
                     My Profile
                   </button>
                 </li>
@@ -136,7 +141,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                     onClick={handleLogout}
                     className="flex items-center text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer font-medium"
                   >
-                    <LogOut className="mr-3" size={16} />
+                    <LogOut className="mr-3" size={16} aria-hidden="true" />
                     Logout
                   </button>
                 </li>
@@ -147,8 +152,10 @@ export const AppShell: React.FC<AppShellProps> = ({
         </header>
 
         {/* ── Page content — scrollable ───────────────────────────── */}
-        <main className="flex-1 overflow-y-auto p-6 bg-slate-50 text-slate-900">
-          {children}
+        <main id="main-content" className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50 text-slate-900">
+          <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-7">
+            {children}
+          </div>
         </main>
       </div>
 

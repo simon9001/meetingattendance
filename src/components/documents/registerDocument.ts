@@ -187,34 +187,30 @@ export interface RegisterInput {
 export type { Orientation, MarginSize };
 export { TARGET_ROW_MM, PAGE_MARGIN_MAP, getPageMetrics };
 
+// Only a meeting configured as multi-day gets one signature column per day. A
+// single-day meeting always has exactly one column, so someone who signs late
+// (after the meeting day) still lands in the same column as everyone else.
 export const getAttendanceDates = (input: RegisterInput): string[] => {
-  const { meeting, staff, visitors, attendeeFilter } = input;
+  const { meeting } = input;
   const formConfig = parseMeetingFormConfig(meeting);
   if (formConfig.isMultiDay && formConfig.sessionDates && formConfig.sessionDates.length > 0) {
     return formConfig.sessionDates.map(d => formatAttendanceDate(d));
   }
+  return [formatAttendanceDate(meeting?.meeting_date || new Date().toISOString())];
+};
 
-  const targetAttendees = attendeeFilter === 'staff' ? staff : attendeeFilter === 'visitors' ? visitors : [...staff, ...visitors];
-  const dateSet = new Set<string>();
-  
-  for (const a of targetAttendees) {
-    if (a.submitted_at) {
-      const formatted = formatAttendanceDate(a.submitted_at);
-      if (formatted) dateSet.add(formatted);
-    }
-  }
-
-  // Fallback to meeting date if no signed dates found
-  if (dateSet.size === 0 && meeting?.meeting_date) {
-    const formatted = formatAttendanceDate(meeting.meeting_date);
-    if (formatted) dateSet.add(formatted);
-  }
-
-  if (dateSet.size === 0) {
-    dateSet.add(formatAttendanceDate(new Date().toISOString()));
-  }
-
-  return Array.from(dateSet);
+// A single-day register lists each person once. Records signed before the
+// backend refused repeat sign-ins can hold the same name twice; the earliest
+// signature is the one that stands (attendance arrives sorted by submitted_at).
+const firstSignaturePerPerson = <T extends { full_name?: string }>(attendees: T[]): T[] => {
+  const seen = new Set<string>();
+  return attendees.filter(a => {
+    const key = (a.full_name || '').trim().toLowerCase();
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 
 export const buildRegisterHtml = (input: RegisterInput): string => {
@@ -226,7 +222,7 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
   const dynamicCols = getDynamicRegisterColumns(formConfig, attendeeFilter);
 
   const allAttendeesRaw = attendeeFilter === 'staff' ? staff : attendeeFilter === 'visitors' ? visitors : [...staff, ...visitors];
-  const allAttendees = isMultiDay ? aggregateMultiDayAttendees(allAttendeesRaw, dates) : allAttendeesRaw;
+  const allAttendees = isMultiDay ? aggregateMultiDayAttendees(allAttendeesRaw, dates) : firstSignaturePerPerson(allAttendeesRaw);
 
   // Always fill whole sheets — trailing blanks double as walk-in lines.
   const rowsPerPage = getRowsPerPage(pageMetrics, isMultiDay);
@@ -234,9 +230,9 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
 
   // Deterministic column widths so the table always fits the page width
   const totalColWeight = dynamicCols.reduce((sum, c) => sum + c.widthPercent, 0) || 1;
-  const dynamicColsPool = isMultiDay ? 60 : 73;
+  const dynamicColsPool = isMultiDay ? 60 : 78;
   const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * dynamicColsPool));
-  const signatureBlockWidth = isMultiDay ? 35 : 11;
+  const signatureBlockWidth = isMultiDay ? 35 : 17;
   const perDateWidth = isMultiDay ? Math.max(5, Math.floor(signatureBlockWidth / Math.max(dates.length, 1))) : 0;
   const registerTitle = attendeeFilter === 'staff'
     ? `STAFF ATTENDANCE REGISTER ${resolveDepartmentDisplay(meeting, '') ? `– ${resolveDepartmentDisplay(meeting, '').toUpperCase()}` : ''}`
@@ -249,12 +245,6 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
   const { sigMm } = getRowMetrics(pageMetrics, isMultiDay);
   const sigHeight = `${sigMm.toFixed(2)}mm`;
 
-  // Format single attendee submitted date
-  const getAttendeeDateStr = (attendee: any) => {
-    if (!attendee?.submitted_at) return dates[0] || '';
-    return formatAttendanceDate(attendee.submitted_at) || dates[0] || '';
-  };
-
   // Render one body row (blank when there is no attendee at that index)
   const buildRow = (index: number): string => {
     const attendee = allAttendees[index];
@@ -263,10 +253,9 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
     const sigImg = attendee?.signature_data
       ? `<img class="kenha-sig" src="${attendee.signature_data}" style="height:${sigHeight}; max-width:96%; object-fit:contain; display:block; margin:0 auto;" />`
       : '';
-    const signedDateStr = attendee ? getAttendeeDateStr(attendee) : '';
 
     if (!isMultiDay) {
-      // Single Day Layout: S/NO | [DYNAMIC COLUMNS] | DATE SIGNED | SIGNATURE
+      // Single Day Layout: S/NO | [DYNAMIC COLUMNS] | SIGNATURE
       const cellsHtml = dynamicCols.map((col, idx) => {
         const val = attendee ? col.getValue(attendee) : '';
         const isName = col.key === 'name';
@@ -277,8 +266,7 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
         <tr>
           <td contenteditable="false" style="border:1px solid #000; padding:2px; text-align:center; font-weight:600; font-size:12.5px; width:5%;">${rowNum}.</td>
           ${cellsHtml}
-          <td contenteditable="false" style="border:1px solid #000; padding:2px; text-align:center; font-size:11.5px; color:#000; width:11%;">${signedDateStr}</td>
-          <td contenteditable="false" style="border:1px solid #000; padding:1px; text-align:center; width:11%;">${sigImg}</td>
+          <td contenteditable="false" style="border:1px solid #000; padding:1px; text-align:center; width:${signatureBlockWidth}%;">${sigImg}</td>
         </tr>
       `;
     }
@@ -312,8 +300,7 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
       ${dynamicCols.map((col, idx) => `
         <th contenteditable="false" style="border:1px solid #000; padding:4px 6px; font-size:14px; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${col.header}</th>
       `).join('')}
-      <th contenteditable="false" style="border:1px solid #000; padding:4px 3px; text-align:center; font-size:14px; width:11%; word-wrap:break-word;">DATE SIGNED</th>
-      <th contenteditable="false" style="border:1px solid #000; padding:4px 3px; text-align:center; font-size:14px; width:11%; word-wrap:break-word;">SIGNATURE</th>
+      <th contenteditable="false" style="border:1px solid #000; padding:4px 3px; text-align:center; font-size:14px; width:${signatureBlockWidth}%; word-wrap:break-word;">SIGNATURE</th>
     </tr>
   ` : `
     <tr style="background:#ffffff; text-align:left; font-weight:700; color:#000; height:26px;">

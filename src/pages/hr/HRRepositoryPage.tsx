@@ -55,7 +55,7 @@ export const HRRepositoryPage: React.FC = () => {
             <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 20 }}>No records found in HR Repository.</p>
           ) : (
             <div className="table-responsive">
-              <table className="table-fluent">
+              <table className="table-fluent table-cards">
                 <thead>
                   <tr>
                     <th>Meeting Title</th>
@@ -69,12 +69,12 @@ export const HRRepositoryPage: React.FC = () => {
                 <tbody>
                   {filtered.map((r: any) => (
                     <tr key={r.report_id}>
-                      <td style={{ fontWeight: 600 }}>{r.meetings?.title || 'N/A'}</td>
-                      <td>{resolveDepartmentDisplay(r.meetings, 'N/A')}</td>
-                      <td>{r.profiles?.email || 'N/A'}</td>
-                      <td>{r.meetings?.meeting_date || 'N/A'}</td>
-                      <td>{r.submitted_at ? new Date(r.submitted_at).toLocaleDateString() : 'N/A'}</td>
-                      <td>
+                      <td data-label="Meeting Title" style={{ fontWeight: 600 }}>{r.meetings?.title || 'N/A'}</td>
+                      <td data-label="Department">{resolveDepartmentDisplay(r.meetings, 'N/A')}</td>
+                      <td data-label="Organizer">{r.profiles?.email || 'N/A'}</td>
+                      <td data-label="Meeting Date">{r.meetings?.meeting_date || 'N/A'}</td>
+                      <td data-label="Submission Date">{r.submitted_at ? new Date(r.submitted_at).toLocaleDateString() : 'N/A'}</td>
+                      <td data-label="Filing Status">
                         <span className="badge badge-submitted">
                           {r.status === 'archived' ? 'Archived & Verified' : 'Submitted & Pending Review'}
                         </span>

@@ -105,7 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 text-left w-full hover:bg-slate-50 transition-all cursor-pointer group select-none"
       >
         <div className="flex-shrink-0 p-1 bg-white rounded-lg border border-slate-200 shadow-2xs group-hover:scale-105 group-hover:shadow-sm transition-transform">
-          <KeNHALogo height={28} width="auto" />
+          <KeNHALogo height={26} />
         </div>
         <div className="flex flex-col leading-tight min-w-0 flex-1">
           <span className="text-[14px] font-extrabold text-slate-900 tracking-tight truncate group-hover:text-brand-700 transition-colors">
