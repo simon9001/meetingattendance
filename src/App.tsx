@@ -37,10 +37,11 @@ import { HRAnalyticsPage } from './pages/hr/HRAnalyticsPage';
 import { QRCodeModal } from './components/QRCodeModal';
 // Inline lightweight type for QR modal state (decoupled from mock data)
 interface ActiveQRMeeting { id: string; title: string; pin: string; }
-import { apiSlice } from './features/apis/apiSlice';
+import { apiSlice, refreshSession } from './features/apis/apiSlice';
 import type { User } from './data/mockData';
 import type { Toast } from './types';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector, useStore } from 'react-redux';
+import type { RootState } from './store';
 import { selectCurrentUser, logout } from './features/slice/authSlice';
 import { selectCurrentToken } from './features/slice/authSlice';
 import { useLogoutMutation } from './features/apis/authApi';
@@ -104,6 +105,7 @@ function App() {
   const dispatch = useDispatch();
   const currentUser = useSelector(selectCurrentUser);
   const currentToken = useSelector(selectCurrentToken);
+  const store = useStore<RootState>();
   const [logoutApi] = useLogoutMutation();
 
   const setCurrentUser = (u: User | null) => {
@@ -116,23 +118,37 @@ function App() {
   // ── Token expiry watcher ──────────────────────────────────────────────
   // Runs every 30 s. If the JWT's exp claim has passed, auto-logout.
   useEffect(() => {
-    const isExpired = (token: string | null): boolean => {
-      if (!token) return false; // nothing stored — already logged out
+    // Renew a little before expiry, so downloads that call the API directly
+    // (not through the auto-retrying API layer) never carry a dead token.
+    const RENEW_BEFORE_MS = 2 * 60_000;
+    const msUntilExpiry = (token: string): number => {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        return payload.exp * 1000 < Date.now();
+        return payload.exp * 1000 - Date.now();
       } catch {
-        return true;
+        return 0;
       }
     };
 
-    const check = () => {
-      if (currentToken && isExpired(currentToken)) {
-        dispatch(logout());
-        dispatch(apiSlice.util.resetApiState());
-        navigate('/login');
-        showToast('Your session has expired. Please log in again.', 'error');
+    const signOutExpired = () => {
+      dispatch(logout());
+      dispatch(apiSlice.util.resetApiState());
+      navigate('/login');
+      showToast('Your session has expired. Please log in again.', 'error');
+    };
+
+    const check = async () => {
+      if (!currentToken) return; // nothing stored — already logged out
+      const remaining = msUntilExpiry(currentToken);
+      if (remaining > RENEW_BEFORE_MS) return;
+      if (!store.getState().auth.refreshToken) {
+        // Nothing to renew with: the session ends when the token does.
+        if (remaining <= 0) signOutExpired();
+        return;
       }
+      const outcome = await refreshSession(dispatch, store.getState);
+      // 'offline' keeps the session; the next check tries again.
+      if (outcome === 'rejected') signOutExpired();
     };
 
     // Check immediately, then every 30 seconds

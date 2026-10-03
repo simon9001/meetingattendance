@@ -27,6 +27,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   setCurrentUser, showToast, navigate,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
+  // Remembered between visits, so a user who ticked it keeps the preference.
+  const [keepSignedIn, setKeepSignedIn] = useState(() => localStorage.getItem('kmtams_remember_me') === 'true');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [warningMsg, setWarningMsg] = useState<string | null>(null);
@@ -102,12 +104,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     try {
       const response = await loginApi({ email: loginEmail, password: loginPassword }).unwrap();
       if (response.success && response.data) {
-        const { access_token, user: profile, must_change_password } = response.data;
+        const { access_token, refresh_token, user: profile, must_change_password } = response.data;
         const mappedUser = mapProfileToUser(profile);
 
         // Reset all RTK Query cache so that no previous user's cached data is shown
         dispatch(apiSlice.util.resetApiState());
-        dispatch(setCredentials({ user: mappedUser, token: access_token }));
+        dispatch(setCredentials({
+          user: mappedUser,
+          token: access_token,
+          refreshToken: refresh_token,
+          remember: keepSignedIn,
+        }));
         setCurrentUser(mappedUser);
 
         showToast(`Welcome back, ${mappedUser.name}!`);
@@ -234,7 +241,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 Forgot password?
               </a>
               <label className="login-keep-signed-in" htmlFor="l-keep">
-                <input id="l-keep" name="keep-signed-in" type="checkbox" />
+                <input
+                  id="l-keep"
+                  name="keep-signed-in"
+                  type="checkbox"
+                  checked={keepSignedIn}
+                  onChange={e => setKeepSignedIn(e.target.checked)}
+                />
                 Keep me signed in
               </label>
             </div>

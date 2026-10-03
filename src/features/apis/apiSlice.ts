@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import { BASE_URL } from '../../backendcomnnect/domin';
-import { logout } from '../slice/authSlice';
+import { logout, tokenRefreshed } from '../slice/authSlice';
 
 /**
  * Base API Slice
@@ -24,16 +24,65 @@ const rawBaseQuery = fetchBaseQuery({
   },
 });
 
-// Wrapper: auto-logout on 401 (token expired / invalid)
+// ── Session renewal ──────────────────────────────────────────────────────
+// Access tokens last about an hour. When one runs out, the refresh token is
+// swapped for a new one so the user is not thrown back to the login page.
+// Concurrent callers share a single in-flight refresh: Supabase rotates the
+// refresh token on use, so two parallel refreshes would invalidate each other.
+//   'ok'       → new tokens stored
+//   'rejected' → the server refused (revoked, disabled account): sign out
+//   'offline'  → could not reach the server: keep the session, try later
+export type RefreshOutcome = 'ok' | 'rejected' | 'offline';
+let refreshInFlight: Promise<RefreshOutcome> | null = null;
+
+export const refreshSession = (
+  dispatch: (action: any) => any,
+  getState: () => any,
+): Promise<RefreshOutcome> => {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = (async (): Promise<RefreshOutcome> => {
+    const refreshToken: string | null = getState().auth.refreshToken;
+    if (!refreshToken) return 'rejected';
+    let res: Response;
+    try {
+      res = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+    } catch {
+      return 'offline';
+    }
+    if (res.status === 401 || res.status === 400) return 'rejected';
+    if (!res.ok) return 'offline';
+    const body = await res.json().catch(() => null);
+    const data = body?.data;
+    if (!data?.access_token || !data?.refresh_token) return 'rejected';
+    dispatch(tokenRefreshed({ token: data.access_token, refreshToken: data.refresh_token }));
+    return 'ok';
+  })().finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+};
+
+// Wrapper: on 401, renew the session and retry once; sign out only when the
+// session can no longer be renewed.
 const baseQueryWithLogoutOn401: BaseQueryFn<
   string | FetchArgs,
   unknown,
   FetchBaseQueryError
 > = async (args, api, extraOptions) => {
-  const result = await rawBaseQuery(args, api, extraOptions);
-  if (result.error && result.error.status === 401) {
-    api.dispatch(logout());
-    api.dispatch(apiSlice.util.resetApiState());
+  let result = await rawBaseQuery(args, api, extraOptions);
+  const url = typeof args === 'string' ? args : args.url;
+  if (result.error && result.error.status === 401 && !url.startsWith('/auth/login')) {
+    const outcome = await refreshSession(api.dispatch, api.getState);
+    if (outcome === 'ok') {
+      result = await rawBaseQuery(args, api, extraOptions);
+    } else if (outcome === 'rejected') {
+      api.dispatch(logout());
+      api.dispatch(apiSlice.util.resetApiState());
+    }
   }
   return result;
 };
