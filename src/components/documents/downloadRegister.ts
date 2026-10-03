@@ -62,6 +62,79 @@ export const downloadRegisterPdf = async (
   input: RegisterInput,
   opts: { token?: string | null; apiBaseUrl: string; previewHtml?: string },
 ): Promise<void> => {
+  const blob = await renderRegisterPdfBlob(input, opts);
+  saveBlob(blob, fileNameFor(input));
+};
+
+/**
+ * Prints the register from the rendered PDF rather than from the web page.
+ *
+ * A browser printing a web page may add its own date, title, URL and page
+ * number in the margins, and the print dialog's margin setting (which it
+ * remembers between prints) can override the document's. A PDF prints exactly
+ * as rendered, with none of that furniture. "Save as PDF" in the same dialog
+ * still works.
+ */
+export const printRegisterPdf = async (
+  input: RegisterInput,
+  opts: { token?: string | null; apiBaseUrl: string; previewHtml?: string },
+): Promise<void> => {
+  const blob = await renderRegisterPdfBlob(input, opts);
+  const url = URL.createObjectURL(blob);
+
+  document.getElementById('kenha-pdf-print-frame')?.remove();
+  const frame = document.createElement('iframe');
+  frame.id = 'kenha-pdf-print-frame';
+  // Kept rendered (not display:none / visibility:hidden), or the browser's PDF
+  // viewer never loads inside it and print() does nothing.
+  Object.assign(frame.style, {
+    position: 'fixed', right: '0', bottom: '0', width: '1px', height: '1px', border: '0', opacity: '0',
+  });
+  frame.src = url;
+
+  await new Promise<void>((resolve, reject) => {
+    frame.onload = () => {
+      // The PDF viewer finishes initialising slightly after the load event.
+      setTimeout(() => {
+        try {
+          frame.contentWindow?.focus();
+          frame.contentWindow?.print();
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      }, 400);
+    };
+    frame.onerror = () => reject(new Error('The PDF could not be opened for printing.'));
+    document.body.appendChild(frame);
+  });
+
+  // Leave the frame and URL alive while the print dialog is open.
+  setTimeout(() => {
+    frame.remove();
+    URL.revokeObjectURL(url);
+  }, 60_000);
+};
+
+const saveBlob = (blob: Blob, fileName: string) => {
+  const url = URL.createObjectURL(blob);
+  try {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } finally {
+    // Give the browser a moment to start the save before revoking.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }
+};
+
+const renderRegisterPdfBlob = async (
+  input: RegisterInput,
+  opts: { token?: string | null; apiBaseUrl: string; previewHtml?: string },
+): Promise<Blob> => {
   const bodyHtml = opts.previewHtml?.trim() || buildRegisterHtml(input);
   const document_ = buildPrintDocument(bodyHtml, input);
   const selfContained = await inlineImages(document_);
@@ -89,17 +162,5 @@ export const downloadRegisterPdf = async (
     throw new Error(message);
   }
 
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  try {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileNameFor(input);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  } finally {
-    // Give the browser a moment to start the save before revoking.
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
-  }
+  return res.blob();
 };

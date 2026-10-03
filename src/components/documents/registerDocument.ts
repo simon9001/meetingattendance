@@ -64,24 +64,29 @@ const PAGE_CHROME_MM = {
 type Orientation = 'landscape' | 'portrait';
 type MarginSize = 'normal' | 'narrow' | 'wide';
 
+// The letterhead and footer artwork sit this far from the top and bottom edges
+// of the paper, the way a Word header and footer sit in the page margins; the
+// margin setting (normal / narrow / wide) governs the left and right sides.
+const HEADER_FOOTER_EDGE_MM = 7;
+
 const getPageMetrics = (orientation: Orientation, marginSize: MarginSize) => {
   const margin = PAGE_MARGIN_MAP[marginSize][orientation];
   const sheetHeight = orientation === 'landscape' ? 210 : 297; // A4
   const sheetWidth = orientation === 'landscape' ? 297 : 210;
   // 2mm of slack so a full-height page never spills onto a blank extra sheet.
-  const contentHeightMm = sheetHeight - margin.vertical * 2 - 2;
+  const contentHeightMm = sheetHeight - HEADER_FOOTER_EDGE_MM * 2 - 2;
   const contentWidthMm = sheetWidth - margin.horizontal * 2;
   // The letterhead artwork spans the full text column, so its height follows
   // from that; above it sits the KeNHA/DG/F01 reference line (~4.6mm) and
   // below it a small gap before the title (~1mm).
   const headerMm = 4.6 + contentWidthMm / HEADER_BANNER_ASPECT + 1;
-  // Footer artwork scales with the column width; the page-number line sits above it.
-  const footerMm = contentWidthMm / FOOTER_BANNER_ASPECT + 4;
+  // Footer artwork scales with the column width, plus a small gap above it.
+  const footerMm = contentWidthMm / FOOTER_BANNER_ASPECT + 2;
   // Printing with `@page { margin: 0 }` is what suppresses the browser's own
   // title/URL/date furniture, so the sheet carries the margin as padding
   // instead. Less the same 2mm of slack, the text box is identical either way.
   const printSheetHeightMm = sheetHeight - 2;
-  return { margin: margin.css, contentHeightMm, contentWidthMm, headerMm, footerMm, printSheetHeightMm };
+  return { margin: `${HEADER_FOOTER_EDGE_MM}mm ${margin.horizontal}mm`, contentHeightMm, contentWidthMm, headerMm, footerMm, printSheetHeightMm };
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -329,7 +334,7 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
     + wrappedLineCount(meetingTitleText, titleWidthMm, 16, 0.3) * 16 * 1.4 * PX_TO_MM
     + wrappedLineCount(`${registerTitle} (CONTINUED)`, titleWidthMm, 14, 0.4) * 14 * 1.35 * PX_TO_MM;
   // A little slack on top, since every figure here is an estimate.
-  const pageBodyMm = getBodyMm(pageMetrics, isMultiDay) + PAGE_CHROME_MM.title - titleMm - 3;
+  const pageBodyMm = getBodyMm(pageMetrics, isMultiDay) + PAGE_CHROME_MM.title - titleMm - 4;
 
   const pages: number[][] = [];
   let currentPage: number[] = [];
@@ -348,7 +353,6 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
   const blankRows = Math.max(0, Math.floor((pageBodyMm - usedMm) / TARGET_ROW_MM));
   for (let i = 0; i < blankRows; i++) currentPage.push(allAttendees.length + i);
   pages.push(currentPage);
-  const pageCount = pages.length;
   const signatureBlockWidth = isMultiDay ? 35 : 17;
   const perDateWidth = isMultiDay ? Math.max(5, Math.floor(signatureBlockWidth / Math.max(dates.length, 1))) : 0;
 
@@ -438,13 +442,11 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
 </header>`;
 
   // ── EDITABLE FOOTER REGION (PINNED TO THE BOTTOM OF EVERY SHEET) ────────
-  // ── EDITABLE FOOTER REGION (PINNED TO THE BOTTOM OF EVERY SHEET) ────────
   // The vision / mission / core values / social / ISO strip is one supplied
   // artwork (kenha_footer_banner.png) rather than markup imitating it, so the
   // printed page, the .docx and the official letterhead cannot drift apart.
-  const buildFooter = (pageNo: number) => `
-<footer style="flex:0 0 auto; margin-top:auto; padding-top:2px; width:100%;">
-  <div class="kenha-page-no" style="text-align:right; font-size:7.5px; font-weight:700; color:#1e293b; font-family:'Times New Roman', Times, serif; white-space:nowrap; margin-bottom:1px;">Page ${pageNo} of ${pageCount}</div>
+  const footerHtml = `
+<footer style="flex:0 0 auto; margin-top:auto; padding-top:2mm; width:100%;">
   <div style="width:100%;">
     <img src="/kenha_footer_banner.png?v=2" alt="KeNHA Vision, Mission, Core Values and ISO 9001:2015 certification" style="width:100%; height:auto; display:block; opacity:1; -webkit-print-color-adjust:exact; print-color-adjust:exact;" />
   </div>
@@ -485,7 +487,7 @@ ${headerHtml}
   </table>
   </div>
 </main>
-${buildFooter(pageIndex + 1)}
+${footerHtml}
 </div>`;
   });
 

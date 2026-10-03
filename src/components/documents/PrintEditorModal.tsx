@@ -2,14 +2,17 @@ import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react'
 import { X, Printer, FileText, Undo, Redo } from 'lucide-react';
 // @ts-ignore — mammoth ships browser remaps via package.json browser field
 import mammoth from 'mammoth';
+import { useSelector } from 'react-redux';
 import { useCorrectAttendanceRecordMutation } from '../../features/apis/apiSlice';
+import { selectCurrentToken } from '../../features/slice/authSlice';
+import { BASE_URL } from '../../backendcomnnect/domin';
+import { printRegisterPdf } from './downloadRegister';
 import {
   buildRegisterHtml,
   buildPrintDocument,
   getAttendanceDates,
   getPageMetrics,
   getRowMetrics,
-  PAGE_MARGIN_MAP,
 } from './registerDocument';
 import type {
   RegisterInput,
@@ -346,8 +349,34 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
 
 
 
-  // ── Print using isolated print frame ─────────────────────────────────────────
-  const handlePrint = useCallback(() => {
+  // ── Print from the rendered PDF ──────────────────────────────────────────────
+  // Printing the PDF (not the web page) keeps the browser from adding its own
+  // date, title, URL and page number, and from shifting the header and footer
+  // with margins of its own. The page print below remains as a fallback.
+  const authToken = useSelector(selectCurrentToken);
+  const [isPreparingPrint, setIsPreparingPrint] = useState(false);
+
+  const handlePrint = useCallback(async () => {
+    if (isPreparingPrint) return;
+    const canvas = document.getElementById('print-doc-canvas');
+    setIsPreparingPrint(true);
+    try {
+      await printRegisterPdf(registerInput, {
+        token: authToken,
+        apiBaseUrl: BASE_URL,
+        previewHtml: canvas?.innerHTML,
+      });
+    } catch (err: any) {
+      console.error('PDF print failed, falling back to page print:', err);
+      showToast?.('Could not prepare the PDF — printing the page instead. Untick "Headers and footers" in the print dialog.', 'error');
+      printPage();
+    } finally {
+      setIsPreparingPrint(false);
+    }
+  }, [isPreparingPrint, registerInput, authToken, showToast]);
+
+  // ── Fallback: print the page through an isolated frame ──────────────────────
+  const printPage = useCallback(() => {
     const canvas = document.getElementById('print-doc-canvas');
     const rawContent = canvas ? canvas.innerHTML : buildDefaultContent();
 
@@ -384,7 +413,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
         console.error('Print frame error:', e);
       }
     }, 250);
-  }, [buildDefaultContent, orientation, pageMetrics, meeting]);
+  }, [buildDefaultContent, registerInput]);
 
 
 
@@ -403,12 +432,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Canvas padding is the same value handed to @page, so the preview is to scale.
-  const marginPaddingMap = {
-    normal: PAGE_MARGIN_MAP.normal[orientation].css,
-    narrow: PAGE_MARGIN_MAP.narrow[orientation].css,
-    wide: PAGE_MARGIN_MAP.wide[orientation].css,
-  };
+  // Canvas padding is the same value the printed sheet uses, so the preview is to scale.
 
   return (
     <div id="print-editor-root" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', background: '#2c3e50', fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif' }}>
@@ -511,12 +535,12 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button type="button" onClick={handlePrint} style={{
+            <button type="button" onClick={handlePrint} disabled={isPreparingPrint} style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px',
               borderRadius: 4, border: 'none', background: '#d97706', color: '#fff',
               cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'background .15s',
             }} title="Print, or choose 'Save as PDF' as the destination — both match this preview exactly">
-              <Printer size={14} /> Print / Save as PDF
+              <Printer size={14} /> {isPreparingPrint ? 'Preparing…' : 'Print / Save as PDF'}
             </button>
 
             <button type="button" onClick={onClose} style={{
@@ -585,7 +609,7 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
               background: '#ffffff',
               boxShadow: '0 12px 36px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.05)',
               borderRadius: 2,
-              padding: marginPaddingMap[marginSize],
+              padding: pageMetrics.margin,
               transformOrigin: 'top center',
               outline: 'none',
               boxSizing: 'border-box',
