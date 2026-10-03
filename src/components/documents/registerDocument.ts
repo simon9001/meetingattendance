@@ -45,7 +45,7 @@ const PAGE_MARGIN_MAP: Record<MarginSize, Record<Orientation, { css: string; ver
 // a hardcoded height is what made the printed header look stretched.
 // The footer is still supplied artwork, so its printed height is dictated by
 // its own proportions. The header is markup and is measured below instead.
-const FOOTER_BANNER_ASPECT = 1005 / 94;
+const FOOTER_BANNER_ASPECT = 1481 / 120;
 
 
 // Vertical budget of the fixed furniture on each page, in millimetres. Whatever
@@ -87,6 +87,11 @@ const getPageMetrics = (orientation: Orientation, marginSize: MarginSize) => {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
+// Filled-in register data is set bold at the same size as the column headings,
+// so names and details read as clearly as the headings above them.
+const HEADER_FONT_PX = 14;
+const DATA_CELL_FONT = `font-size:${HEADER_FONT_PX}px; font-weight:700; line-height:1.2;`;
+
 const participantTypeOf = (attendee: any): 'staff' | 'visitor' => {
   if (attendee?.participant_type === 'staff' || attendee?.participant_type === 'visitor') {
     return attendee.participant_type;
@@ -114,6 +119,72 @@ const cellBinding = (attendee: any, columnKey: string): string => {
   const field = correctableField(columnKey, type);
   if (!field) return ' contenteditable="false"';
   return ` contenteditable="true" class="kenha-correctable" data-attendance-id="${attendee.attendance_id}" data-participant-type="${type}" data-field="${field}"`;
+};
+
+// Height left for body rows on one sheet once the header, title, table head
+// and footer are accounted for.
+const getBodyMm = (
+  page: { contentHeightMm: number; headerMm: number; footerMm: number },
+  isMultiDay: boolean,
+): number => {
+  const theadMm = isMultiDay ? PAGE_CHROME_MM.theadMulti : PAGE_CHROME_MM.theadSingle;
+  return page.contentHeightMm - page.headerMm - PAGE_CHROME_MM.title
+    - theadMm - page.footerMm - PAGE_CHROME_MM.tableGap;
+};
+
+// ── Row height estimate ─────────────────────────────────────────────────────
+// Data is set at HEADER_FONT_PX bold, so a long name or designation wraps onto
+// a second or third line — most of all in portrait, where columns are narrow.
+// A fixed rows-per-sheet count then pushes the last rows past the bottom of the
+// sheet, where they are cut off. Each row's height is therefore estimated from
+// how many lines its longest cell wraps to, and sheets are filled by height.
+const PX_TO_MM = 25.4 / 96;
+const LINE_HEIGHT = 1.2;
+
+// Approximate advance widths of bold Times New Roman, in em. Treating every
+// character alike either overflows sheets (too narrow) or wastes rows (too
+// wide: a phone number was estimated at two lines when it fits on one).
+const charEm = (ch: string): number => {
+  if (ch === ' ') return 0.25;
+  if (/[0-9]/.test(ch)) return 0.5;
+  if (/[MW]/.test(ch)) return 0.98;
+  if (/[A-Z]/.test(ch)) return 0.72;
+  if (/[mw]/.test(ch)) return 0.8;
+  if (/[iljtf]/.test(ch)) return 0.3;
+  if (/[a-z]/.test(ch)) return 0.5;
+  if (/[.,:;'!|]/.test(ch)) return 0.28;
+  return 0.55; // other punctuation, symbols and accented letters
+};
+
+// Width of a string in mm at the register's data size, with 5% headroom so
+// estimates round towards an extra line rather than a clipped row.
+const textWidthMm = (text: string): number =>
+  [...text].reduce((sum, ch) => sum + charEm(ch), 0) * HEADER_FONT_PX * PX_TO_MM * 1.05;
+
+const wrappedLineCount = (text: string, widthMm: number): number => {
+  const value = String(text ?? '').trim();
+  if (!value || widthMm <= 0) return 1;
+  const spaceMm = textWidthMm(' ');
+  let lines = 1;
+  let usedMm = 0;
+  for (const word of value.split(/\s+/)) {
+    const wordMm = textWidthMm(word);
+    // Words wider than the column break mid-word (word-wrap: break-word).
+    if (wordMm > widthMm) {
+      if (usedMm > 0) lines += 1;
+      lines += Math.ceil(wordMm / widthMm) - 1;
+      usedMm = wordMm % widthMm || widthMm;
+      continue;
+    }
+    const needed = usedMm === 0 ? wordMm : usedMm + spaceMm + wordMm;
+    if (needed > widthMm) {
+      lines += 1;
+      usedMm = wordMm;
+    } else {
+      usedMm = needed;
+    }
+  }
+  return lines;
 };
 
 // Height of one body row (and the signature inside it) for a given page box.
@@ -224,14 +295,46 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
   const allAttendeesRaw = attendeeFilter === 'staff' ? staff : attendeeFilter === 'visitors' ? visitors : [...staff, ...visitors];
   const allAttendees = isMultiDay ? aggregateMultiDayAttendees(allAttendeesRaw, dates) : firstSignaturePerPerson(allAttendeesRaw);
 
-  // Always fill whole sheets — trailing blanks double as walk-in lines.
-  const rowsPerPage = getRowsPerPage(pageMetrics, isMultiDay);
-  const pageCount = Math.max(1, Math.ceil(allAttendees.length / rowsPerPage));
-
   // Deterministic column widths so the table always fits the page width
   const totalColWeight = dynamicCols.reduce((sum, c) => sum + c.widthPercent, 0) || 1;
   const dynamicColsPool = isMultiDay ? 60 : 78;
   const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * dynamicColsPool));
+
+  // ── Pagination by height ────────────────────────────────────────────────
+  // Sheets are filled until the table area is used up, so wrapped (taller)
+  // rows move to the next sheet instead of being cut off at the bottom. The
+  // last sheet is topped up with blank rows, which double as walk-in lines.
+  const cellPadMm = (isMultiDay ? 8 : 12) * PX_TO_MM;
+  const lineMm = HEADER_FONT_PX * LINE_HEIGHT * PX_TO_MM;
+  const rowChromeMm = 8 * PX_TO_MM; // vertical padding + borders
+  const estimateRowMm = (attendee: any): number => {
+    const lines = Math.max(1, ...dynamicCols.map((col, idx) => {
+      const widthMm = (pageMetrics.contentWidthMm * dynamicColWidths[idx]) / 100 - cellPadMm;
+      return wrappedLineCount(col.getValue(attendee), widthMm);
+    }));
+    return Math.max(TARGET_ROW_MM, lines * lineMm + rowChromeMm);
+  };
+  // A little slack: the title block above the table is itself an estimate.
+  const pageBodyMm = getBodyMm(pageMetrics, isMultiDay) - 3;
+
+  const pages: number[][] = [];
+  let currentPage: number[] = [];
+  let usedMm = 0;
+  allAttendees.forEach((attendee, index) => {
+    const rowMm = estimateRowMm(attendee);
+    if (currentPage.length > 0 && usedMm + rowMm > pageBodyMm) {
+      pages.push(currentPage);
+      currentPage = [];
+      usedMm = 0;
+    }
+    currentPage.push(index);
+    usedMm += rowMm;
+  });
+  // Blank walk-in rows on the last sheet (a sheet is always printed, even empty).
+  const blankRows = Math.max(0, Math.floor((pageBodyMm - usedMm) / TARGET_ROW_MM));
+  for (let i = 0; i < blankRows; i++) currentPage.push(allAttendees.length + i);
+  pages.push(currentPage);
+  const pageCount = pages.length;
   const signatureBlockWidth = isMultiDay ? 35 : 17;
   const perDateWidth = isMultiDay ? Math.max(5, Math.floor(signatureBlockWidth / Math.max(dates.length, 1))) : 0;
   const registerTitle = attendeeFilter === 'staff'
@@ -258,13 +361,12 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
       // Single Day Layout: S/NO | [DYNAMIC COLUMNS] | SIGNATURE
       const cellsHtml = dynamicCols.map((col, idx) => {
         const val = attendee ? col.getValue(attendee) : '';
-        const isName = col.key === 'name';
-        return `<td${cellBinding(attendee, col.key)} style="border:1px solid #000; padding:3px 6px; font-size:12.5px; font-weight:${isName && val ? '600' : '400'}; color:#000; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${val}</td>`;
+        return `<td${cellBinding(attendee, col.key)} style="border:1px solid #000; padding:3px 6px; ${DATA_CELL_FONT} color:#000; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${val}</td>`;
       }).join('');
 
       return `
         <tr>
-          <td contenteditable="false" style="border:1px solid #000; padding:2px; text-align:center; font-weight:600; font-size:12.5px; width:5%;">${rowNum}.</td>
+          <td contenteditable="false" style="border:1px solid #000; padding:2px; text-align:center; ${DATA_CELL_FONT} width:5%;">${rowNum}.</td>
           ${cellsHtml}
           <td contenteditable="false" style="border:1px solid #000; padding:1px; text-align:center; width:${signatureBlockWidth}%;">${sigImg}</td>
         </tr>
@@ -274,13 +376,12 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
     // Multi-Day Layout
     const cellsHtml = dynamicCols.map((col, idx) => {
       const val = attendee ? col.getValue(attendee) : '';
-      const isName = col.key === 'name';
-      return `<td${cellBinding(attendee, col.key)} style="border:1px solid #000; padding:3px 4px; font-size:11.5px; font-weight:${isName && val ? '600' : '400'}; color:#000; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${val}</td>`;
+      return `<td${cellBinding(attendee, col.key)} style="border:1px solid #000; padding:3px 4px; ${DATA_CELL_FONT} color:#000; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${val}</td>`;
     }).join('');
 
     return `
       <tr>
-        <td contenteditable="false" style="border:1px solid #000; padding:2px; text-align:center; font-weight:600; font-size:11.5px; width:5%;">${rowNum}.</td>
+        <td contenteditable="false" style="border:1px solid #000; padding:2px; text-align:center; ${DATA_CELL_FONT} width:5%;">${rowNum}.</td>
         ${cellsHtml}
         ${dates.map(d => {
           const sig = (attendee as any)?.signaturesByDate?.[d] || (dates.length === 1 ? attendee?.signature_data : undefined);
@@ -296,19 +397,19 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
   // ── Table head, repeated on every sheet ─────────────────────────────────
   const theadHtml = !isMultiDay ? `
     <tr style="background:#ffffff; text-align:left; font-weight:700; color:#000; height:30px;">
-      <th contenteditable="false" style="border:1px solid #000; padding:4px 3px; text-align:center; font-size:14px; width:5%; word-wrap:break-word;">S/NO</th>
+      <th contenteditable="false" style="border:1px solid #000; padding:4px 3px; text-align:center; font-size:${HEADER_FONT_PX}px; width:5%; word-wrap:break-word;">S/NO</th>
       ${dynamicCols.map((col, idx) => `
-        <th contenteditable="false" style="border:1px solid #000; padding:4px 6px; font-size:14px; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${col.header}</th>
+        <th contenteditable="false" style="border:1px solid #000; padding:4px 6px; font-size:${HEADER_FONT_PX}px; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${col.header}</th>
       `).join('')}
-      <th contenteditable="false" style="border:1px solid #000; padding:4px 3px; text-align:center; font-size:14px; width:${signatureBlockWidth}%; word-wrap:break-word;">SIGNATURE</th>
+      <th contenteditable="false" style="border:1px solid #000; padding:4px 3px; text-align:center; font-size:${HEADER_FONT_PX}px; width:${signatureBlockWidth}%; word-wrap:break-word;">SIGNATURE</th>
     </tr>
   ` : `
     <tr style="background:#ffffff; text-align:left; font-weight:700; color:#000; height:26px;">
-      <th rowspan="2" contenteditable="false" style="border:1px solid #000; padding:4px 3px; text-align:center; font-size:14px; width:5%; word-wrap:break-word;">S/NO</th>
+      <th rowspan="2" contenteditable="false" style="border:1px solid #000; padding:4px 3px; text-align:center; font-size:${HEADER_FONT_PX}px; width:5%; word-wrap:break-word;">S/NO</th>
       ${dynamicCols.map((col, idx) => `
-        <th rowspan="2" contenteditable="false" style="border:1px solid #000; padding:4px; font-size:14px; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${col.header}</th>
+        <th rowspan="2" contenteditable="false" style="border:1px solid #000; padding:4px; font-size:${HEADER_FONT_PX}px; width:${dynamicColWidths[idx]}%; word-wrap:break-word;">${col.header}</th>
       `).join('')}
-      <th colspan="${dates.length}" contenteditable="false" style="border:1px solid #000; padding:4px 2px; text-align:center; font-size:14px; width:${signatureBlockWidth}%; word-wrap:break-word;">SIGNATURE</th>
+      <th colspan="${dates.length}" contenteditable="false" style="border:1px solid #000; padding:4px 2px; text-align:center; font-size:${HEADER_FONT_PX}px; width:${signatureBlockWidth}%; word-wrap:break-word;">SIGNATURE</th>
     </tr>
     <tr style="background:#ffffff; text-align:center; font-weight:700; color:#000; height:22px;">
       ${dates.map(d => `<th contenteditable="false" style="border:1px solid #000; padding:2px 1px; width:${perDateWidth}%; font-size:10px; word-wrap:break-word; white-space:nowrap;">${d}</th>`).join('')}
@@ -355,16 +456,13 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
 <footer style="flex:0 0 auto; margin-top:auto; padding-top:2px; width:100%;">
   <div class="kenha-page-no" style="text-align:right; font-size:7.5px; font-weight:700; color:#1e293b; font-family:'Times New Roman', Times, serif; white-space:nowrap; margin-bottom:1px;">Page ${pageNo} of ${pageCount}</div>
   <div style="width:100%;">
-    <img src="/kenha_footer_banner.png" alt="KeNHA Vision, Mission, Core Values and ISO 9001:2015 certification" style="width:100%; height:auto; display:block; opacity:1; -webkit-print-color-adjust:exact; print-color-adjust:exact;" />
+    <img src="/kenha_footer_banner.png?v=2" alt="KeNHA Vision, Mission, Core Values and ISO 9001:2015 certification" style="width:100%; height:auto; display:block; opacity:1; -webkit-print-color-adjust:exact; print-color-adjust:exact;" />
   </div>
 </footer>`;
 
   // ── Assemble one wrapper per printed sheet ──────────────────────────────
-  const pagesHtml = Array.from({ length: pageCount }).map((_, pageIndex) => {
-    const firstRow = pageIndex * rowsPerPage;
-    const rowsHtml = Array.from({ length: rowsPerPage })
-      .map((_, i) => buildRow(firstRow + i))
-      .join('');
+  const pagesHtml = pages.map((rowIndexes, pageIndex) => {
+    const rowsHtml = rowIndexes.map(buildRow).join('');
 
     return `
 <div class="kenha-page-wrapper" style="position:relative; font-family:'Times New Roman', Times, serif; font-size:11px; color:#000; background:#fff; height:${pageMetrics.contentHeightMm}mm; min-height:${pageMetrics.contentHeightMm}mm; display:flex; flex-direction:column; justify-content:flex-start; box-sizing:border-box;">
