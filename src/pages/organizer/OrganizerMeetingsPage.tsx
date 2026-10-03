@@ -3,7 +3,7 @@ import {
   Search, Eye, QrCode, Edit3, FileText, Clock,
   PlayCircle, XCircle, Mail, Calendar, MapPin, Plus,
   ChevronLeft, ChevronRight, MoreVertical, SlidersHorizontal,
-  Grid, Activity, Award, UserCheck, Users, Trash2
+  Grid, Activity, Award, UserCheck, Users, Trash2, Send, CheckCircle2, AlertTriangle
 } from 'lucide-react';
 import { PageSpinner, InlineSpinner } from '../../components/shared/Feedback';
 import { Modal } from '../../components/shared/Modal';
@@ -22,6 +22,9 @@ import {
   useCloseMeetingAttendanceMutation,
   useExtendMeetingAttendanceMutation,
   useDeleteMeetingMutation,
+  useGetReportsQuery,
+  useGenerateReportMutation,
+  useSubmitReportToHRMutation,
 } from '../../features/apis/apiSlice';
 import {
   parseMeetingFormConfig,
@@ -254,6 +257,235 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
 
   const handlePrint = () => {
     setPrintEditorOpen(true);
+  };
+
+  // ── Submit attendance report to HR ──────────────────────────────────────
+  // Generating builds the PDF register and the report record; submitting marks
+  // it as filed and notifies + emails every HR officer.
+  const { data: reportsResponse } = useGetReportsQuery(undefined);
+  const [generateReport, { isLoading: isGenerating }] = useGenerateReportMutation();
+  const [submitReportToHR, { isLoading: isSubmittingToHR }] = useSubmitReportToHRMutation();
+  const [submitHrModal, setSubmitHrModal] = useState<{ isOpen: boolean; meeting: any | null; closeFirst: boolean }>({
+    isOpen: false,
+    meeting: null,
+    closeFirst: true,
+  });
+
+  const reportByMeeting = useMemo(() => {
+    const map: Record<string, any> = {};
+    const reports: any[] = Array.isArray(reportsResponse?.data) ? reportsResponse.data : [];
+    for (const r of reports) map[r.meeting_id] = r;
+    return map;
+  }, [reportsResponse]);
+
+  const isSubmittedToHR = (m: any) => {
+    const status = reportByMeeting[m?.meeting_id]?.status;
+    return status === 'submitted_to_hr' || status === 'archived';
+  };
+
+  const openSubmitToHR = (m: any) =>
+    setSubmitHrModal({ isOpen: true, meeting: m, closeFirst: m.attendance_status === 'open' });
+
+  const closeSubmitToHR = () => setSubmitHrModal({ isOpen: false, meeting: null, closeFirst: true });
+
+  const isSendingToHR = isGenerating || isSubmittingToHR || isClosing;
+
+  const handleSubmitToHR = async () => {
+    const m = submitHrModal.meeting;
+    if (!m) return;
+    try {
+      if (m.attendance_status === 'open' && submitHrModal.closeFirst) {
+        await closeAttendance(m.meeting_id).unwrap();
+      }
+      const generated: any = await generateReport(m.meeting_id).unwrap();
+      const reportId = generated?.data?.report?.report_id;
+      if (!reportId) throw new Error('The report was created but no report ID came back.');
+      await submitReportToHR(reportId).unwrap();
+      showToast(`Attendance report for "${m.title}" submitted to HR. HR officers have been notified.`, 'success');
+      closeSubmitToHR();
+    } catch (err: any) {
+      showToast(err?.data?.error || err?.message || 'Could not submit the report to HR', 'error');
+    }
+  };
+
+  // Dialogs shared by the meetings list and the register view, so they open
+  // wherever the organiser clicked rather than only on the list.
+  const renderSharedDialogs = () => (
+    <>
+      {extendModal.isOpen && extendModal.meeting && (
+        <Modal
+          open
+          onClose={() => setExtendModal({ isOpen: false, meeting: null, minutes: 30 })}
+          title="Extend Attendance Window"
+          maxWidth={480}
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={() => setExtendModal({ isOpen: false, meeting: null, minutes: 30 })}
+                className="btn btn-secondary"
+                disabled={isExtending}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteExtend}
+                className="btn btn-primary"
+                disabled={isExtending}
+              >
+                {isExtending ? <InlineSpinner /> : <Clock size={16} />}
+                Confirm &amp; Extend ({extendModal.minutes} min)
+              </button>
+            </>
+          }
+        >
+          <p style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-main)', margin: '0 0 6px' }}>
+            {extendModal.meeting.title}
+          </p>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>
+            Choose how much time to add. The register stays open (or re-opens) so participants can keep signing in.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 16 }}>
+            {[15, 30, 60, 120, 180, 240].map(mins => (
+              <button
+                key={mins}
+                type="button"
+                onClick={() => setExtendModal(prev => ({ ...prev, minutes: mins }))}
+                aria-pressed={extendModal.minutes === mins}
+                className={`btn ${extendModal.minutes === mins ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: 12.5, padding: '9px 4px', fontWeight: extendModal.minutes === mins ? 700 : 500 }}
+              >
+                +{mins >= 60 ? `${mins / 60} hr${mins / 60 > 1 ? 's' : ''}` : `${mins} mins`}
+              </button>
+            ))}
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 4 }}>
+            <label htmlFor="custom-minutes" className="form-label">Or enter custom minutes</label>
+            <input
+              id="custom-minutes"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={1440}
+              className="form-input"
+              value={extendModal.minutes}
+              onChange={e => setExtendModal(prev => ({ ...prev, minutes: Math.max(1, parseInt(e.target.value) || 1) }))}
+            />
+          </div>
+        </Modal>
+      )}
+
+      {submitHrModal.isOpen && submitHrModal.meeting && (
+        <Modal
+          open
+          onClose={() => { if (!isSendingToHR) closeSubmitToHR(); }}
+          title="Submit Attendance Report to HR"
+          maxWidth={480}
+          footer={
+            <>
+              <button type="button" onClick={closeSubmitToHR} className="btn btn-secondary" disabled={isSendingToHR}>
+                Cancel
+              </button>
+              <button type="button" onClick={handleSubmitToHR} className="btn btn-primary" disabled={isSendingToHR}>
+                {isSendingToHR ? <><InlineSpinner /> Submitting…</> : <><Send size={16} /> Submit to HR</>}
+              </button>
+            </>
+          }
+        >
+          <p style={{ fontSize: 13.5, color: 'var(--text-main)', margin: '0 0 12px', lineHeight: 1.5 }}>
+            The attendance register for <strong>{submitHrModal.meeting.title}</strong> will be compiled into a PDF report and sent to HR. All HR officers are notified and emailed.
+          </p>
+
+          {submitHrModal.meeting.attendance_status === 'open' && (
+            <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, color: '#92400E', lineHeight: 1.45 }}>
+                <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+                <span>Attendance is still open. Anyone who signs in after you submit will not be in the report.</span>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, fontSize: 13, fontWeight: 600, color: 'var(--text-main)', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={submitHrModal.closeFirst}
+                  onChange={e => setSubmitHrModal(prev => ({ ...prev, closeFirst: e.target.checked }))}
+                  style={{ width: 16, height: 16, accentColor: '#EAB308' }}
+                />
+                Close attendance before submitting
+              </label>
+            </div>
+          )}
+
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
+            Once submitted, the report is filed with HR and cannot be submitted again.
+          </p>
+        </Modal>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteConfirmModal.isOpen && deleteConfirmModal.meeting && (
+        <Modal
+          open
+          onClose={() => setDeleteConfirmModal({ isOpen: false, meeting: null })}
+          title="Confirm Delete Meeting"
+          maxWidth={440}
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmModal({ isOpen: false, meeting: null })}
+                className="btn btn-secondary"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteMeeting(deleteConfirmModal.meeting)}
+                className="btn btn-danger"
+                style={{ background: '#dc2626', color: '#ffffff', borderColor: '#b91c1c', display: 'flex', alignItems: 'center', gap: 6 }}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (<><InlineSpinner /> Deleting...</>) : (<><Trash2 size={15} /> Yes, Delete Meeting</>)}
+              </button>
+            </>
+          }
+        >
+              <p style={{ fontSize: 13.5, color: '#334155', margin: '0 0 12px 0', lineHeight: 1.5 }}>
+                Are you sure you want to delete <strong>"{deleteConfirmModal.meeting.title}"</strong>?
+              </p>
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
+                <p style={{ margin: 0, fontSize: 12, color: '#991b1b', lineHeight: 1.45 }}>
+                  ⚠️ <strong>Warning:</strong> This will permanently delete the meeting along with all recorded staff and visitor attendance logs, signatures, and associated reports. This action cannot be undone.
+                </p>
+              </div>
+        </Modal>
+      )}
+    </>
+  );
+
+  // The Submit to HR control: a button until submitted, then a filed badge.
+  const renderSubmitToHRButton = (m: any) => {
+    if (isSubmittedToHR(m)) {
+      return (
+        <button type="button" className="btn btn-secondary" disabled title="This report has already been filed with HR">
+          <CheckCircle2 size={16} style={{ color: '#047857' }} /> Submitted to HR
+        </button>
+      );
+    }
+    const notStarted = m.attendance_status === 'not_started';
+    return (
+      <button
+        type="button"
+        onClick={() => openSubmitToHR(m)}
+        className="btn btn-dark"
+        disabled={notStarted}
+        title={notStarted ? 'Open attendance first — there is nothing to report yet' : 'Send this attendance register to HR'}
+      >
+        <Send size={16} /> Submit to HR
+      </button>
+    );
   };
 
   // Helper for Status Badges
@@ -516,6 +748,8 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                   <Clock size={16} /> Reopen / Extend
                 </button>
               )}
+
+              {renderSubmitToHRButton(selectedMeeting)}
 
               <button
                 type="button"
@@ -801,6 +1035,8 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
           visitors={visitorAttendees}
           showToast={showToast}
         />
+
+        {renderSharedDialogs()}
       </div>
     );
   }
@@ -1228,6 +1464,24 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
                                   <FileText size={15} /> Generate Document
                                 </button>
 
+                                {isSubmittedToHR(m) ? (
+                                  <button type="button" role="menuitem" className="row-menu-item is-success" disabled>
+                                    <CheckCircle2 size={15} /> Submitted to HR
+                                  </button>
+                                ) : m.attendance_status !== 'not_started' && (
+                                  <button
+                                    type="button"
+                                    role="menuitem"
+                                    className="row-menu-item"
+                                    onClick={() => {
+                                      openSubmitToHR(m);
+                                      setActiveMenuId(null);
+                                    }}
+                                  >
+                                    <Send size={15} /> Submit to HR
+                                  </button>
+                                )}
+
                                 <hr className="row-menu-sep" />
 
                                 {m.attendance_status === 'not_started' && (
@@ -1452,169 +1706,7 @@ export const OrganizerMeetingsPage: React.FC<OrganizerMeetingsPageProps> = ({
         showToast={showToast}
       />
 
-      {/* Extend Attendance Window Modal */}
-      {extendModal.isOpen && extendModal.meeting && (
-        <div
-          className="modal-backdrop"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-          }}
-        >
-          <div
-            className="modal-content"
-            style={{
-              background: 'var(--bg-card)',
-              color: 'var(--text-main)',
-              borderRadius: 12,
-              padding: 24,
-              width: '100%',
-              maxWidth: 480,
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)',
-              border: '1px solid var(--border-color)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <div
-                style={{
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  color: '#f59e0b',
-                  borderRadius: '50%',
-                  width: 40,
-                  height: 40,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Clock size={22} />
-              </div>
-              <div>
-                <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>Extend Attendance Window</h3>
-                <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-                  {extendModal.meeting.title}
-                </p>
-              </div>
-            </div>
-
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>
-              Choose how much additional time to add to this meeting's attendance register. This immediately keeps or re-opens the session so participants can continue signing in.
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
-              {[15, 30, 60, 120, 180, 240].map(mins => (
-                <button
-                  key={mins}
-                  type="button"
-                  onClick={() => setExtendModal(prev => ({ ...prev, minutes: mins }))}
-                  className={`btn ${extendModal.minutes === mins ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{
-                    fontSize: 12,
-                    padding: '8px 4px',
-                    textAlign: 'center',
-                    backgroundColor: extendModal.minutes === mins ? '#f9d616' : 'var(--bg-app)',
-                    color: extendModal.minutes === mins ? '#0b0d11' : 'var(--text-main)',
-                    borderColor: extendModal.minutes === mins ? '#e5ac00' : 'var(--border-color)',
-                    fontWeight: extendModal.minutes === mins ? 700 : 500,
-                  }}
-                >
-                  +{mins >= 60 ? `${mins / 60} hr${mins / 60 > 1 ? 's' : ''}` : `${mins} mins`}
-                </button>
-              ))}
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 20 }}>
-              <label htmlFor="custom-minutes" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-main)' }}>
-                Or enter custom minutes:
-              </label>
-              <input
-                id="custom-minutes"
-                type="number"
-                min={1}
-                max={1440}
-                className="form-input"
-                value={extendModal.minutes}
-                onChange={e => setExtendModal(prev => ({ ...prev, minutes: Math.max(1, parseInt(e.target.value) || 1) }))}
-                style={{
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-main)',
-                  borderColor: 'var(--border-color)',
-                }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button
-                type="button"
-                onClick={() => setExtendModal({ isOpen: false, meeting: null, minutes: 30 })}
-                className="btn btn-secondary"
-                disabled={isExtending}
-                style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', borderColor: 'var(--border-color)' }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleExecuteExtend}
-                className="btn btn-primary"
-                disabled={isExtending}
-                style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-              >
-                {isExtending ? <InlineSpinner /> : <Clock size={16} />}
-                Confirm &amp; Extend ({extendModal.minutes} min)
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DELETE CONFIRMATION MODAL */}
-      {deleteConfirmModal.isOpen && deleteConfirmModal.meeting && (
-        <Modal
-          open
-          onClose={() => setDeleteConfirmModal({ isOpen: false, meeting: null })}
-          title="Confirm Delete Meeting"
-          maxWidth={440}
-          footer={
-            <>
-              <button
-                type="button"
-                onClick={() => setDeleteConfirmModal({ isOpen: false, meeting: null })}
-                className="btn btn-secondary"
-                disabled={isDeleting}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeleteMeeting(deleteConfirmModal.meeting)}
-                className="btn btn-danger"
-                style={{ background: '#dc2626', color: '#ffffff', borderColor: '#b91c1c', display: 'flex', alignItems: 'center', gap: 6 }}
-                disabled={isDeleting}
-              >
-                {isDeleting ? (<><InlineSpinner /> Deleting...</>) : (<><Trash2 size={15} /> Yes, Delete Meeting</>)}
-              </button>
-            </>
-          }
-        >
-              <p style={{ fontSize: 13.5, color: '#334155', margin: '0 0 12px 0', lineHeight: 1.5 }}>
-                Are you sure you want to delete <strong>"{deleteConfirmModal.meeting.title}"</strong>?
-              </p>
-              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
-                <p style={{ margin: 0, fontSize: 12, color: '#991b1b', lineHeight: 1.45 }}>
-                  ⚠️ <strong>Warning:</strong> This will permanently delete the meeting along with all recorded staff and visitor attendance logs, signatures, and associated reports. This action cannot be undone.
-                </p>
-              </div>
-        </Modal>
-      )}
+      {renderSharedDialogs()}
     </div>
   );
 };
