@@ -46,6 +46,8 @@ const PAGE_MARGIN_MAP: Record<MarginSize, Record<Orientation, { css: string; ver
 // The footer is still supplied artwork, so its printed height is dictated by
 // its own proportions. The header is markup and is measured below instead.
 const FOOTER_BANNER_ASPECT = 1481 / 120;
+// The letterhead (black bar + address strip) is supplied artwork too.
+const HEADER_BANNER_ASPECT = 1378 / 169;
 
 
 // Vertical budget of the fixed furniture on each page, in millimetres. Whatever
@@ -69,13 +71,10 @@ const getPageMetrics = (orientation: Orientation, marginSize: MarginSize) => {
   // 2mm of slack so a full-height page never spills onto a blank extra sheet.
   const contentHeightMm = sheetHeight - margin.vertical * 2 - 2;
   const contentWidthMm = sheetWidth - margin.horizontal * 2;
-  // The banner spans the full text column, so its height is dictated by that.
-  // Header furniture, in millimetres: the black bar (a 104px mark collapsed to
-  // ~52px by its negative margins, plus padding), the KeNHA/DG/F01 reference
-  // line, and the address strip — which wraps to twice as many lines once the
-  // text column is narrower than about 200mm, i.e. on portrait.
-  const addressLines = contentWidthMm >= 200 ? 2 : 4;
-  const headerMm = 16.4 + 4.1 + 2 + addressLines * 4.1;
+  // The letterhead artwork spans the full text column, so its height follows
+  // from that; above it sits the KeNHA/DG/F01 reference line (~4.6mm) and
+  // below it a small gap before the title (~1mm).
+  const headerMm = 4.6 + contentWidthMm / HEADER_BANNER_ASPECT + 1;
   // Footer artwork scales with the column width; the page-number line sits above it.
   const footerMm = contentWidthMm / FOOTER_BANNER_ASPECT + 4;
   // Printing with `@page { margin: 0 }` is what suppresses the browser's own
@@ -158,17 +157,17 @@ const charEm = (ch: string): number => {
 
 // Width of a string in mm at the register's data size, with 5% headroom so
 // estimates round towards an extra line rather than a clipped row.
-const textWidthMm = (text: string): number =>
-  [...text].reduce((sum, ch) => sum + charEm(ch), 0) * HEADER_FONT_PX * PX_TO_MM * 1.05;
+const textWidthMm = (text: string, fontPx: number = HEADER_FONT_PX, letterSpacingPx = 0): number =>
+  ([...text].reduce((sum, ch) => sum + charEm(ch), 0) * fontPx + text.length * letterSpacingPx) * PX_TO_MM * 1.05;
 
-const wrappedLineCount = (text: string, widthMm: number): number => {
+const wrappedLineCount = (text: string, widthMm: number, fontPx: number = HEADER_FONT_PX, letterSpacingPx = 0): number => {
   const value = String(text ?? '').trim();
   if (!value || widthMm <= 0) return 1;
-  const spaceMm = textWidthMm(' ');
+  const spaceMm = textWidthMm(' ', fontPx, letterSpacingPx);
   let lines = 1;
   let usedMm = 0;
   for (const word of value.split(/\s+/)) {
-    const wordMm = textWidthMm(word);
+    const wordMm = textWidthMm(word, fontPx, letterSpacingPx);
     // Words wider than the column break mid-word (word-wrap: break-word).
     if (wordMm > widthMm) {
       if (usedMm > 0) lines += 1;
@@ -300,6 +299,12 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
   const dynamicColsPool = isMultiDay ? 60 : 78;
   const dynamicColWidths = dynamicCols.map(c => Math.round((c.widthPercent / totalColWeight) * dynamicColsPool));
 
+  const registerTitle = attendeeFilter === 'staff'
+    ? `STAFF ATTENDANCE REGISTER ${resolveDepartmentDisplay(meeting, '') ? `– ${resolveDepartmentDisplay(meeting, '').toUpperCase()}` : ''}`
+    : attendeeFilter === 'visitors'
+    ? 'VISITORS ATTENDANCE REGISTER'
+    : `ATTENDANCE REGISTER ${resolveDepartmentDisplay(meeting, '') ? `– ${resolveDepartmentDisplay(meeting, '').toUpperCase()}` : ''}`;
+
   // ── Pagination by height ────────────────────────────────────────────────
   // Sheets are filled until the table area is used up, so wrapped (taller)
   // rows move to the next sheet instead of being cut off at the bottom. The
@@ -314,8 +319,17 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
     }));
     return Math.max(TARGET_ROW_MM, lines * lineMm + rowChromeMm);
   };
-  // A little slack: the title block above the table is itself an estimate.
-  const pageBodyMm = getBodyMm(pageMetrics, isMultiDay) - 3;
+  // The title block wraps to more lines on narrow (portrait) sheets or for long
+  // meeting names, so its height is estimated from its text rather than
+  // assumed. Mirrors the title markup below: 6mm + 5mm margins, a 16px/1.4
+  // meeting title, 3.5mm gap, then the 14px/1.35 register title.
+  const titleWidthMm = pageMetrics.contentWidthMm - 16;
+  const meetingTitleText = String(meeting?.title || 'MEETING & TRAINING ATTENDANCE REGISTER').toUpperCase();
+  const titleMm = 6 + 5 + 3.5
+    + wrappedLineCount(meetingTitleText, titleWidthMm, 16, 0.3) * 16 * 1.4 * PX_TO_MM
+    + wrappedLineCount(`${registerTitle} (CONTINUED)`, titleWidthMm, 14, 0.4) * 14 * 1.35 * PX_TO_MM;
+  // A little slack on top, since every figure here is an estimate.
+  const pageBodyMm = getBodyMm(pageMetrics, isMultiDay) + PAGE_CHROME_MM.title - titleMm - 3;
 
   const pages: number[][] = [];
   let currentPage: number[] = [];
@@ -337,11 +351,6 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
   const pageCount = pages.length;
   const signatureBlockWidth = isMultiDay ? 35 : 17;
   const perDateWidth = isMultiDay ? Math.max(5, Math.floor(signatureBlockWidth / Math.max(dates.length, 1))) : 0;
-  const registerTitle = attendeeFilter === 'staff'
-    ? `STAFF ATTENDANCE REGISTER ${resolveDepartmentDisplay(meeting, '') ? `– ${resolveDepartmentDisplay(meeting, '').toUpperCase()}` : ''}`
-    : attendeeFilter === 'visitors'
-    ? 'VISITORS ATTENDANCE REGISTER'
-    : `ATTENDANCE REGISTER ${resolveDepartmentDisplay(meeting, '') ? `– ${resolveDepartmentDisplay(meeting, '').toUpperCase()}` : ''}`;
 
   // Whatever height the fixed furniture leaves over is shared by the 15 rows,
   // so a sheet is properly filled in landscape and in portrait alike.
@@ -424,27 +433,8 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
     KeNHA/DG/F01
   </div>
 
-  <!-- Black letterhead bar. Built in markup because the supplied artwork on
-       disk is the grey variant; the KeNHA mark is the real asset, clipped to
-       the ellipse measured from its own pixels so its white ground drops away. -->
-  <div style="width:100%; background:#000000; display:flex; align-items:center; gap:12px; padding:5px 16px; box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
-    <img src="/kenhalogo.png" alt="KeNHA" style="width:104px; height:104px; margin:-26px 0; flex:0 0 auto; align-self:center; object-fit:contain; clip-path:ellipse(45% 26.6% at 49.9% 49.3%);" />
-    <div style="flex:1 1 auto; min-width:0;">
-      <div style="color:#ffffff; font-weight:700; font-size:25px; line-height:1.12; letter-spacing:0.2px;">
-        Kenya National Highways Authority
-      </div>
-      <div style="border-top:1px solid rgba(255,255,255,0.6); margin:4px 0 3px;"></div>
-      <div style="color:#F9D616; font-weight:700; font-size:14px; line-height:1.12;">
-        Quality Highways, Better Connections
-      </div>
-    </div>
-  </div>
-
-  <!-- White address strip beneath the bar -->
-  <div style="width:100%; background:#ffffff; padding:4px 2px 0; text-align:center; font-size:11.5px; line-height:1.35; color:#000000;">
-    <div><strong>Barabara Plaza, Block A &amp; C,</strong> Jomo Kenyatta International Airport (JKIA), Off Airport South Road, along Mazao Road,</div>
-    <div><strong>P.O Box</strong> 49712 - 00100 Nairobi, <strong>Tel</strong> 020 - 4954000 / 0700 423 606 <strong>Email</strong> dg@kenha.co.ke / <strong>Website</strong> www.kenha.co.ke</div>
-  </div>
+  <!-- Official letterhead: KeNHA mark, name, tagline and address strip -->
+  <img src="/kenha_register_header.png?v=1" alt="Kenya National Highways Authority — Quality Highways, Better Connections" style="width:100%; height:auto; display:block; -webkit-print-color-adjust:exact; print-color-adjust:exact;" />
 </header>`;
 
   // ── EDITABLE FOOTER REGION (PINNED TO THE BOTTOM OF EVERY SHEET) ────────
