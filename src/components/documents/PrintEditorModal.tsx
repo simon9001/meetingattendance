@@ -13,6 +13,7 @@ import {
   getAttendanceDates,
   getPageMetrics,
   getRowMetrics,
+  repaginateRegister,
 } from './registerDocument';
 import type {
   RegisterInput,
@@ -50,6 +51,22 @@ const ToolbarBtn = ({ onClick, title, children, active = false, danger = false }
   }}>{children}</button>
 );
 
+
+// Rows are measured, so wait until fonts and the letterhead/footer artwork have
+// loaded (their heights decide how much room the table has), then repaginate.
+const settleThenRepaginate = async (canvas: HTMLElement, isCancelled: () => boolean) => {
+  try {
+    await document.fonts?.ready;
+  } catch { /* measure with whatever loaded */ }
+  const pending = Array.from(canvas.querySelectorAll('img'))
+    .filter(img => !img.complete)
+    .map(img => new Promise<void>(resolve => {
+      img.addEventListener('load', () => resolve(), { once: true });
+      img.addEventListener('error', () => resolve(), { once: true });
+    }));
+  await Promise.all(pending);
+  if (!isCancelled()) repaginateRegister(canvas);
+};
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
@@ -248,9 +265,12 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
   // orientation or margins must not discard edits or an uploaded template.
   useEffect(() => {
     if (!isOpen) return;
-    if (canvasRef.current) {
-      canvasRef.current.innerHTML = buildDefaultContentRef.current();
-    }
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.innerHTML = buildDefaultContentRef.current();
+    let cancelled = false;
+    settleThenRepaginate(canvas, () => cancelled);
+    return () => { cancelled = true; };
   }, [isOpen, registerSignature]);
 
   // ── Re-flow the existing sheets when the page geometry changes ─────────────
@@ -267,11 +287,16 @@ export const PrintEditorModal: React.FC<PrintEditorModalProps> = ({
     const sigHeight = `${sigMm.toFixed(2)}mm`;
 
     for (const wrapper of wrappers) {
+      wrapper.style.height = `${pageMetrics.contentHeightMm}mm`;
       wrapper.style.minHeight = `${pageMetrics.contentHeightMm}mm`;
       wrapper.querySelectorAll<HTMLImageElement>('main table tbody tr img.kenha-sig').forEach(img => {
         img.style.height = sigHeight;
       });
     }
+    // A smaller page box can push rows past the footer; move them on.
+    let cancelled = false;
+    settleThenRepaginate(canvas, () => cancelled);
+    return () => { cancelled = true; };
   }, [isOpen, pageMetrics, registerSignature]);
 
 

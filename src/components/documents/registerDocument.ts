@@ -368,6 +368,8 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
   // Render one body row (blank when there is no attendee at that index)
   const buildRow = (index: number): string => {
     const attendee = allAttendees[index];
+    // Blank walk-in lines are marked so repagination can drop or add them.
+    const rowAttrs = attendee ? '' : ' data-blank-row="1"';
     const rowNum = index + 1;
 
     const sigImg = attendee?.signature_data
@@ -382,7 +384,7 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
       }).join('');
 
       return `
-        <tr>
+        <tr${rowAttrs}>
           <td contenteditable="false" style="border:1px solid #000; padding:2px; text-align:center; ${DATA_CELL_FONT} width:5%;">${rowNum}.</td>
           ${cellsHtml}
           <td contenteditable="false" style="border:1px solid #000; padding:1px; text-align:center; width:${signatureBlockWidth}%;">${sigImg}</td>
@@ -397,7 +399,7 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
     }).join('');
 
     return `
-      <tr>
+      <tr${rowAttrs}>
         <td contenteditable="false" style="border:1px solid #000; padding:2px; text-align:center; ${DATA_CELL_FONT} width:5%;">${rowNum}.</td>
         ${cellsHtml}
         ${dates.map(d => {
@@ -472,7 +474,7 @@ ${headerHtml}
     <div style="font-size:16px; font-weight:800; text-transform:uppercase; color:#000; line-height:1.4; letter-spacing:0.3px;">
       ${meeting?.title || 'MEETING &amp; TRAINING ATTENDANCE REGISTER'}
     </div>
-    <div style="font-size:14px; font-weight:800; text-transform:uppercase; color:#000; margin-top:3.5mm; line-height:1.35; letter-spacing:0.4px;">
+    <div class="kenha-register-title" style="font-size:14px; font-weight:800; text-transform:uppercase; color:#000; margin-top:3.5mm; line-height:1.35; letter-spacing:0.4px;">
       ${registerTitle}${pageIndex > 0 ? ' (CONTINUED)' : ''}
     </div>
   </div>
@@ -503,6 +505,121 @@ ${footerHtml}
 
   return pagesHtml.join(separator);
 };
+
+// ── Repagination by measurement ───────────────────────────────────────────────
+// buildRegisterHtml decides what goes on each sheet from *estimated* text
+// sizes. Wherever the register is actually drawn, fonts can differ (the PDF
+// server has no Times New Roman, for one), so rows can come out taller than
+// estimated. This pass measures the drawn sheets: a table that no longer fits
+// above the footer first loses its blank walk-in lines, then hands its last
+// rows to the next sheet — adding a new sheet when needed — so no row is ever
+// hidden behind the footer. The last sheet is then topped up with blank lines.
+//
+// It runs in the editor preview; the PDF server runs its own copy
+// (REPAGINATE_REGISTER_JS in the backend's pdfReport.ts) with its own fonts.
+// Keep the two in step.
+export function repaginateRegister(root: ParentNode): number {
+  const sheets = () => Array.from(root.querySelectorAll('.kenha-page-wrapper')) as HTMLElement[];
+  const bodyOf = (sheet: Element) => sheet.querySelector('.register-table-slot tbody') as HTMLTableSectionElement | null;
+  const overflows = (sheet: Element) => {
+    const slot = sheet.querySelector('.register-table-slot');
+    const table = slot && slot.querySelector('table');
+    if (!slot || !table) return false;
+    return table.getBoundingClientRect().height > slot.getBoundingClientRect().height + 1;
+  };
+  const isBlank = (row: Element) => row.hasAttribute('data-blank-row');
+
+  // Tables are styled to fill their slot (height: 100%), so a table never
+  // reports less than the slot, and once grown it keeps stretching its rows.
+  // Measure at natural height while rearranging; the fill comes back after.
+  const tables = () => Array.from(root.querySelectorAll('.register-table-slot table')) as HTMLElement[];
+  // The slot is a flex container, which would also stretch the table. Row
+  // heights left by an earlier pass are cleared so rows measure naturally.
+  tables().forEach(t => {
+    t.style.setProperty('height', 'auto', 'important');
+    t.style.setProperty('align-self', 'flex-start', 'important');
+    Array.from((t as HTMLTableElement).rows).forEach(row => row.style.removeProperty('height'));
+  });
+
+  const addSheetAfter = (sheet: HTMLElement): HTMLElement => {
+    const copy = sheet.cloneNode(true) as HTMLElement;
+    const body = bodyOf(copy);
+    if (body) body.innerHTML = '';
+    copy.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+    const title = copy.querySelector('.kenha-register-title');
+    if (title && !/\(CONTINUED\)/.test(title.textContent || '')) {
+      title.textContent = `${(title.textContent || '').trim()} (CONTINUED)`;
+    }
+    // Keep the on-screen "page break" marker between sheets when there is one.
+    const marker = root.querySelector('.kenha-page-sep');
+    sheet.after(copy);
+    if (marker) copy.before(marker.cloneNode(true));
+    return copy;
+  };
+
+  let moved = 0;
+  let guard = 0;
+  for (let i = 0; i < sheets().length && guard < 10000; i++) {
+    const sheet = sheets()[i];
+    const body = bodyOf(sheet);
+    if (!body) continue;
+    while (overflows(sheet) && body.rows.length > 1 && guard++ < 10000) {
+      const last = body.rows[body.rows.length - 1];
+      if (isBlank(last)) {
+        last.remove();
+        continue;
+      }
+      const next = sheets()[i + 1] || addSheetAfter(sheet);
+      const nextBody = bodyOf(next);
+      if (!nextBody) break;
+      nextBody.insertBefore(last, nextBody.firstChild);
+      moved++;
+    }
+  }
+
+  // Top up the last sheet with blank walk-in lines, so its rows keep a normal
+  // writing height instead of stretching to fill the sheet.
+  const lastSheet = sheets()[sheets().length - 1];
+  const lastBody = lastSheet && bodyOf(lastSheet);
+  const template = lastBody && lastBody.rows[lastBody.rows.length - 1];
+  if (lastSheet && lastBody && template) {
+    const numberOf = (row: Element) => parseInt((row.querySelector('td')?.textContent || '').replace(/\D/g, ''), 10) || 0;
+    for (let n = 0; n < 200 && !overflows(lastSheet); n++) {
+      const blank = template.cloneNode(true) as HTMLTableRowElement;
+      blank.setAttribute('data-blank-row', '1');
+      Array.from(blank.cells).forEach((cell, idx) => {
+        cell.innerHTML = idx === 0 ? `${numberOf(lastBody.rows[lastBody.rows.length - 1]) + 1}.` : '';
+        cell.removeAttribute('data-attendance-id');
+        cell.removeAttribute('data-field');
+        cell.setAttribute('contenteditable', 'false');
+        cell.classList.remove('kenha-correctable');
+      });
+      lastBody.appendChild(blank);
+      if (overflows(lastSheet)) {
+        blank.remove();
+        break;
+      }
+    }
+  }
+
+  // Fill each sheet: share its leftover height between its body rows, so the
+  // table ends exactly at the gap above the footer. Explicit pixel heights
+  // rather than a percentage-height table, which in a flex slot can render
+  // taller than the slot and run under the footer.
+  for (const sheet of sheets()) {
+    const slot = sheet.querySelector('.register-table-slot');
+    const table = slot && (slot.querySelector('table') as HTMLTableElement | null);
+    const body = bodyOf(sheet);
+    if (!slot || !table || !body || body.rows.length === 0) continue;
+    const spare = slot.getBoundingClientRect().height - table.getBoundingClientRect().height - 1;
+    if (spare <= 0) continue;
+    const extra = spare / body.rows.length;
+    Array.from(body.rows).forEach(row => {
+      row.style.height = `${(row.getBoundingClientRect().height + extra).toFixed(2)}px`;
+    });
+  }
+  return moved;
+}
 
 // ── The standalone document handed to the printer or the PDF renderer ───────
 // `bodyHtml` is the live preview markup, so what is printed or downloaded is
