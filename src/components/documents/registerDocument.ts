@@ -22,6 +22,9 @@ import {
 // other way round. Portrait therefore fits roughly twice as many people as
 // landscape, which is simply how much paper each has.
 const TARGET_ROW_MM = 10;
+// No sheet ever lists more than this many people (blank walk-in lines included).
+// The server's PDF pass (REPAGINATE_REGISTER_JS in pdfReport.ts) uses the same limit.
+export const MAX_ROWS_PER_SHEET = 8;
 
 // The canvas padding on screen doubles as the @page margin when printing, so
 // what the organiser sees is what comes out of the printer.
@@ -345,7 +348,7 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
   let usedMm = 0;
   allAttendees.forEach((attendee, index) => {
     const rowMm = estimateRowMm(attendee);
-    if (currentPage.length > 0 && usedMm + rowMm > pageBodyMm) {
+    if (currentPage.length > 0 && (usedMm + rowMm > pageBodyMm || currentPage.length >= MAX_ROWS_PER_SHEET)) {
       pages.push(currentPage);
       currentPage = [];
       usedMm = 0;
@@ -354,7 +357,10 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
     usedMm += rowMm;
   });
   // Blank walk-in rows on the last sheet (a sheet is always printed, even empty).
-  const blankRows = Math.max(0, Math.floor((pageBodyMm - usedMm) / TARGET_ROW_MM));
+  const blankRows = Math.min(
+    MAX_ROWS_PER_SHEET - currentPage.length,
+    Math.max(0, Math.floor((pageBodyMm - usedMm) / TARGET_ROW_MM)),
+  );
   for (let i = 0; i < blankRows; i++) currentPage.push(allAttendees.length + i);
   pages.push(currentPage);
   const signatureBlockWidth = isMultiDay ? 35 : 17;
@@ -528,6 +534,7 @@ export function repaginateRegister(root: ParentNode): number {
     return table.getBoundingClientRect().height > slot.getBoundingClientRect().height + 1;
   };
   const isBlank = (row: Element) => row.hasAttribute('data-blank-row');
+  const MAX_ROWS = MAX_ROWS_PER_SHEET;
 
   // Tables are styled to fill their slot (height: 100%), so a table never
   // reports less than the slot, and once grown it keeps stretching its rows.
@@ -563,7 +570,7 @@ export function repaginateRegister(root: ParentNode): number {
     const sheet = sheets()[i];
     const body = bodyOf(sheet);
     if (!body) continue;
-    while (overflows(sheet) && body.rows.length > 1 && guard++ < 10000) {
+    while ((overflows(sheet) || body.rows.length > MAX_ROWS) && body.rows.length > 1 && guard++ < 10000) {
       const last = body.rows[body.rows.length - 1];
       if (isBlank(last)) {
         last.remove();
@@ -584,7 +591,7 @@ export function repaginateRegister(root: ParentNode): number {
   const template = lastBody && lastBody.rows[lastBody.rows.length - 1];
   if (lastSheet && lastBody && template) {
     const numberOf = (row: Element) => parseInt((row.querySelector('td')?.textContent || '').replace(/\D/g, ''), 10) || 0;
-    for (let n = 0; n < 200 && !overflows(lastSheet); n++) {
+    for (let n = 0; n < 200 && !overflows(lastSheet) && lastBody.rows.length < MAX_ROWS; n++) {
       const blank = template.cloneNode(true) as HTMLTableRowElement;
       blank.setAttribute('data-blank-row', '1');
       Array.from(blank.cells).forEach((cell, idx) => {

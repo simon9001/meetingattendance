@@ -2980,3 +2980,16 @@ textarea[aria-invalid='true']:focus {
     grid-column: 1 / -1;
   }
 }
+
+/* Public sign-in form: typed and chosen values at 14px. (The 6-digit PIN boxes
+   keep their own large size.) Note: iPhone Safari zooms into a field whose
+   text is under 16px when it is tapped. */
+.public-card .form-input,
+.public-card select,
+.public-card textarea,
+.public-card input[type="text"]:not(.pin-digit-input),
+.public-card input[type="email"],
+.public-card input[type="tel"],
+.public-card input[type="number"] {
+  font-size: 14px !important;
+}
