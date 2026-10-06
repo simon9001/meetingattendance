@@ -264,6 +264,14 @@ export const apiSlice = createApi({
         body: data,
       }),
     }),
+    // Multi-day meetings: the days this participant can still sign for
+    getSignableDates: builder.mutation({
+      query: (body) => ({
+        url: '/attendance/signable-dates',
+        method: 'POST',
+        body,
+      }),
+    }),
     submitAttendance: builder.mutation({
       query: (attendanceData) => ({
         url: '/attendance/submit',
@@ -378,6 +386,7 @@ export const {
   useGetPublicMeetingInfoQuery,
   useValidateMeetingPinMutation,
   useSubmitAttendanceMutation,
+  useGetSignableDatesMutation,
   useGetMeetingAttendanceQuery,
   useCorrectAttendanceRecordMutation,
   // Reports

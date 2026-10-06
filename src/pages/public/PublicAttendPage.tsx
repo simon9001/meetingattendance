@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ShieldAlert, ShieldCheck, CheckCircle, UserCheck, Users, Clock, RefreshCw, AlertCircle } from 'lucide-react';
 import { PageSpinner, InlineSpinner, AlertError } from '../../components/shared/Feedback';
 import { SignaturePad } from '../../components/SignaturePad';
+import { SessionDayPicker } from '../../components/meetings/SessionDayPicker';
+import type { SessionDayStatus } from '../../components/meetings/SessionDayPicker';
 import type { Attendance } from '../../data/mockData';
 import confetti from 'canvas-confetti';
 import { parseMeetingFormConfig, resolveDepartmentDisplay } from '../../types/formConfig';
@@ -58,6 +60,11 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
   const [customResponses, setCustomResponses] = useState<Record<string, string>>({});
 
   const [signatureData, setSignatureData] = useState<string | null>(null);
+
+  // Multi-day meetings: the day(s) this signature is for ("DD/MM/YYYY")
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [dayStatus, setDayStatus] = useState<SessionDayStatus>({ loaded: false, availableCount: 0 });
+  const [signedDays, setSignedDays] = useState<string[]>([]);
   const [acceptedDisclaimer, setAcceptedDisclaimer] = useState(false);
 
   // Queries & Mutations
@@ -170,6 +177,8 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
     setPosition('');
     setCustomResponses({});
     setSignatureData(null);
+    setSelectedDays([]);
+    setSignedDays([]);
     setAcceptedDisclaimer(false);
     setTimeout(() => pinInputRefs[0].current?.focus(), 100);
   };
@@ -273,6 +282,21 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
       }
     }
 
+    if (formConfig.isMultiDay) {
+      if (!dayStatus.loaded) {
+        showToast('Please wait while the meeting days load', 'error');
+        return;
+      }
+      if (dayStatus.availableCount === 0) {
+        showToast('You have already signed for every day of this meeting so far', 'error');
+        return;
+      }
+      if (selectedDays.length === 0) {
+        showToast('Choose at least one day you are signing for', 'error');
+        return;
+      }
+    }
+
     if (formConfig.includeSignature !== false && !signatureData) {
       showToast('Please add your signature to register', 'error');
       return;
@@ -291,6 +315,7 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
       full_name: trimmedName,
       signature_data: signatureData || (formConfig.includeSignature === false ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' : ''),
       custom_responses: customResponses,
+      ...(formConfig.isMultiDay ? { session_dates: selectedDays } : {}),
     };
 
     if (attendType === 'staff') {
@@ -311,7 +336,8 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
     }
 
     try {
-      await submitAttendance(payload).unwrap();
+      const result: any = await submitAttendance(payload).unwrap();
+      setSignedDays(result?.data?.session_dates ?? []);
 
       const todayDateStr = new Date().toISOString().split('T')[0];
       const subKey = formConfig.isMultiDay ? `kmtams_submitted_${meetingId}_${todayDateStr}` : `kmtams_submitted_${meetingId}`;
@@ -481,7 +507,7 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
                     Multi-Day Training Attendance
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>
-                    Active Day: {formConfig.activeSessionDate || formConfig.sessionDates[0]}
+                    Today: {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })}
                   </div>
                 </div>
                 <span style={{ fontSize: 11, background: '#fde047', color: '#854d0e', fontWeight: 800, padding: '3px 8px', borderRadius: 6 }}>
@@ -532,6 +558,18 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
                 required
               />
             </div>
+
+            {formConfig.isMultiDay && (
+              <SessionDayPicker
+                meetingId={meetingId}
+                meetingPin={pinDigits.join('')}
+                fullName={fullName}
+                participantType={attendType}
+                selected={selectedDays}
+                onChange={setSelectedDays}
+                onStatusChange={setDayStatus}
+              />
+            )}
 
             {attendType === 'staff' ? (
               <>
@@ -760,7 +798,9 @@ export const PublicAttendPage: React.FC<PublicAttendPageProps> = ({
             <CheckCircle size={48} color="#10B981" style={{ margin: '0 auto 16px auto', animation: 'bounce 1s' }} />
             <h3 style={{ fontSize: 18, fontWeight: 700 }}>Attendance Registered Successfully</h3>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '8px 0 24px 0', lineHeight: 1.5 }}>
-              Thank you! Your signature and attendance records have been securely stored in the KeNHA KMTAMS database.
+              {signedDays.length > 0
+                ? `Thank you! You are signed in for ${signedDays.length === 1 ? signedDays[0] : `${signedDays.length} days (${signedDays.join(', ')})`}.`
+                : 'Thank you! Your signature and attendance records have been securely stored in the KeNHA KMTAMS database.'}
               {!sharedDevice && ' You may now close this page.'}
             </p>
             {sharedDevice && (

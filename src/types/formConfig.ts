@@ -366,7 +366,9 @@ export function aggregateMultiDayAttendees(
   allSubmissions.forEach(sub => {
     if (!sub || !sub.full_name) return;
     const key = (sub.full_name || '').trim().toLowerCase();
-    const dateStr = formatAttendanceDate(sub.submitted_at);
+    // session_date is the day the signature is FOR (a participant may sign for
+    // an earlier day they missed); older rows only have the submission time.
+    const dateStr = formatAttendanceDate(sub.session_date || sub.submitted_at);
 
     if (!map.has(key)) {
       map.set(key, {
