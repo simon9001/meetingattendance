@@ -68,6 +68,9 @@ type MarginSize = 'normal' | 'narrow' | 'wide';
 // of the paper, the way a Word header and footer sit in the page margins; the
 // margin setting (normal / narrow / wide) governs the left and right sides.
 const HEADER_FOOTER_EDGE_MM = 7;
+// Clear space between the last table row and the footer artwork, whose own top
+// edge is a dark rule that otherwise reads as part of the table border.
+const FOOTER_GAP_MM = 5;
 
 const getPageMetrics = (orientation: Orientation, marginSize: MarginSize) => {
   const margin = PAGE_MARGIN_MAP[marginSize][orientation];
@@ -80,8 +83,9 @@ const getPageMetrics = (orientation: Orientation, marginSize: MarginSize) => {
   // from that; above it sits the KeNHA/DG/F01 reference line (~4.6mm) and
   // below it a small gap before the title (~1mm).
   const headerMm = 4.6 + contentWidthMm / HEADER_BANNER_ASPECT + 1;
-  // Footer artwork scales with the column width, plus a small gap above it.
-  const footerMm = contentWidthMm / FOOTER_BANNER_ASPECT + 2;
+  // Footer artwork scales with the column width, plus the gap that keeps it
+  // clear of the table above (FOOTER_GAP_MM, the footer's top padding).
+  const footerMm = contentWidthMm / FOOTER_BANNER_ASPECT + FOOTER_GAP_MM;
   // Printing with `@page { margin: 0 }` is what suppresses the browser's own
   // title/URL/date furniture, so the sheet carries the margin as padding
   // instead. Less the same 2mm of slack, the text box is identical either way.
@@ -446,7 +450,7 @@ export const buildRegisterHtml = (input: RegisterInput): string => {
   // artwork (kenha_footer_banner.png) rather than markup imitating it, so the
   // printed page, the .docx and the official letterhead cannot drift apart.
   const footerHtml = `
-<footer style="flex:0 0 auto; margin-top:auto; padding-top:2mm; width:100%;">
+<footer style="flex:0 0 auto; margin-top:auto; padding-top:${FOOTER_GAP_MM}mm; width:100%;">
   <div style="width:100%;">
     <img src="/kenha_footer_banner.png?v=2" alt="KeNHA Vision, Mission, Core Values and ISO 9001:2015 certification" style="width:100%; height:auto; display:block; opacity:1; -webkit-print-color-adjust:exact; print-color-adjust:exact;" />
   </div>
@@ -476,7 +480,7 @@ ${headerHtml}
   <!-- Attendance Register Table with Dynamic Configured Columns.
        The slot takes all height left under the title, and the table fills the
        slot, so the last row always meets the footer with no dead band. -->
-  <div class="register-table-slot" style="flex:1 1 auto; min-height:0; display:flex;">
+  <div class="register-table-slot" style="flex:1 1 auto; min-height:0; display:flex; overflow:hidden;">
   <table class="main-attendance-table"${pageIndex === 0 ? ' id="main-attendance-table"' : ''} border="1" cellpadding="0" cellspacing="0" style="width:100%; height:100%; border-collapse:collapse; font-size:12.5px; table-layout:fixed; border:1.5px solid #000; margin-bottom:0; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;">
     <thead>
       ${theadHtml}
@@ -626,7 +630,7 @@ export const buildPrintDocument = (bodyHtml: string, input: RegisterInput): stri
           }
           footer {
             margin-top: auto !important;
-            padding-top: 4px;
+            padding-top: ${FOOTER_GAP_MM}mm;
             width: 100%;
             flex: 0 0 auto;
           }
